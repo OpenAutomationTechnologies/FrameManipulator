@@ -40,7 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     #include "obdmacro.h"
 #undef OBD_DEFINE_MACRO
 
-#include <framemanipulator.h>
+#include <frameman.h>
 
 OBD_BEGIN ()
 
@@ -214,7 +214,7 @@ OBD_BEGIN ()
 
 
         //Reg 1 => Manipulation Data 1
-        OBD_BEGIN_INDEX_RAM(0x3001, 0x41, FMConfigObdAccess)
+        OBD_BEGIN_INDEX_RAM(0x3001, 0x41, frameman_configObdAccessCb)
             OBD_SUBINDEX_RAM_VAR(0x3001, 0x00, kObdTypeUInt8, kObdAccSRW, tObdUnsigned8, Number_Mani_1, 0x40)
             OBD_SUBINDEX_RAM_VAR(0x3001, 0x01, kObdTypeUInt64, kObdAccSRW, tObdUnsigned64, Mani1_Task, 0x00LL)
             OBD_SUBINDEX_RAM_VAR(0x3001, 0x02, kObdTypeUInt64, kObdAccSRW, tObdUnsigned64, Mani1_Task, 0x00LL)
@@ -284,7 +284,7 @@ OBD_BEGIN ()
 
 
         //Reg 2 => Manipulation Data 2
-        OBD_BEGIN_INDEX_RAM(0x3002, 0x41, FMConfigObdAccess)
+        OBD_BEGIN_INDEX_RAM(0x3002, 0x41, frameman_configObdAccessCb)
             OBD_SUBINDEX_RAM_VAR(0x3002, 0x00, kObdTypeUInt8, kObdAccSRW, tObdUnsigned8, Number_Mani_2, 0x40)
             OBD_SUBINDEX_RAM_VAR(0x3002, 0x01, kObdTypeUInt64, kObdAccSRW, tObdUnsigned64, Mani2_Task, 0x00LL)
             OBD_SUBINDEX_RAM_VAR(0x3002, 0x02, kObdTypeUInt64, kObdAccSRW, tObdUnsigned64, Mani2_Task, 0x00LL)
@@ -355,7 +355,7 @@ OBD_BEGIN ()
 
 
         //Reg 3 => Framedata
-        OBD_BEGIN_INDEX_RAM(0x3003, 0x41, FMConfigObdAccess)
+        OBD_BEGIN_INDEX_RAM(0x3003, 0x41, frameman_configObdAccessCb)
             OBD_SUBINDEX_RAM_VAR(0x3003, 0x00, kObdTypeUInt8, kObdAccSRW, tObdUnsigned8, Number_Framedata, 0x40)
             OBD_SUBINDEX_RAM_VAR(0x3003, 0x01, kObdTypeUInt64, kObdAccSRW, tObdUnsigned64, Framedata_Task, 0x00LL)
             OBD_SUBINDEX_RAM_VAR(0x3003, 0x02, kObdTypeUInt64, kObdAccSRW, tObdUnsigned64, Framedata_Task, 0x00LL)
@@ -425,7 +425,7 @@ OBD_BEGIN ()
 
 
         //Reg 4 => Framemask
-        OBD_BEGIN_INDEX_RAM(0x3004, 0x41, FMConfigObdAccess)
+        OBD_BEGIN_INDEX_RAM(0x3004, 0x41, frameman_configObdAccessCb)
             OBD_SUBINDEX_RAM_VAR(0x3004, 0x00, kObdTypeUInt8, kObdAccSRW, tObdUnsigned8, Number_Framemask, 0x40)
             OBD_SUBINDEX_RAM_VAR(0x3004, 0x01, kObdTypeUInt64, kObdAccSRW, tObdUnsigned64, Framemask_Task, 0x00LL)
             OBD_SUBINDEX_RAM_VAR(0x3004, 0x02, kObdTypeUInt64, kObdAccSRW, tObdUnsigned64, Framemask_Task, 0x00LL)

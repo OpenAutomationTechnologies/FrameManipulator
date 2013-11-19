@@ -43,9 +43,7 @@ FM_DIR=`readlink -n -f ${FM_REL_DIR}`
 # Relative path to openPOWERLINK root directory
 # (Is converted to absolute)
 source $FM_DIR/project.config
-STACKROOT_REL_DIR=${FM_DIR}/${DIR_OPENPOWERLINK}
-#FERTIG????
-STACKROOT_DIR=`readlink -n -f ${STACKROOT_REL_DIR}`
+STACKROOT_DIR=${FM_DIR}/${DIR_OPENPOWERLINK}
 
 ##################################
 # SW is for CN
@@ -140,5 +138,5 @@ ${STACKROOT_DIR}/stack/src/user/veth/veth-noos.c \
 ${STACKROOT_DIR}/stack/src/user/ledu.c \
 ${STACKROOT_DIR}/examples/demo_cn_embedded/event-cn.c \
 ${FM_DIR}/app/main.c \
-${FM_DIR}/libs/framemanipulator/framemanipulator.c \
+${FM_DIR}/libs/framemanipulator/frameman.c \
 "

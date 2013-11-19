@@ -44,11 +44,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //------------------------------------------------------------------------------
 #include <Epl.h>
 
-
-
 #include <event.h>
 
-#include "Framemanipulator.h"
+#include "frameman.h"
 
 //============================================================================//
 //            G L O B A L   D E F I N I T I O N S                             //
@@ -226,7 +224,7 @@ static tEplKernel initPowerlink(tInstance* pInstance_p)
 
     // set callback functions
     initParam.m_pfnCbEvent = processEvents;
-    initParam.m_pfnCbSync  = SyncFM;//FM PDO-Callback;
+    initParam.m_pfnCbSync  = frameman_syncCb;//FM PDO-Callback;
 
     // initialize POWERLINK stack
     ret = oplk_init(&initParam);
@@ -238,7 +236,7 @@ static tEplKernel initPowerlink(tInstance* pInstance_p)
 
 
     // initialize FM
-    ret=FM_Init();
+    ret=frameman_init();
     if (ret != kEplSuccessful)
     {
         printf("linking FM vars... error\n\n");
