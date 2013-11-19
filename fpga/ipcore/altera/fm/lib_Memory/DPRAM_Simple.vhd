@@ -46,7 +46,7 @@ USE ieee.std_logic_1164.all;
 LIBRARY altera_mf;
 USE altera_mf.all;
 
-ENTITY DPRAM IS
+ENTITY DPRAM_Simple IS
     generic(gWordWidth:natural:=8;
             gAddrWidth:natural:=11);
     PORT
@@ -63,10 +63,10 @@ ENTITY DPRAM IS
         q_a         : OUT STD_LOGIC_VECTOR (gWordWidth-1 DOWNTO 0);
         q_b         : OUT STD_LOGIC_VECTOR (gWordWidth-1 DOWNTO 0)
     );
-END DPRAM;
+END DPRAM_Simple;
 
 
-ARCHITECTURE SYN OF DPRAM IS
+ARCHITECTURE SYN OF DPRAM_Simple IS
 
     SIGNAL sub_wire0    : STD_LOGIC_VECTOR (gWordWidth-1 DOWNTO 0);
     SIGNAL sub_wire1    : STD_LOGIC_VECTOR (gWordWidth-1 DOWNTO 0);

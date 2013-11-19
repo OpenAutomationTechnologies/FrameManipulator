@@ -64,7 +64,7 @@ architecture two_seg_arch of Data_Buffer is
 
     --frame-data memory ----------------------------------------------------------------------
     --dual-port-ram without byteenable, with the same clock domain
-    component DPRAM
+    component DPRAM_Simple
         generic(gWordWidth:natural:=8;
                 gAddrWidth:natural:=11);
         PORT
@@ -146,7 +146,7 @@ begin
     --Buffer for Frames --------------------------------------------------------------------------
     --Port A: incoming frame-data
     --Port B: outgoing frame-data and frame header manipulation
-    FBuffer:DPRAM
+    FBuffer:DPRAM_Simple
     generic map(gWordWidth=>gDataWidth,
                 gAddrWidth=>gDataAddrWidth)
     port map (  clock=>clk,
