@@ -1,72 +1,40 @@
-/****************************************************************************
+/**
+********************************************************************************
+\file   EplCfg.h
 
-  (c) SYSTEC electronic GmbH, D-07973 Greiz, August-Bebel-Str. 29
-      www.systec-electronic.com
+\brief  configuration file
 
-  Project:      openPOWERLINK
+This header file configures the POWERLINK node.
 
-  Description:  configuration file
+*******************************************************************************/
 
-  License:
+/*------------------------------------------------------------------------------
+Copyright (c) 2012, Bernecker+Rainer Industrie-Elektronik Ges.m.b.H. (B&R)
+All rights reserved.
 
-    Redistribution and use in source and binary forms, with or without
-    modification, are permitted provided that the following conditions
-    are met:
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of the copyright holders nor the
+      names of its contributors may be used to endorse or promote products
+      derived from this software without specific prior written permission.
 
-    1. Redistributions of source code must retain the above copyright
-       notice, this list of conditions and the following disclaimer.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDERS BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+------------------------------------------------------------------------------*/
 
-    2. Redistributions in binary form must reproduce the above copyright
-       notice, this list of conditions and the following disclaimer in the
-       documentation and/or other materials provided with the distribution.
-
-    3. Neither the name of SYSTEC electronic GmbH nor the names of its
-       contributors may be used to endorse or promote products derived
-       from this software without prior written permission. For written
-       permission, please contact info@systec-electronic.com.
-
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-    COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-    POSSIBILITY OF SUCH DAMAGE.
-
-    Severability Clause:
-
-        If a provision of this License is or becomes illegal, invalid or
-        unenforceable in any jurisdiction, that shall not affect:
-        1. the validity or enforceability in that jurisdiction of any other
-           provision of this License; or
-        2. the validity or enforceability in other jurisdictions of that or
-           any other provision of this License.
-
-  -------------------------------------------------------------------------
-
-                $RCSfile: EplCfg.h,v $
-
-                $Author: Michael.Ulbricht $
-
-                $Revision: 1.5 $  $Date: 2010/08/11 09:53:36 $
-
-                $State: Exp $
-
-                Build Environment:
-                    ...
-
-  -------------------------------------------------------------------------
-
-  Revision History:
-
-  2010-03-23    m.u.: Start of Implementation
-
-****************************************************************************/
 
 #ifndef _EPLCFG_H_
 #define _EPLCFG_H_
@@ -78,8 +46,6 @@
 // =========================================================================
 // generic defines which for whole EPL Stack
 // =========================================================================
-#define EPL_USE_DELETEINST_FUNC TRUE
-
 // needed to support datatypes over 32 bit by global.h
 #define USE_VAR64
 
@@ -94,11 +60,18 @@
 // be adapted and tested.
 //#define TARGET_HARDWARE                 TGTHW_PC_WRAPP
 
-// use no FIFOs, make direct calls
-//#define EPL_USE_SHAREDBUFF   FALSE
+// don't use shared buff any more
+#define EPL_USE_SHAREDBUFF   FALSE
 
-// do not use kernel part event queue (high priority), so make direct calls for kernel part events
-#define EPL_EVENT_USE_KERNEL_QUEUE      FALSE
+// determine event queue implementation
+// -> internal and u2k queues: direct call
+// -> k2u queue: circular buffer
+#define EPL_EVENT_K2U_QUEUE             EPL_QUEUE_CIRCBUF
+#define EPL_EVENT_U2K_QUEUE             EPL_QUEUE_DIRECT
+#define EPL_EVENT_KINT_QUEUE            EPL_QUEUE_DIRECT
+#define EPL_EVENT_UINT_QUEUE            EPL_QUEUE_DIRECT
+
+#define CONFIG_DLLCAL_QUEUE             EPL_QUEUE_DIRECT
 
 #ifndef BENCHMARK_MODULES
 //#define BENCHMARK_MODULES       0 //0xEE800042L
@@ -118,8 +91,8 @@
 // EPL_MODULE_INTEGRATION defines all modules which are included in
 // EPL application. Please add or delete modules for your application.
 
-#define EPL_MODULE_INTEGRATION  (0 \
-                                | EPL_MODULE_OBDK \
+#define EPL_MODULE_INTEGRATION     (0 \
+                                | EPL_MODULE_OBD \
                                 | EPL_MODULE_PDOU \
                                 | EPL_MODULE_PDOK \
                                 | EPL_MODULE_SDOS \
@@ -133,7 +106,7 @@
                                 | EPL_MODULE_LEDU \
                                 )
 
-/*                              | EPL_MODULE_PDOU \ */
+/*                                | EPL_MODULE_PDOU \ */
 
 
 
@@ -174,6 +147,13 @@
 // openMAC supports auto-response delay
 #define EDRV_AUTO_RESPONSE_DELAY        TRUE
 
+// Number of receive buffers for deferred release of Asnd frames
+#define EDRV_ASND_NUM_RX_BUFFERS        6
+
+// Number of receive buffers for deferred release of generic Ethernet frames
+#define EDRV_ETH_NUM_RX_BUFFERS         6
+
+
 // =========================================================================
 // Data Link Layer (DLL) specific defines
 // =========================================================================
@@ -200,26 +180,41 @@
 // CN supports PRes Chaining
 #define EPL_DLL_PRES_CHAINING_CN        TRUE
 
-// Disable deferred release of rx-buffers until Edrv for openMAC supports it
-#define EPL_DLL_DISABLE_DEFERRED_RXFRAME_RELEASE    TRUE
+// Disable deferred release of isochronous receive frames (Preq. Pres)
+#define EPL_DLL_DEFERRED_RXFRAME_RELEASE_ISOCHRONOUS    FALSE
+
+// Enable deferred release of asynchronous receive frames (Asnd, non POWERLINK)
+#define EPL_DLL_DEFERRED_RXFRAME_RELEASE_ASYNCHRONOUS    TRUE
+
+// Asynchronous transmit buffer for NMT frames in bytes
+#define DLLCAL_BUFFER_SIZE_TX_NMT           4096
+
+// Asynchronous transmit buffer for generic Asnd frames in bytes
+#define DLLCAL_BUFFER_SIZE_TX_GEN_ASND      8192
+
+// Asynchronous transmit buffer for generic Ethernet frames in bytes
+#define DLLCAL_BUFFER_SIZE_TX_GEN_ETH       8192
+
+// Asynchronous transmit buffer for sync response frames in bytes
+#define DLLCAL_BUFFER_SIZE_TX_SYNC          4096
+
+// Size of kernel to user queue
+#define EVENT_SIZE_CIRCBUF_KERNEL_TO_USER   8192
 
 // =========================================================================
 // OBD specific defines
 // =========================================================================
 
-#define EPL_OBD_USE_KERNEL              TRUE
-
-// switch this define to TRUE if Epl should compare object range automatically
-//#define EPL_OBD_CHECK_OBJECT_RANGE          FALSE
-#define EPL_OBD_CHECK_OBJECT_RANGE          TRUE
+// switch this define to TRUE if Epl should compare object range
+// automaticly
+#define CONFIG_OBD_CHECK_OBJECT_RANGE          FALSE
+//#define CONFIG_OBD_CHECK_OBJECT_RANGE          TRUE
 
 // set this define to TRUE if there are strings or domains in OD, which
 // may be changed in object size and/or object data pointer by its object
 // callback function (called event kObdEvWrStringDomain)
-//#define EPL_OBD_USE_STRING_DOMAIN_IN_RAM    FALSE
-#define EPL_OBD_USE_STRING_DOMAIN_IN_RAM    TRUE
-
-#define EPL_OBD_USE_VARIABLE_SUBINDEX_TAB TRUE
+//#define CONFIG_OBD_USE_STRING_DOMAIN_IN_RAM    FALSE
+#define CONFIG_OBD_USE_STRING_DOMAIN_IN_RAM    TRUE
 
 // =========================================================================
 // Timer module specific defines
@@ -227,6 +222,8 @@
 
 // if TRUE the high resolution timer module will be used
 #define EPL_TIMER_USE_HIGHRES           FALSE
+
+
 
 // =========================================================================
 // SDO module specific defines
@@ -238,6 +235,7 @@
 //#define EPL_MAX_SDO_COM_CON         100
 //#define EPL_SDO_MAX_CONNECTION_UDP  50
 
+
 // =========================================================================
 // API Layer specific defines
 // =========================================================================
@@ -248,31 +246,25 @@
 // =========================================================================
 // defines for flash update function
 // =========================================================================
-//#define CONFIG_IIB_IS_PRESENT                                  ///< IIB is stored in flash
 #define CONFIG_FACTORY_IIB_FLASH_ADRS          0x00400000      ///< flash address of factory IIB
 #define CONFIG_USER_IIB_FLASH_ADRS             0x00410000      ///< flash address of user IIB
 #define CONFIG_USER_IMAGE_FLASH_ADRS           0x00200000      ///< flash address of user image
-#define CONFIG_USER_IIB_VERSION                1               ///< used IIB version
+#define CONFIG_USER_IIB_VERSION                2               ///< used IIB version
 
 // =========================================================================
 // defines for FPGA reconfiguration
 // =========================================================================
 #define CONFIG_DISABLE_WATCHDOG            ///< if defined, watchdog timer will be disabled
-//#define CONFIG_USER_IMAGE_IN_FLASH         ///< this define enables user image reconfiguration
+#define CONFIG_USER_IMAGE_IN_FLASH         ///< this define enables user image reconfiguration
 
 // =========================================================================
-// defines for POWERLINK device identification and configuration
+// defines for POWERLINK identification
 // =========================================================================
-// identification parameters
 #define CONFIG_IDENT_PRODUCT_CODE           0x00000064
 #define CONFIG_IDENT_REVISION               0x10020
 #define CONFIG_IDENT_VENDOR_ID              0x0100006C
 #define CONFIG_IDENT_SERIAL_NUMBER          0
 #define CONFIG_IDENT_DEVICE_NAME            "POWERLINK FM"
-
-// PDO size hardware restrictions
-#define CONFIG_ISOCHR_TX_MAX_PAYLOAD   36
-#define CONFIG_ISOCHR_RX_MAX_PAYLOAD   1490
 
 #endif //_EPLCFG_H_
 

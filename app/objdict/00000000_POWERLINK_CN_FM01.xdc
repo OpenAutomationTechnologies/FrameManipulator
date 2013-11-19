@@ -1500,52 +1500,6 @@
 
 
           <!-- Standardised Device Profile Area (0x6000 - 0x9FFF): may be used according to a CiA device profile. The profile to be used is given by NMT_DeviceType_U32 -->
-          <Object index="6000" name="DigitalInput_00h_AU8" objectType="8" dataType="0005">
-            <SubObject subIndex="00" name="NumberOfEntries" objectType="7" dataType="0005" accessType="const" defaultValue="4" PDOmapping="no"/>
-            <SubObject subIndex="01" name="DigitalInput" objectType="7" dataType="0005" accessType="ro" PDOmapping="TPDO"/>
-            <SubObject subIndex="02" name="DigitalInput" objectType="7" dataType="0005" accessType="ro" PDOmapping="TPDO"/>
-            <SubObject subIndex="03" name="DigitalInput" objectType="7" dataType="0005" accessType="ro" PDOmapping="TPDO"/>
-            <SubObject subIndex="04" name="DigitalInput" objectType="7" dataType="0005" accessType="ro" PDOmapping="TPDO"/>
-          </Object>
-          <Object index="6200" name="DigitalOutput_00h_AU8" objectType="8" dataType="0005">
-            <SubObject subIndex="00" name="NumberOfEntries" objectType="7" dataType="0005" accessType="const" defaultValue="4" PDOmapping="no"/>
-            <SubObject subIndex="01" name="DigitalOutput" objectType="7" dataType="0005" accessType="rw" PDOmapping="RPDO"/>
-            <SubObject subIndex="02" name="DigitalOutput" objectType="7" dataType="0005" accessType="rw" PDOmapping="RPDO"/>
-            <SubObject subIndex="03" name="DigitalOutput" objectType="7" dataType="0005" accessType="rw" PDOmapping="RPDO"/>
-            <SubObject subIndex="04" name="DigitalOutput" objectType="7" dataType="0005" accessType="rw" PDOmapping="RPDO"/>
-          </Object>
-          <Object index="6400" name="AnalogueInput_00h_AI8" objectType="8" dataType="0002">
-            <SubObject subIndex="00" name="NumberOfEntries" objectType="7" dataType="0005" accessType="const" defaultValue="4" PDOmapping="no"/>
-            <SubObject subIndex="01" name="AnalogueInput" objectType="7" dataType="0002" accessType="ro" PDOmapping="TPDO"/>
-            <SubObject subIndex="02" name="AnalogueInput" objectType="7" dataType="0002" accessType="ro" PDOmapping="TPDO"/>
-            <SubObject subIndex="03" name="AnalogueInput" objectType="7" dataType="0002" accessType="ro" PDOmapping="TPDO"/>
-            <SubObject subIndex="04" name="AnalogueInput" objectType="7" dataType="0002" accessType="ro" PDOmapping="TPDO"/>
-          </Object>
-          <Object index="6401" name="AnalogueInput_00h_AI16" objectType="8" dataType="0003">
-            <SubObject subIndex="00" name="NumberOfEntries" objectType="7" dataType="0005" accessType="const" defaultValue="2" PDOmapping="no"/>
-            <SubObject subIndex="01" name="AnalogueInput" objectType="7" dataType="0003" accessType="ro" PDOmapping="TPDO"/>
-            <SubObject subIndex="02" name="AnalogueInput" objectType="7" dataType="0003" accessType="ro" PDOmapping="TPDO"/>
-          </Object>
-          <Object index="6402" name="AnalogueInput_00h_AI32" objectType="8" dataType="0004">
-            <SubObject subIndex="00" name="NumberOfEntries" objectType="7" dataType="0005" accessType="const" defaultValue="1" PDOmapping="no"/>
-            <SubObject subIndex="01" name="AnalogueInput" objectType="7" dataType="0004" accessType="ro" PDOmapping="TPDO"/>
-          </Object>
-          <Object index="6410" name="AnalogueOutput_00h_AI8" objectType="8" dataType="0002">
-            <SubObject subIndex="00" name="NumberOfEntries" objectType="7" dataType="0005" accessType="const" defaultValue="4" PDOmapping="no"/>
-            <SubObject subIndex="01" name="AnalogueOutput" objectType="7" dataType="0002" accessType="rw" PDOmapping="RPDO"/>
-            <SubObject subIndex="02" name="AnalogueOutput" objectType="7" dataType="0002" accessType="rw" PDOmapping="RPDO"/>
-            <SubObject subIndex="03" name="AnalogueOutput" objectType="7" dataType="0002" accessType="rw" PDOmapping="RPDO"/>
-            <SubObject subIndex="04" name="AnalogueOutput" objectType="7" dataType="0002" accessType="rw" PDOmapping="RPDO"/>
-          </Object>
-          <Object index="6411" name="AnalogueOutput_00h_AI16" objectType="8" dataType="0003">
-            <SubObject subIndex="00" name="NumberOfEntries" objectType="7" dataType="0005" accessType="const" defaultValue="2" PDOmapping="no"/>
-            <SubObject subIndex="01" name="AnalogueOutput" objectType="7" dataType="0003" accessType="rw" PDOmapping="RPDO"/>
-            <SubObject subIndex="02" name="AnalogueOutput" objectType="7" dataType="0003" accessType="rw" PDOmapping="RPDO"/>
-          </Object>
-          <Object index="6412" name="AnalogueOutput_00h_AI32" objectType="8" dataType="0004">
-            <SubObject subIndex="00" name="NumberOfEntries" objectType="7" dataType="0005" accessType="const" defaultValue="1" PDOmapping="no"/>
-            <SubObject subIndex="01" name="AnalogueOutput" objectType="7" dataType="0004" accessType="rw" PDOmapping="RPDO"/>
-          </Object>
         </ObjectList>
       </ApplicationLayers>
       <TransportLayers/>
