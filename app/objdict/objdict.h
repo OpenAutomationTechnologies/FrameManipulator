@@ -493,6 +493,10 @@ OBD_BEGIN ()
             OBD_SUBINDEX_RAM_VAR(0x3004, 0x40, kObdTypeUInt64, kObdAccSRW, tObdUnsigned64, Framemask_Task, 0x00LL)
         OBD_END_INDEX(0x3004)
 
+        // Object 3005h: FM_Vers
+        OBD_BEGIN_INDEX_RAM(0x3005, 0x01, NULL)
+           OBD_SUBINDEX_RAM_VSTRING(0x3005, 0x00, kObdAccR, fm_version, OBD_MAX_STRING_SIZE, "0.1.0")
+        OBD_END_INDEX(0x3005)
 
     OBD_END_PART ()
 

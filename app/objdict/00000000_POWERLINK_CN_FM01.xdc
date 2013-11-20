@@ -1351,7 +1351,7 @@
             <SubObject subIndex="3E" name="Settings2_U64" objectType="7" dataType="001B" accessType="rw" PDOmapping="no" defaultValue="0x0000000000000000"/>
             <SubObject subIndex="3F" name="Settings2_U64" objectType="7" dataType="001B" accessType="rw" PDOmapping="no" defaultValue="0x0000000000000000"/>
             <SubObject subIndex="40" name="Settings2_U64" objectType="7" dataType="001B" accessType="rw" PDOmapping="no" defaultValue="0x0000000000000000"/>
-        </Object> 
+        </Object>
 
 
         <!-- FrameManipulator Area -->
@@ -1497,7 +1497,7 @@
             <SubObject subIndex="40" name="FrameMask_U64" objectType="7" dataType="001B" accessType="rw" PDOmapping="no" defaultValue="0x0000000000000000"/>
         </Object>
 
-
+        <Object index="3005" name="FM_Vers_VS" objectType="7" dataType="0009" accessType="const" PDOmapping="no" defaultValue="0.1.0"/>
 
           <!-- Standardised Device Profile Area (0x6000 - 0x9FFF): may be used according to a CiA device profile. The profile to be used is given by NMT_DeviceType_U32 -->
         </ObjectList>
