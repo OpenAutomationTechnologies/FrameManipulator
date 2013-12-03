@@ -1,0 +1,46 @@
+#!/bin/bash
+# This script gets the openPOWERLINK stack sources specified by project.config.
+
+ROOT_DIR=$PWD
+REPO_PATH=$1
+
+source $ROOT_DIR/project.config
+
+checkoutOplk () {
+    mkdir $DIR_OPENPOWERLINK -p
+    git clone $REPO_PATH $DIR_OPENPOWERLINK -b $VERSION_OPENPOWERLINK
+
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
+
+    if [ -n "${HASH_OPENPOWERLINK}" ];
+    then
+        pushd $DIR_OPENPOWERLINK
+        git checkout $HASH_OPENPOWERLINK
+
+        if [ $? -ne 0 ]; then
+            popd
+            exit 1
+        fi
+        popd
+    fi
+
+    exit 0
+}
+
+if [ -z "${REPO_PATH}" ];
+then
+    REPO_PATH=$REPO_OPENPOWERLINK
+fi
+
+echo "INFO: Get needed openPOWERLINK revision from $REPO_PATH"
+
+rm $DIR_OPENPOWERLINK -rf
+
+checkoutOplk
+RET=$?
+
+echo "INFO: Done"
+
+exit $RET
