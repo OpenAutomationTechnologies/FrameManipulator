@@ -60,14 +60,14 @@ BSP_DIR=./bsp
 ##################################
 # Include path
 INCLUDES=". \
-${STACKROOT_DIR}/examples/demo_cn_embedded \
 ${STACKROOT_DIR}/include \
 ${STACKROOT_DIR}/libs/omethlib \
 ${STACKROOT_DIR}/libs/circbuf \
-${STACKROOT_DIR}/stack/include/target/openmac \
+${STACKROOT_DIR}/stack/include/target \
 ${STACKROOT_DIR}/stack/src/arch/altera_nios2 \
 ${STACKROOT_DIR}/stack/src \
 ${STACKROOT_DIR}/objdicts/generic \
+${STACKROOT_DIR}/examples/common/gpio \
 ${FM_DIR}/app/objdict \
 ${FM_DIR}/libs/framemanipulator"
 
@@ -81,13 +81,14 @@ ${STACKROOT_DIR}/libs/omethlib/omethlib_phycfg_bemicro.c \
 ${STACKROOT_DIR}/libs/circbuf/circbuffer.c \
 ${STACKROOT_DIR}/libs/circbuf/circbuf-noos.c \
 ${STACKROOT_DIR}/libs/trace/trace-printf.c \
+${STACKROOT_DIR}/stack/src/arch/altera_nios2/openmac-nios2.c \
 ${STACKROOT_DIR}/stack/src/arch/altera_nios2/target-nios2.c \
 ${STACKROOT_DIR}/stack/src/arch/altera_nios2/lock-localnoos.c \
 ${STACKROOT_DIR}/stack/src/common/debug.c \
 ${STACKROOT_DIR}/stack/src/common/errstring.c \
 ${STACKROOT_DIR}/stack/src/common/dll/dllcal-direct.c \
 ${STACKROOT_DIR}/stack/src/common/event/event.c \
-${STACKROOT_DIR}/stack/src/common/timer/timer-generic.c \
+${STACKROOT_DIR}/stack/src/user/timer/timer-generic.c \
 ${STACKROOT_DIR}/stack/src/kernel/ctrl/ctrlk.c \
 ${STACKROOT_DIR}/stack/src/kernel/ctrl/ctrlkcal-direct.c \
 ${STACKROOT_DIR}/stack/src/kernel/dll/dllk.c \
@@ -132,11 +133,10 @@ ${STACKROOT_DIR}/stack/src/user/pdo/pdoucalmem-local.c \
 ${STACKROOT_DIR}/stack/src/user/pdo/pdoucalsync-null.c \
 ${STACKROOT_DIR}/stack/src/user/pdo/pdoucal-triplebufshm.c \
 ${STACKROOT_DIR}/stack/src/user/sdo/sdo-asndu.c \
-${STACKROOT_DIR}/stack/src/user/sdo/sdo-asysequ.c \
+${STACKROOT_DIR}/stack/src/user/sdo/sdo-sequ.c \
 ${STACKROOT_DIR}/stack/src/user/sdo/sdo-comu.c \
-${STACKROOT_DIR}/stack/src/user/veth/veth-noos.c \
 ${STACKROOT_DIR}/stack/src/user/ledu.c \
-${STACKROOT_DIR}/examples/demo_cn_embedded/event-cn.c \
+${STACKROOT_DIR}/examples/common/gpio/gpio-nios2.c \
 ${FM_DIR}/app/main.c \
 ${FM_DIR}/libs/framemanipulator/frameman.c \
 "

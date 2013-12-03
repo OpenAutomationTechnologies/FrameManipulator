@@ -147,12 +147,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // openMAC supports auto-response delay
 #define EDRV_AUTO_RESPONSE_DELAY        TRUE
 
-// Number of receive buffers for deferred release of Asnd frames
-#define EDRV_ASND_NUM_RX_BUFFERS        6
-
-// Number of receive buffers for deferred release of generic Ethernet frames
-#define EDRV_ETH_NUM_RX_BUFFERS         6
-
 
 // =========================================================================
 // Data Link Layer (DLL) specific defines
@@ -180,11 +174,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // CN supports PRes Chaining
 #define EPL_DLL_PRES_CHAINING_CN        TRUE
 
-// Disable deferred release of isochronous receive frames (Preq. Pres)
-#define EPL_DLL_DEFERRED_RXFRAME_RELEASE_ISOCHRONOUS    FALSE
+// Disable deferred release of rx-buffers until Edrv for openMAC supports it
+#define EPL_DLL_DISABLE_DEFERRED_RXFRAME_RELEASE    TRUE
 
-// Enable deferred release of asynchronous receive frames (Asnd, non POWERLINK)
-#define EPL_DLL_DEFERRED_RXFRAME_RELEASE_ASYNCHRONOUS    TRUE
 
 // Asynchronous transmit buffer for NMT frames in bytes
 #define DLLCAL_BUFFER_SIZE_TX_NMT           4096

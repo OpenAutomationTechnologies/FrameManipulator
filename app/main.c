@@ -43,10 +43,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // includes
 //------------------------------------------------------------------------------
 #include <Epl.h>
-
-#include <event.h>
-
-#include "frameman.h"
+#include <gpio.h>
+#include <frameman.h>
 
 //============================================================================//
 //            G L O B A L   D E F I N I T I O N S                             //
@@ -127,7 +125,7 @@ int main (void)
     target_init();
 
     // get node ID from input
-    nodeid = target_getNodeid();
+    nodeid = gpio_getNodeid();
 
     // initialize instance
     EPL_MEMSET(&instance_l, 0, sizeof(instance_l));
@@ -141,10 +139,8 @@ int main (void)
     EPL_MEMCPY(instance_l.aMacAddr, aMacAddr, sizeof(aMacAddr));
     instance_l.aMacAddr[5]  = instance_l.nodeId;
 
-    initEvents(&eventCbPowerlink);
-
     PRINTF("----------------------------------------------------\n");
-    PRINTF("openPOWERLINK embedded CN DEMO application\n");
+    PRINTF("openPOWERLINK Frame Manipulator CN\n");
     PRINTF("----------------------------------------------------\n");
 
     PRINTF("NODEID=0x%02X\n", instance_l.nodeId);
@@ -223,7 +219,7 @@ static tEplKernel initPowerlink(tInstance* pInstance_p)
     initParam.m_fSyncOnPrcNode            = FALSE;
 
     // set callback functions
-    initParam.m_pfnCbEvent = processEvents;
+    initParam.m_pfnCbEvent = eventCbPowerlink;
     initParam.m_pfnCbSync  = frameman_syncCb;//FM PDO-Callback;
 
     // initialize POWERLINK stack
@@ -329,6 +325,7 @@ static tEplKernel eventCbPowerlink(tEplApiEventType EventType_p, tEplApiEventArg
 
     UNUSED_PARAMETER(pUserArg_p);
 
+    //FIXME: Control PLK status/error LEDs
     switch(EventType_p)
     {
         case kEplApiEventNmtStateChange:
