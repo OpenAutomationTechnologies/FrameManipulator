@@ -325,7 +325,6 @@ static tEplKernel eventCbPowerlink(tEplApiEventType EventType_p, tEplApiEventArg
 
     UNUSED_PARAMETER(pUserArg_p);
 
-    //FIXME: Control PLK status/error LEDs
     switch(EventType_p)
     {
         case kEplApiEventNmtStateChange:
@@ -338,6 +337,23 @@ static tEplKernel eventCbPowerlink(tEplApiEventType EventType_p, tEplApiEventArg
 
                     // NMT off state is reached
                     instance_l.fGsOff = TRUE;
+                    break;
+
+                default:
+                    break;
+            }
+            break;
+
+        case kEplApiEventLed:
+            //activate LEDs
+            switch(pEventArg_p->m_Led.m_LedType)
+            {
+                case kLedTypeStatus:
+                    gpio_setStatusLed(pEventArg_p->m_Led.m_fOn);
+                    break;
+
+                case kLedTypeError:
+                    gpio_setErrorLed(pEventArg_p->m_Led.m_fOn);
                     break;
 
                 default:
