@@ -105,7 +105,7 @@ architecture two_seg_arch of Frame_Creator is
     --generates a valid (or manipulated) CRC
     component CRC_calculator
         port(
-            clk, reset:         in std_logic;
+            clk:                in std_logic;
             iReadBuff_Active:   in std_logic;
             iCRC_Active:        in std_logic;
             iCRCMani:           in std_logic;
@@ -214,10 +214,11 @@ begin
     ------------------------------------------------------------------------------------------
     CRC_calc : CRC_calculator
         port map (
-            clk=>clk, reset=>reset,
-            iReadBuff_Active=>ReadBuff_Active, iCRC_Active=>CRC_Active , iTXD=> TXDBuff,
-            iCRCMani=>iDistCrcEn,
-            oTXD=> TXDCRC);
+            clk                 => clk,
+            iReadBuff_Active    => ReadBuff_Active, iCRC_Active => CRC_Active,
+            iTXD                => TXDBuff,         iCRCMani    => iDistCrcEn,
+            oTXD                => TXDCRC);
+
 
 
     --collection of the different streams for the multiplexer

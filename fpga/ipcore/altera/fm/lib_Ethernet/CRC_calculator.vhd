@@ -25,7 +25,7 @@ use ieee.numeric_std.all;
 
 entity CRC_calculator is
     port(
-        clk, reset:         in std_logic;
+        clk:                in std_logic;
         iReadBuff_Active:   in std_logic;
         iCRC_Active:        in std_logic;
         iCRCMani:           in std_logic;
@@ -36,24 +36,9 @@ end CRC_calculator;
 
 architecture Behave of CRC_calculator is
 
-    --Cnter for reset after the 4 Bytes
-    component Basic_Cnter
-        generic(gCntWidth: natural := 2);
-        port(
-            clk, reset:   in std_logic;
-            iClear:       in std_logic;
-            iEn   :       in std_logic;
-            iStartValue:  in std_logic_vector(gCntWidth-1 downto 0);
-            iEndValue:    in std_logic_vector(gCntWidth-1 downto 0);
-            oQ:           out std_logic_vector(gCntWidth-1 downto 0);
-            oOv:          out std_logic
-        );
-    end component;
-
     SIGNAL  Crc :   std_logic_vector(31 DOWNTO 0);
     SIGNAL  CrcDin: std_logic_vector( 1 DOWNTO 0);
-    signal cnt_res: std_logic;
-    signal CRCcnt:  std_logic_vector(3 downto 0);
+
 begin
 
 
@@ -72,7 +57,6 @@ Calc: PROCESS ( clk, Crc, CrcDin )   IS
 
         IF iCRC_Active = '1'    THEN   --output
             Crc <= Crc(29 DOWNTO 0) & "00";
-            cnt_res<='0';
 
         elsif       iReadBuff_Active = '1' THEN  --calculation
 
@@ -108,22 +92,13 @@ Calc: PROCESS ( clk, Crc, CrcDin )   IS
             Crc(29) <= Crc(27)                  ;
             Crc(30) <= Crc(28)                  ;
             Crc(31) <= Crc(29)                  ;
-            cnt_res<='1';
 
         ELSE                       --else FF
             Crc <= x"FFFFFFFF";
 
-            cnt_res<='1';
         END IF;
     END IF;
 END PROCESS Calc;
-
-    cnt_end:Basic_Cnter
-    generic map(gCntWidth=>4)
-    port map(
-        clk=>clk, reset=>reset,
-        iClear=>cnt_res,iEn=>   '1',iStartValue=>(others=>'0'),iEndValue=>(others=>'1'),
-        oQ=>CRCcnt,oOv=>open);
 
 
     oTXD <= NOT Crc(30) & NOT Crc(31);
