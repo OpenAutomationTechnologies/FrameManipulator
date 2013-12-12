@@ -68,20 +68,23 @@ architecture Behave of read_logic is
         );
     end component;
 
-    signal cnt: std_logic_vector(log2c(gPrescaler)-1 downto 0):=(others=>'0');
+    signal cnt: std_logic_vector(log2c(gPrescaler)-1 downto 0);
     signal difpre:std_logic;
 
-    signal Addr:        std_logic_vector(oAddr'range):=(others=>'0');
+    signal Addr:        std_logic_vector(oAddr'range);
     signal Addr_next:   std_logic_vector(oAddr'range);
 
 begin
 
-    process(clk)
+    process(clk, reset)
     begin
-        if clk'event and clk='1' then
+        if reset = '1' then
+            Addr_next<=(others=>'0');
+        elsif clk'event and clk='1' then
             Addr_next<=Addr;
         end if;
     end process;
+
 
     Prescale:
     if gPrescaler>1 generate
@@ -89,21 +92,44 @@ begin
         difpre_clk : Basic_Cnter
         generic map (gCntWidth => log2c(gPrescaler))
         port map (
-                clk=>clk, reset=>reset,
-                iClear=>iSync,iEn => iEn, iStartValue=>(others=>'0'),iEndValue=>(others=>'1'),
-                oQ => cnt, oOv => open
-                );
+                clk         => clk,
+                reset       => reset,
+                iClear      => iSync,
+                iEn         => iEn,
+                iStartValue => (others=>'0'),
+                iEndValue   => (others=>'1'),
+                oQ          => cnt,
+                oOv         => open
+        );
+
+        difpre<='1' when cnt=(cnt'range=>'0') and iEn='1' else '0';
+
     end generate;
 
-    difpre<='1' when cnt=(cnt'range=>'0') and iEn='1' else '0';
+
+    WithoutPrescale:
+    if gPrescaler<=1 generate
+
+        difpre<='1' when iEn='1' else '0';
+
+    end generate;
+
+
+
 
     buffer_clk : Basic_Cnter
     generic map (gCntWidth => gAddrWidth)
     port map (
-            clk=>clk, reset=>reset,
-            iClear=>iSync,iEn => difpre, iStartValue=>iStartAddr,iEndValue=>(others=>'1'),
-            oQ => Addr, oOv => open
-            );
+            clk         => clk,
+            reset       => reset,
+            iClear      => iSync,
+            iEn         => difpre,
+            iStartValue => iStartAddr,
+            iEndValue   => (others=>'1'),
+            oQ          => Addr,
+            oOv         => open
+    );
+
 
     oAddr<=Addr;
     oRdEn<='1' when Addr/=Addr_next else '0';   --edge detection
