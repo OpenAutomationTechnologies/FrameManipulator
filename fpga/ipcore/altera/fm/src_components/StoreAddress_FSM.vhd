@@ -128,7 +128,7 @@ begin
 
 
     --Moore output
-    process(state_reg,Reg_DataInStartAddr,iDelayTime,iCRCManEn)
+    process(state_reg,Reg_DataInStartAddr,iDelayTime,iCRCManEn, iDataInEndAddr)
     begin
         --store and output of new start position
         Next_DataInStartAddr    <=Reg_DataInStartAddr;

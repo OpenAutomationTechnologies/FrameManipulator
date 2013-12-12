@@ -1,26 +1,27 @@
--- ***********************************************************************
--- *                       Basic_Cnter V1.3                              *
--- ***********************************************************************
--- *                                                                     *
--- * A little mod 2^x counter                                            *
--- *                                                                     *
--- * V1.1                                                                *
--- *                                                                     *
--- * in :iClear         reset signal                                     *
--- *     iEn            Enable signal                                    *
--- *     iStartValue    Value after Clear                                *
--- *     iEndValue      Maximal value => Overflow                        *
--- * out:oQ             current number                                   *
--- *     oOv            overflow signal                                  *
--- *                                                                     *
--- *---------------------------------------------------------------------*
--- *                                                                     *
--- * 27.04.12 V1.0 created Basic_Cnter          by Sebastian Muelhausen  *
--- * 02.05.12 V1.1 Enable added                 by Sebastian Muelhausen  *
--- * 30.05.12 V1.2 Start Value added            by Sebastian Muelhausen  *
--- * 06.08.12 V1.3 End Value added              by Sebastian Muelhausen  *
--- *                                                                     *
--- ***********************************************************************
+-- ***************************************************************************
+-- *                       Basic_Cnter V1.4                                  *
+-- ***************************************************************************
+-- *                                                                         *
+-- * A little mod 2^x counter                                                *
+-- *                                                                         *
+-- * V1.4                                                                    *
+-- *                                                                         *
+-- * in :iClear         reset signal                                         *
+-- *     iEn            Enable signal                                        *
+-- *     iStartValue    Value after Clear                                    *
+-- *     iEndValue      Maximal value => Overflow                            *
+-- * out:oQ             current number                                       *
+-- *     oOv            overflow signal                                      *
+-- *                                                                         *
+-- *-------------------------------------------------------------------------*
+-- *                                                                         *
+-- * 27.04.12 V1.0 created Basic_Cnter              by Sebastian Muelhausen  *
+-- * 02.05.12 V1.1 Enable added                     by Sebastian Muelhausen  *
+-- * 30.05.12 V1.2 Start Value added                by Sebastian Muelhausen  *
+-- * 06.08.12 V1.3 End Value added                  by Sebastian Muelhausen  *
+-- * 10.12.13 V1.4 Added startvalue in process list by Sebastian Muelhausen  *
+-- *                                                                         *
+-- ***************************************************************************
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -57,7 +58,7 @@ begin
 
 
 
-    process(iClear,iEn,iEndValue,r_q)
+    process(iClear, iEn, iStartValue, iEndValue,r_q)
     begin
         r_next<=r_q;
         oOv<='0';

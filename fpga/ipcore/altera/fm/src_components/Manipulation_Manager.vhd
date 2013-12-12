@@ -246,7 +246,7 @@ begin
     --DATA HANDLING (select the right manipulation, output)----------------------------------
 
     --storing data
-    process(iFrameSync,SelectedTask,iTaskSettingData)
+    process(iFrameSync,SelectedTask,iTaskSettingData, ManiSetting)
     begin
         if (SelectedTask='1') then          --task fits => store setting
             ManiSetting_next<= iTaskSettingData(ManiSetting_next'left downto 0);

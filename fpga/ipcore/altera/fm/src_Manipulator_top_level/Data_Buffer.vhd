@@ -164,21 +164,20 @@ begin
                 ManiNext<='0';
             else
                 ManiNext<=iTaskManiEn;
+
+                if ManiEdge='1' then --stores the task setting at the receiving edge
+                    DataStartAddr   <=iDataStartAddr;
+                    ManiOffset      <=iManiSetting(gManiSettingWidth-1 downto gTaskWordWidth);
+                    ManiWords       <=iManiSetting(gTaskWordWidth-1 downto 0);
+
+                end if;
+
             end if;
         end if;
     end process;
 
     ManiEdge<='1' when ManiNext='0' and iTaskManiEn='1' else '0';
 
-
-    --Register for Manipulation-------------------------------------------------------------------
-    --stores the task setting at the receiving edge
-    process(ManiEdge)
-    begin
-        DataStartAddr   <=iDataStartAddr;
-        ManiOffset      <=iManiSetting(gManiSettingWidth-1 downto gTaskWordWidth);
-        ManiWords       <=iManiSetting(gTaskWordWidth-1 downto 0);
-    end process;
 
 
     --Counter for Data Selection-------------------------------------------------------------------
