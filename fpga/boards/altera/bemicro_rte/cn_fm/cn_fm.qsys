@@ -478,7 +478,7 @@
  </module>
  <module
    kind="FrameManipulator"
-   version="1.0"
+   version="0.1.0"
    enabled="1"
    name="FrameManipulator_0">
   <parameter name="gBytesOfTheFrameBuffer" value="1600" />
