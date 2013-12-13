@@ -206,11 +206,11 @@ static tEplKernel initPowerlink(tInstance* pInstance_p)
     initParam.m_dwLossOfFrameTolerance    = 100000;
     initParam.m_dwAsyncSlotTimeout        = 3000000;
     initParam.m_dwWaitSocPreq             = 0;
-    initParam.m_dwDeviceType              = -1;               // NMT_DeviceType_U32
-    initParam.m_dwVendorId                = -1;               // NMT_IdentityObject_REC.VendorId_U32
-    initParam.m_dwProductCode             = -1;               // NMT_IdentityObject_REC.ProductCode_U32
-    initParam.m_dwRevisionNumber          = -1;               // NMT_IdentityObject_REC.RevisionNo_U32
-    initParam.m_dwSerialNumber            = -1;               // NMT_IdentityObject_REC.SerialNo_U32
+    initParam.m_dwDeviceType              = -1;                         // NMT_DeviceType_U32
+    initParam.m_dwVendorId                = CONFIG_IDENT_VENDOR_ID;     // NMT_IdentityObject_REC.VendorId_U32
+    initParam.m_dwProductCode             = CONFIG_IDENT_PRODUCT_CODE;  // NMT_IdentityObject_REC.ProductCode_U32
+    initParam.m_dwRevisionNumber          = -1;                         // NMT_IdentityObject_REC.RevisionNo_U32
+    initParam.m_dwSerialNumber            = -1;                         // NMT_IdentityObject_REC.SerialNo_U32
     initParam.m_dwApplicationSwDate       = 0;
     initParam.m_dwApplicationSwTime       = 0;
     initParam.m_dwSubnetMask              = SUBNET_MASK;
