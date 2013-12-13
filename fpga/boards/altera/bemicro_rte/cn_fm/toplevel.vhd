@@ -163,7 +163,7 @@ architecture rtl of toplevel is
 begin
     SRAM_ADDR       <= sramAddr(SRAM_ADDR'range);
 
-    LED         <=  not LEDG(7 downto 2) & plk_status_error;    --LED is low acitve, LEDG high
+    LED         <=  not (LEDG(7 downto 2) & plk_status_error);      --LED output is low acitve
 
     nodeSwitch  <=  not NODE_SWITCH;    --NODE_SWITCH is low acitve, nodeSwitch high
 
