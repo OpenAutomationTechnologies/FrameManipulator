@@ -833,7 +833,7 @@
  <connection
    kind="clock"
    version="13.0"
-   start="clk100.clk"
+   start="clk50.clk"
    end="FrameManipulator_0.clock_mem_slave" />
  <connection
    kind="avalon"
