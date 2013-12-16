@@ -16,7 +16,7 @@
    {
       datum _sortIndex
       {
-         value = "13";
+         value = "11";
          type = "int";
       }
    }
@@ -27,6 +27,11 @@
          value = "2";
          type = "int";
       }
+      datum sopceditor_expanded
+      {
+         value = "0";
+         type = "boolean";
+      }
    }
    element clk25
    {
@@ -35,6 +40,11 @@
          value = "0";
          type = "int";
       }
+      datum sopceditor_expanded
+      {
+         value = "0";
+         type = "boolean";
+      }
    }
    element clk50
    {
@@ -42,6 +52,11 @@
       {
          value = "1";
          type = "int";
+      }
+      datum sopceditor_expanded
+      {
+         value = "0";
+         type = "boolean";
       }
    }
    element sysid.control_slave
@@ -52,24 +67,11 @@
          type = "String";
       }
    }
-   element epcs_flash_controller_0
-   {
-      datum _sortIndex
-      {
-         value = "8";
-         type = "int";
-      }
-      datum sopceditor_expanded
-      {
-         value = "0";
-         type = "boolean";
-      }
-   }
    element ledg_pio
    {
       datum _sortIndex
       {
-         value = "12";
+         value = "10";
          type = "int";
       }
       datum sopceditor_expanded
@@ -98,7 +100,7 @@
    {
       datum _sortIndex
       {
-         value = "10";
+         value = "8";
          type = "int";
       }
       datum sopceditor_expanded
@@ -111,7 +113,7 @@
    {
       datum _sortIndex
       {
-         value = "4";
+         value = "6";
          type = "int";
       }
    }
@@ -123,17 +125,12 @@
          type = "int";
       }
    }
-   element remote_update_cycloneiii_0
+   element ledg_pio.s1
    {
-      datum _sortIndex
+      datum baseAddress
       {
-         value = "9";
-         type = "int";
-      }
-      datum sopceditor_expanded
-      {
-         value = "0";
-         type = "boolean";
+         value = "8208";
+         type = "String";
       }
    }
    element status_led_pio.s1
@@ -152,35 +149,24 @@
          type = "String";
       }
    }
-   element ledg_pio.s1
-   {
-      datum baseAddress
-      {
-         value = "8208";
-         type = "String";
-      }
-   }
-   element remote_update_cycloneiii_0.s1
-   {
-      datum baseAddress
-      {
-         value = "2048";
-         type = "String";
-      }
-   }
    element sram_0
    {
       datum _sortIndex
       {
-         value = "5";
+         value = "4";
          type = "int";
+      }
+      datum sopceditor_expanded
+      {
+         value = "0";
+         type = "boolean";
       }
    }
    element status_led_pio
    {
       datum _sortIndex
       {
-         value = "11";
+         value = "9";
          type = "int";
       }
       datum sopceditor_expanded
@@ -196,13 +182,23 @@
          value = "7";
          type = "int";
       }
+      datum sopceditor_expanded
+      {
+         value = "0";
+         type = "boolean";
+      }
    }
    element tri_state_0
    {
       datum _sortIndex
       {
-         value = "6";
+         value = "5";
          type = "int";
+      }
+      datum sopceditor_expanded
+      {
+         value = "0";
+         type = "boolean";
       }
    }
 }
@@ -220,7 +216,7 @@
  <parameter name="projectName" value="BeMicro.qpf" />
  <parameter name="sopcBorderPoints" value="false" />
  <parameter name="systemHash" value="1" />
- <parameter name="timeStamp" value="1383917226922" />
+ <parameter name="timeStamp" value="1387214944530" />
  <parameter name="useTestBenchNamingPattern" value="false" />
  <instanceScript></instanceScript>
  <interface name="clk25" internal="clk25.clk_in" type="clock" dir="end" />
@@ -230,11 +226,6 @@
  <interface
    name="tri_state_0_out"
    internal="tri_state_0.out"
-   type="conduit"
-   dir="end" />
- <interface
-   name="epcs_flash"
-   internal="epcs_flash_controller_0.external"
    type="conduit"
    dir="end" />
  <interface
@@ -275,6 +266,11 @@
  <interface
    name="framemanipulator_0_conduit_end"
    internal="FrameManipulator_0.conduit_end"
+   type="conduit"
+   dir="end" />
+ <interface
+   name="epcs_flash"
+   internal="pcp_0.epcs_flash"
    type="conduit"
    dir="end" />
  <module kind="clock_source" version="13.0" enabled="1" name="clk25">
@@ -372,25 +368,6 @@
   <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone IV E" />
  </module>
  <module
-   kind="altera_avalon_epcs_flash_controller"
-   version="13.0.1.99.2"
-   enabled="1"
-   name="epcs_flash_controller_0">
-  <parameter name="autoSelectASMIAtom" value="true" />
-  <parameter name="useASMIAtom" value="false" />
-  <parameter name="clockRate" value="100000000" />
-  <parameter name="deviceFamilyString" value="Cyclone IV E" />
-  <parameter name="autoInitializationFileName">$${FILENAME}_epcs_flash_controller_0</parameter>
- </module>
- <module
-   kind="altera_avalon_remote_update_cycloneiii"
-   version="13.0"
-   enabled="1"
-   name="remote_update_cycloneiii_0">
-  <parameter name="clockFrequency" value="25000000" />
-  <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone IV E" />
- </module>
- <module
    kind="altera_avalon_pio"
    version="13.0.1.99.2"
    enabled="1"
@@ -449,6 +426,9 @@
   <parameter name="AUTO_UNIQUE_ID" value="$${FILENAME}_pcp_0" />
   <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone IV E" />
   <parameter name="AUTO_DEVICE" value="EP4CE22F17C6" />
+  <parameter name="AUTO_CLK25_CLOCK_RATE" value="25000000" />
+  <parameter name="AUTO_CLK25_CLOCK_DOMAIN" value="2" />
+  <parameter name="AUTO_CLK25_RESET_DOMAIN" value="2" />
   <parameter name="AUTO_CLK50_CLOCK_RATE" value="50000000" />
   <parameter name="AUTO_CLK50_CLOCK_DOMAIN" value="3" />
   <parameter name="AUTO_CLK50_RESET_DOMAIN" value="3" />
@@ -470,7 +450,7 @@
   <parameter name="gui_rxBufSize" value="1" />
   <parameter name="gui_rxBurstSize" value="1" />
   <parameter name="gui_tmrCount" value="1" />
-  <parameter name="gui_tmrPulsEn" value="false" />
+  <parameter name="gui_tmrPulseEn" value="false" />
   <parameter name="gui_tmrPulseWdt" value="10" />
   <parameter name="gui_actEn" value="false" />
   <parameter name="AUTO_DMACLK_CLOCK_RATE" value="100000000" />
@@ -487,7 +467,7 @@
   <parameter name="gTaskCount" value="32" />
   <parameter name="gControlBytesPerWord" value="1" />
   <parameter name="gControlAddr" value="1" />
-  <parameter name="AUTO_CLOCK_MEM_SLAVE_CLOCK_RATE" value="100000000" />
+  <parameter name="AUTO_CLOCK_MEM_SLAVE_CLOCK_RATE" value="50000000" />
   <parameter name="AUTO_CLOCK_50_CLOCK_RATE" value="50000000" />
  </module>
  <connection
@@ -545,46 +525,6 @@
    version="13.0"
    start="clk100.clk_reset"
    end="sysid.reset" />
- <connection
-   kind="clock"
-   version="13.0"
-   start="clk100.clk"
-   end="epcs_flash_controller_0.clk" />
- <connection
-   kind="reset"
-   version="13.0"
-   start="clk25.clk_reset"
-   end="epcs_flash_controller_0.reset" />
- <connection
-   kind="reset"
-   version="13.0"
-   start="clk100.clk_reset"
-   end="epcs_flash_controller_0.reset" />
- <connection
-   kind="reset"
-   version="13.0"
-   start="clk50.clk_reset"
-   end="epcs_flash_controller_0.reset" />
- <connection
-   kind="clock"
-   version="13.0"
-   start="clk25.clk"
-   end="remote_update_cycloneiii_0.global_signals_clock" />
- <connection
-   kind="reset"
-   version="13.0"
-   start="clk25.clk_reset"
-   end="remote_update_cycloneiii_0.global_signals_clock_reset" />
- <connection
-   kind="reset"
-   version="13.0"
-   start="clk50.clk_reset"
-   end="remote_update_cycloneiii_0.global_signals_clock_reset" />
- <connection
-   kind="reset"
-   version="13.0"
-   start="clk100.clk_reset"
-   end="remote_update_cycloneiii_0.global_signals_clock_reset" />
  <connection
    kind="clock"
    version="13.0"
@@ -689,24 +629,6 @@
    end="sysid.control_slave">
   <parameter name="arbitrationPriority" value="1" />
   <parameter name="baseAddress" value="0x1000" />
-  <parameter name="defaultConnection" value="false" />
- </connection>
- <connection
-   kind="avalon"
-   version="13.0"
-   start="pcp_0.slow_bridge"
-   end="epcs_flash_controller_0.epcs_control_port">
-  <parameter name="arbitrationPriority" value="1" />
-  <parameter name="baseAddress" value="0x0000" />
-  <parameter name="defaultConnection" value="false" />
- </connection>
- <connection
-   kind="avalon"
-   version="13.0"
-   start="pcp_0.slow_bridge"
-   end="remote_update_cycloneiii_0.s1">
-  <parameter name="arbitrationPriority" value="1" />
-  <parameter name="baseAddress" value="0x0800" />
   <parameter name="defaultConnection" value="false" />
  </connection>
  <connection
@@ -853,6 +775,22 @@
   <parameter name="baseAddress" value="0x0900" />
   <parameter name="defaultConnection" value="false" />
  </connection>
+ <connection kind="clock" version="13.0" start="clk25.clk" end="pcp_0.clk25" />
+ <connection
+   kind="reset"
+   version="13.0"
+   start="clk25.clk_reset"
+   end="pcp_0.rst_clk25" />
+ <connection
+   kind="reset"
+   version="13.0"
+   start="clk50.clk_reset"
+   end="pcp_0.rst_clk25" />
+ <connection
+   kind="reset"
+   version="13.0"
+   start="clk100.clk_reset"
+   end="pcp_0.rst_clk25" />
  <interconnectRequirement for="$system" name="qsys_mm.clockCrossingAdapter" value="HANDSHAKE" />
  <interconnectRequirement for="$system" name="qsys_mm.maxAdditionalLatency" value="1" />
 </system>
