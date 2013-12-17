@@ -52,21 +52,23 @@ set_clock_groups -asynchronous     -group $clkGroupB \
 # sram (IS61WV51216BLL-10TLI)
 ## SRAM is driven by 100 MHz fsm.
 ## Note: The SOPC inserts 2 write and 2 read cycles, thus, the SRAM "sees" 50 MHz!
-set sram_clk        50.0
-set sram_tper        [expr 1000.0 / $sram_clk]
+set sram_clkRd      50.0
+set sram_clkWr      100.0
+set sram_tperRd     [expr 1000.0 / $sram_clkRd]
+set sram_tperWr     [expr 1000.0 / $sram_clkWr]
 ## delay Address Access Time (tAA) = 10.0 ns
 set sram_ddel        10.0
 ## pcb delay
 set sram_tpcb        0.1
-## fpga settings...
-set sram_tco        5.5
-set sram_tsu        [expr $sram_tper - $sram_ddel - $sram_tco - 2*$sram_tpcb]
-set sram_th            0.0
-set sram_tcom        0.0
+## fpga settings... Tco range BeMicro 5..9 ns
+set sram_tco        7.0
+set sram_tsu        [expr $sram_tperRd - $sram_ddel - $sram_tco - 2*$sram_tpcb]
+set sram_th         0.0
+set sram_tcom       0.0
 
-set sram_in_max    [expr $sram_tper - $sram_tsu]
-set sram_in_min    $sram_th
-set sram_out_max    [expr $sram_tper - $sram_tco]
+set sram_in_max     [expr $sram_tperRd - $sram_tsu]
+set sram_in_min     $sram_th
+set sram_out_max    [expr $sram_tperWr - $sram_tco]
 set sram_out_min    $sram_tcom
 
 ## TSU / TH
@@ -118,3 +120,43 @@ set_false_path -from [get_ports NODE_SWITCH[*]] -to [get_registers *]
 # add here your slow IOs...
 #############################################################
 # ----------------------------------------------------------------------------------
+
+###RMII-PHYs
+###############################################################################
+# PCB delay (FPGA <--> PHY(s)) [ns]
+set tpcb            0.1
+
+# RMII Timing [ns]
+set rmii_tsu        4.0
+set rmii_th         2.0
+set rmii_tco        14.0
+set rmii_tcomin     2.0
+
+# I/O MIN/MAX DELAY [ns]
+set rmii_in_max     [expr $rmii_tco    + $tpcb ]
+set rmii_in_min     [expr $rmii_tcomin - $tpcb ]
+set rmii_out_max    [expr $rmii_tsu    + $tpcb ]
+set rmii_out_min    [expr $rmii_th     - $tpcb ]
+
+###############################################################################
+# RMII CLOCK RATE
+create_generated_clock -source $clk50 -name CLK50_virt
+
+## input
+set_input_delay -clock CLK50_virt -max $rmii_in_max [get_ports {PHY_RXDV[*] PHY_RXER[*] PHY_RXD[*]}]
+set_input_delay -clock CLK50_virt -min $rmii_in_min [get_ports {PHY_RXDV[*] PHY_RXER[*] PHY_RXD[*]}]
+## output
+set_output_delay -clock CLK50_virt -max $rmii_out_max [get_ports {PHY_TXEN[*] PHY_TXD[*]}]
+set_output_delay -clock CLK50_virt -min $rmii_out_min [get_ports {PHY_TXEN[*] PHY_TXD[*]}]
+## cut path
+set_false_path -from [get_registers *] -to [get_ports PHY_RESET_n[*]]
+set_false_path -from [get_registers *] -to [get_ports PHY_MDC[*]]
+set_false_path -from [get_registers *] -to [get_ports PHY_MDIO[*]]
+set_false_path -from [get_ports PHY_MDIO[*]] -to [get_registers *]
+## multicycle
+## Note: TX signals are latched at falling edge of 100 MHz signal
+### from FPGA to PHY
+set_multicycle_path -from [get_clocks $clk100] -to [get_ports {PHY_TXEN[*] PHY_TXD[*]}] -setup -start 2
+set_multicycle_path -from [get_clocks $clk100] -to [get_ports {PHY_TXEN[*] PHY_TXD[*]}] -hold -start 1
+# ----------------------------------------------------------------------------------
+
