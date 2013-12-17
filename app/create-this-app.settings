@@ -146,8 +146,10 @@ ${STACKROOT_DIR}/libs/omethlib/omethlib_phycfg_bemicro.c \
 "
 
 SRCFILES_INK=${SRCFILES_COMMON}"
-${STACKROOT_DIR}/libs/omethlib/omethlib_phycfg_ink.c \
+${STACKROOT_DIR}/libs/omethlib/omethlib_phycfg_generic.c \
 "
+
+# ${STACKROOT_DIR}/libs/omethlib/omethlib_phycfg_ink.c \ TODO!!!!!!
 
 
 ##################################
