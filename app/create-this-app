@@ -10,6 +10,7 @@
 
 source create-this-app.settings
 
+
 if [ -z "$SOPC_DIR" ]; then
 echo "Define path to SOPC file in create-this-app.settings!"
 exit 1
@@ -79,6 +80,11 @@ do
           SOPC_DIR=$1
           echo "INFO: Overwritten SOPC_DIR to $SOPC_DIR"
           ;;
+      --ink)
+          SOPC_DIR=${SOPC_DIR_INK}
+          SRCFILES=${SRCFILES_INK}
+          echo "INFO: Started app for the INK-Board"
+          ;;
       --help)
           echo "Usage: ${0} [OPTION]"
           echo
@@ -87,6 +93,8 @@ do
           echo "  --sopcdir PATH path to Quartus project"
           echo "  --rebuild      recreates the Makefile and the BSP"
           echo "  --no-make      do not run make at the end of this script"
+          echo "  --ink          create the app for the INK DE2-115"
+          echo "                 Evaluation Board"
           echo
           echo " Configure the script in the file create-this-app.settings"
           echo " according to your needs before running this script!"

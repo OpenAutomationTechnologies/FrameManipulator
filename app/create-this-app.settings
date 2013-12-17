@@ -51,7 +51,8 @@ PLK_NODE_IS=CONFIG_CN
 
 ##################################
 # Relative path to SOPC file
-SOPC_DIR=${FM_DIR}/fpga/boards/altera/bemicro_rte/cn_fm/
+SOPC_DIR_BEMICRO=${FM_DIR}/fpga/boards/altera/bemicro_rte/cn_fm/
+SOPC_DIR_INK=${FM_DIR}/fpga/boards/altera/terasic_de2_115/cn_fm/
 
 ##################################
 # Relative path to bsp
@@ -73,11 +74,10 @@ ${FM_DIR}/libs/framemanipulator"
 
 ##################################
 # Source files
-SRCFILES="\
+SRCFILES_COMMON="\
 ${STACKROOT_DIR}/libs/ami/amiarm.c \
 ${STACKROOT_DIR}/libs/omethlib/omethlib.c \
 ${STACKROOT_DIR}/libs/omethlib/omethlibint.c \
-${STACKROOT_DIR}/libs/omethlib/omethlib_phycfg_bemicro.c \
 ${STACKROOT_DIR}/libs/circbuf/circbuffer.c \
 ${STACKROOT_DIR}/libs/circbuf/circbuf-noos.c \
 ${STACKROOT_DIR}/libs/trace/trace-printf.c \
@@ -140,3 +140,18 @@ ${STACKROOT_DIR}/examples/common/gpio/gpio-nios2.c \
 ${FM_DIR}/app/main.c \
 ${FM_DIR}/libs/framemanipulator/frameman.c \
 "
+
+SRCFILES_BEMICRO=${SRCFILES_COMMON}"
+${STACKROOT_DIR}/libs/omethlib/omethlib_phycfg_bemicro.c \
+"
+
+SRCFILES_INK=${SRCFILES_COMMON}"
+${STACKROOT_DIR}/libs/omethlib/omethlib_phycfg_ink.c \
+"
+
+
+##################################
+# Default board select
+SRCFILES=$SRCFILES_BEMICRO
+SOPC_DIR=$SOPC_DIR_BEMICRO
+
