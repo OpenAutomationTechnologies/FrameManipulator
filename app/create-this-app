@@ -231,6 +231,20 @@ rebuild-bsp:
 .PHONY: fpga
 fpga: rebuild-fpga rebuild-bsp
 
+# Rule to print out Sysid
+.PHONY: print-sysid
+print-sysid:
+	@$(ECHO) $(SOPC_SYSID_FLAG)
+
+
+# Rule to print out Sysid
+.PHONY: print-base-address
+print-base-address:
+	@$(ECHO) $($(basename $(PROGRAM_EPCS_TARGET))_START)
+
+
+
+
 Heredoc
 
 # FIX CPU NAME ISSUE
