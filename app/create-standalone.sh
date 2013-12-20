@@ -33,13 +33,12 @@ do
 done
 
 
-#Create sources
-echo "Start create-this-app"
-chmod +x create-this-app
-./create-this-app --rebuild || {
-    echo "create-this-app failed"
+
+if [ ! -f ./Makefile ]; then
+    echo "Missing Makefile!"
+    echo "Please run create-this-app first"
     exit 1
-}
+fi
 
 echo "Create standalone-folder $STANDALONE_DIR"
 mkdir "$STANDALONE_DIR"
