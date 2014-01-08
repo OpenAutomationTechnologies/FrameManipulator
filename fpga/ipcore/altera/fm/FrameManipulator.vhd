@@ -49,7 +49,9 @@ entity FrameManipulator is
         sc_byteenable:  in std_logic_vector(gControlBytesPerWord-1 downto 0);
 
         oTXData:        out std_logic_vector(1 downto 0);
-        oTXDV:          out std_logic
+        oTXDV:          out std_logic;
+
+        oLED:           out std_logic_vector(1 downto 0)
      );
 end FrameManipulator;
 
@@ -453,6 +455,10 @@ begin
             oTXDV<=TXDV;
         end if;
     end process;
+
+
+    --output of active and abort LED:
+    oLED    <= TestActive & StopTest;
 
 
 end two_seg_arch;

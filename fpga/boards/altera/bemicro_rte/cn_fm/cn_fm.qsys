@@ -125,19 +125,19 @@
          type = "int";
       }
    }
-   element ledg_pio.s1
-   {
-      datum baseAddress
-      {
-         value = "8208";
-         type = "String";
-      }
-   }
    element status_led_pio.s1
    {
       datum baseAddress
       {
          value = "4128";
+         type = "String";
+      }
+   }
+   element ledg_pio.s1
+   {
+      datum baseAddress
+      {
+         value = "8208";
          type = "String";
       }
    }
@@ -216,6 +216,7 @@
  <parameter name="projectName" value="BeMicro.qpf" />
  <parameter name="sopcBorderPoints" value="false" />
  <parameter name="systemHash" value="1" />
+ <parameter name="timeStamp" value="1389165720081" />
  <parameter name="timeStamp" value="1390294713192" />
  <parameter name="useTestBenchNamingPattern" value="false" />
  <instanceScript></instanceScript>
@@ -271,6 +272,11 @@
  <interface
    name="epcs_flash"
    internal="pcp_0.epcs_flash"
+   type="conduit"
+   dir="end" />
+ <interface
+   name="framemanipulator_0_led"
+   internal="FrameManipulator_0.led"
    type="conduit"
    dir="end" />
  <module kind="clock_source" version="13.0" enabled="1" name="clk25">
@@ -459,7 +465,7 @@
  </module>
  <module
    kind="FrameManipulator"
-   version="0.1.0"
+   version="0.1.1"
    enabled="1"
    name="FrameManipulator_0">
   <parameter name="gBytesOfTheFrameBuffer" value="1600" />

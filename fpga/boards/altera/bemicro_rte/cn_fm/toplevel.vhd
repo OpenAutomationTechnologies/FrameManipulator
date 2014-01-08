@@ -117,8 +117,9 @@ architecture rtl of toplevel is
             framemanipulator_0_conduit_end_iRXDV            : in    std_logic                     := 'X';             -- iRXDV
             framemanipulator_0_conduit_end_iRXD             : in    std_logic_vector(1 downto 0)  := (others => 'X'); -- iRXD
             framemanipulator_0_conduit_end_oTXData          : out   std_logic_vector(1 downto 0);                     -- oTXData
-            framemanipulator_0_conduit_end_oTXDV            : out   std_logic                                         -- oTXDV
-        );
+            framemanipulator_0_conduit_end_oTXDV            : out   std_logic;                                        -- oTXDV
+            framemanipulator_0_led_export                   : out   std_logic_vector(1 downto 0)                      -- export
+          );
     end component;
 
 
@@ -139,7 +140,8 @@ architecture rtl of toplevel is
         txEn    : std_logic;
         txD     : std_logic_vector(1 downto 0);
         rxEn    : std_logic;
-        rxD    : std_logic_vector(1 downto 0);
+        rxD     : std_logic_vector(1 downto 0);
+        led     : std_logic_vector(1 downto 0);
     end record;
 
     --pll
@@ -163,7 +165,7 @@ architecture rtl of toplevel is
 begin
     SRAM_ADDR       <= sramAddr(SRAM_ADDR'range);
 
-    LED         <=  not (LEDG(7 downto 2) & plk_status_error);      --LED output is low acitve
+    LED         <=  not (fm.led & "0000" & plk_status_error);       --LED output is low acitve
 
     nodeSwitch  <=  not NODE_SWITCH;    --NODE_SWITCH is low acitve, nodeSwitch high
 
@@ -204,7 +206,8 @@ begin
             framemanipulator_0_conduit_end_iRXDV            => fm.rxEn,
             framemanipulator_0_conduit_end_iRXD             => fm.rxD,
             framemanipulator_0_conduit_end_oTXData          => fm.txD,
-            framemanipulator_0_conduit_end_oTXDV            => fm.txEn
+            framemanipulator_0_conduit_end_oTXDV            => fm.txEn,
+            framemanipulator_0_led_export                   => fm.led
         );
 
     -- Pll Instance

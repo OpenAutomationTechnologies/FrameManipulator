@@ -64,7 +64,7 @@ package require -exact sopc 11.0
 # | module FrameManipulator
 # |
 set_module_property NAME FrameManipulator
-set_module_property VERSION 0.1.0
+set_module_property VERSION 0.1.1
 set_module_property INTERNAL false
 set_module_property OPAQUE_ADDRESS_MAP true
 set_module_property DISPLAY_NAME FrameManipulator
@@ -211,6 +211,16 @@ add_interface_port conduit_end iRXDV export Input 1
 add_interface_port conduit_end iRXD export Input 2
 add_interface_port conduit_end oTXData export Output 2
 add_interface_port conduit_end oTXDV export Output 1
+# |
+# +-----------------------------------
+
+# +-----------------------------------
+# | connection point led
+# |
+add_interface led conduit end
+
+set_interface_property led ENABLED true
+add_interface_port led oLED export Output 2
 # |
 # +-----------------------------------
 
