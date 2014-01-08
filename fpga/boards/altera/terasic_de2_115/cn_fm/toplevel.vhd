@@ -150,8 +150,9 @@ architecture rtl of toplevel is
             framemanipulator_0_conduit_end_iRXDV            : in    std_logic                     := 'X';             -- iRXDV
             framemanipulator_0_conduit_end_iRXD             : in    std_logic_vector(1 downto 0)  := (others => 'X'); -- iRXD
             framemanipulator_0_conduit_end_oTXData          : out   std_logic_vector(1 downto 0);                     -- oTXData
-            framemanipulator_0_conduit_end_oTXDV            : out   std_logic                                         -- oTXDV
-        );
+            framemanipulator_0_conduit_end_oTXDV            : out   std_logic;                                        -- oTXDV
+            framemanipulator_0_led_export                   : out   std_logic_vector(1 downto 0)                      -- export
+          );
     end component cn_fm;
 
     -- PLL component
@@ -206,6 +207,8 @@ architecture rtl of toplevel is
     signal fmRx             : tRmiiPath;                    --data from PL-Slave RMII
     signal fmTx             : tRmiiPath;                    --data from FM RMII
     signal mani_tx          : tMiiPath;                     --data from FM MII
+    signal fmLed            : std_logic_vector(1 downto 0); --FM status leds
+
 
     -- temporary signals
     signal openMac_txEnable     : std_logic_vector(1 downto 0);
@@ -223,7 +226,7 @@ begin
     LCD_ON      <= '1';
     LCD_BLON    <= '1';
 
-    LEDG        <= "000000" & plk_status_error;
+    LEDG        <= fmLed & "0000" & plk_status_error;
 
 
 
@@ -286,7 +289,8 @@ begin
             framemanipulator_0_conduit_end_iRXDV            => fmRx.enable,
             framemanipulator_0_conduit_end_iRXD             => fmRx.data,
             framemanipulator_0_conduit_end_oTXData          => fmTx.data,
-            framemanipulator_0_conduit_end_oTXDV            => fmTx.enable
+            framemanipulator_0_conduit_end_oTXDV            => fmTx.enable,
+            framemanipulator_0_led_export                   => fmLed
         );
 
     -- Pll Instance
