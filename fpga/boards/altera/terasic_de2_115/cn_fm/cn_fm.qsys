@@ -310,7 +310,7 @@
  <parameter name="projectName" value="ink_de2-115.qpf" />
  <parameter name="sopcBorderPoints" value="false" />
  <parameter name="systemHash" value="1" />
- <parameter name="timeStamp" value="1390294677877" />
+ <parameter name="timeStamp" value="1390991227261" />
  <parameter name="useTestBenchNamingPattern" value="false" />
  <instanceScript></instanceScript>
  <interface name="clk50" internal="clk50.clk_in" type="clock" dir="end" />
@@ -613,7 +613,7 @@
  </module>
  <module
    kind="FrameManipulator"
-   version="0.1.1"
+   version="0.2.0"
    enabled="1"
    name="FrameManipulator_0">
   <parameter name="gBytesOfTheFrameBuffer" value="1600" />

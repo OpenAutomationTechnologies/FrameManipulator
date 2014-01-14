@@ -64,7 +64,7 @@ package require -exact sopc 11.0
 # | module FrameManipulator
 # |
 set_module_property NAME FrameManipulator
-set_module_property VERSION 0.1.1
+set_module_property VERSION 0.2.0
 set_module_property INTERNAL false
 set_module_property OPAQUE_ADDRESS_MAP true
 set_module_property DISPLAY_NAME FrameManipulator

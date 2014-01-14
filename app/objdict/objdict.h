@@ -495,7 +495,7 @@ OBD_BEGIN ()
 
         // Object 3005h: FM_Vers
         OBD_BEGIN_INDEX_RAM(0x3005, 0x01, NULL)
-           OBD_SUBINDEX_RAM_VSTRING(0x3005, 0x00, kObdAccR, fm_version, OBD_MAX_STRING_SIZE, "0.1.1")
+           OBD_SUBINDEX_RAM_VSTRING(0x3005, 0x00, kObdAccR, fm_version, OBD_MAX_STRING_SIZE, "0.2.0")
         OBD_END_INDEX(0x3005)
 
     OBD_END_PART ()
