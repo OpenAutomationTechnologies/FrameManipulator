@@ -26,12 +26,16 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library work;
+--! use global library
+use work.global.all;
+
+
 entity Frame_Receiver is
     generic(
-        gBuffAddrWidth:natural:=11;
-        gEtherTypeFilter_1:std_logic_vector(15 downto 0):=X"88AB";      --filter 1
-        gEtherTypeFilter_2:std_logic_vector(15 downto 0):=X"0800"       --filter 2
-        );
+            gBuffAddrWidth      : natural :=11;
+            gEtherTypeFilter    : std_logic_vector :=X"88AB_0800_0806"  --filter
+            );
     port(
         clk, reset:         in std_logic;
         iRXDV:              in std_logic;                                   --frame data valid
@@ -130,6 +134,12 @@ architecture two_seg_arch of Frame_Receiver is
          );
     end component;
 
+    --! Ethertype filter as downto-std_logic_vector
+    constant cEtherTypeFilter   : std_logic_vector(gEtherTypeFilter'length-1 downto 0) := gEtherTypeFilter;
+    constant cEtherTypeSize     : natural := 2*cByteLength; --! Size of EtherType = 2 Bytes
+
+    --! Number of Ethertype filter
+    constant cNumbFilter        : natural := gEtherTypeFilter'length/cEtherTypeSize;
 
     signal data:                std_logic_vector(7 downto 0);
     signal sync:                std_logic;
@@ -137,11 +147,17 @@ architecture two_seg_arch of Frame_Receiver is
     signal EnWL:                std_logic;
     signal wraddr:              std_logic_vector(gBuffAddrWidth-1 downto 0);
 
-    signal EtherType:           std_logic_vector(15 downto 0);
+    signal EtherType:           std_logic_vector(cEtherTypeSize-1 downto 0);
     signal preambleOk:          std_logic:='0';
     signal CollectorFinished:   std_logic;
 
     signal FrameEnd:            std_logic;
+
+    signal MatchFilter  : std_logic_vector(cNumbFilter-1 downto 0); --! Filter(x) does match
+
+    signal StartFrameProcess_reg    : std_logic;    --! Register of oStartFrameProcess to reduce path delay
+    signal StartFrameProcess_next   : std_logic;    --! Next value of register
+
 
 begin
 
@@ -178,6 +194,14 @@ begin
             oFrameData=>EtherType,oCollectorFinished=>CollectorFinished);
 
 
+    --! Check of the Ethertype with the predefined values
+    EthertypeMatch :
+    for i in MatchFilter'range generate
+
+        MatchFilter(i)  <=  '1' when EtherType = cEtherTypeFilter(15+cEtherTypeSize*i downto 0+cEtherTypeSize*i) else '0';
+
+    end generate EthertypeMatch;
+
 
 
     --write logic is enabled and stores data utill the frame has ended
@@ -208,9 +232,26 @@ begin
             oEndAddr=> oDataEndAddr,oFrameEnd=>FrameEnd);
 
 
-    --  frame process can start, when the collection has finished with a valid Ethertype and Preamble
-    oStartFrameProcess<= '1' when CollectorFinished='1' and preambleOk='1' and
-                (EtherType=gEtherTypeFilter_1 or EtherType=gEtherTypeFilter_2) else '0';
+    --  frame process can start, when the collection has finished with Preamble and one of the valid Ethertypes
+    StartFrameProcess_next  <= '1' when CollectorFinished='1' and preambleOk='1' and reduceOr(MatchFilter)='1' else '0';
+
+
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
+    process(clk, reset)
+    begin
+        if reset='1' then
+            StartFrameProcess_reg   <= '0';
+
+        elsif rising_edge(clk) then
+            StartFrameProcess_reg   <= StartFrameProcess_next;
+
+        end if;
+    end process;
+
+    oStartFrameProcess  <= StartFrameProcess_reg;
+
 
     --signal output
     oFrameEnded<=FrameEnd;

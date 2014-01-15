@@ -119,10 +119,9 @@ architecture two_seg_arch of FrameManipulator is
     -- the Data-Buffer
     component Frame_Receiver
         generic(
-            gBuffAddrWidth:natural:=11;
-            gEtherTypeFilter_1:std_logic_vector(15 downto 0):=X"88AB";      --filter 1
-            gEtherTypeFilter_2:std_logic_vector(15 downto 0):=X"0800"       --filter 2
-            );
+                gBuffAddrWidth      : natural :=11;
+                gEtherTypeFilter    : std_logic_vector :=X"88AB_0800_0806"  --filter
+                );
         port(
             clk, reset:         in std_logic;
             iRXDV:              in std_logic;                                   --frame data valid
@@ -351,9 +350,10 @@ begin
     --generating sync signal for Process-Unit   => oFrameSync
     -----------------------------------------------------------------------------------------
     F_Receiver : Frame_Receiver
-    generic map(gEtherTypeFilter_1=>X"88AB",    --POWERLINK frames are valid
-                gEtherTypeFilter_2=>X"0800",    --IP frames are valid
-                gBuffAddrWidth=>cDataBuffAddrWidth)
+    generic map(
+                gBuffAddrWidth      => cDataBuffAddrWidth,
+                gEtherTypeFilter    => X"88AB_0800_0806"    --POWERLINK, IP and ARP frames are valid
+                )
     port map (
             clk=>clk_50, reset=>reset,
             iRXDV => iRXDV,     iRXD =>  iRXD,              iDataStartAddr=>DataInStartAddr,

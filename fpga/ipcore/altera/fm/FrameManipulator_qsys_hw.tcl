@@ -81,6 +81,8 @@ set_module_property FIX_110_VIP_PATH false
 # +-----------------------------------
 # | files
 # |
+add_file "../../../../stacks/openPOWERLINK/hardware/ipcore/common/lib/src/global.vhd" {SYNTHESIS SIM
+ULATION}
 add_file FrameManipulator.vhd {SYNTHESIS SIMULATION}
 add_file lib_Basics/adder_2121.vhd {SYNTHESIS SIMULATION}
 add_file lib_Basics/Basic_Cnter.vhd {SYNTHESIS SIMULATION}
