@@ -93,7 +93,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // local vars
 //------------------------------------------------------------------------------
 
-static BYTE    controlReg_l[2];
+static BYTE    aControlReg_l[2];
 
 //------------------------------------------------------------------------------
 // local function prototypes
@@ -117,13 +117,14 @@ tEplKernel frameman_init(void)
     tObdSize        obdSize;
     UINT            varEntries;
 
-    controlReg_l[0]=0;
-    controlReg_l[1]=0;
+    aControlReg_l[0]=0;
+    aControlReg_l[1]=0;
 
-    obdSize = sizeof(controlReg_l[0]);
+    obdSize = sizeof(aControlReg_l[0]);
     varEntries = 2;
 
-    return oplk_linkObject(0x3000, controlReg_l, &varEntries, &obdSize, 0x01);
+    return oplk_linkObject(0x3000, aControlReg_l, &varEntries, &obdSize, 0x01);
+
 }
 
 
@@ -140,19 +141,19 @@ Linking of Object 0x3000 for PDO-transfer via callback
 //------------------------------------------------------------------------------
 tEplKernel frameman_syncCb(void)
 {
-   char operationByte       = controlReg_l[FRAMEMAN_CONTROL_REG_OPERATION];
-   char *pErrorByte_p       = &controlReg_l[FRAMEMAN_CONTROL_REG_STATUS];
+   char operationByte       = aControlReg_l[FRAMEMAN_CONTROL_REG_OPERATION];
+   char *pErrorByte_p       = &aControlReg_l[FRAMEMAN_CONTROL_REG_STATUS];
 
-   tEplKernel ret       = kEplSuccessful;
+   tEplKernel ret           = kEplSuccessful;
 
    //memory pointer
-   volatile unsigned char  *c_base = (unsigned char *)FRAMEMAN_CONTROL_BASE;
+   volatile BYTE  *c_base   = (BYTE *)FRAMEMAN_CONTROL_BASE;
 
    //positive edge signal
-   unsigned char operation_pos_edge;
+   BYTE operation_pos_edge;
 
    //storage of the operation of the last cycle for edge-detection
-   static unsigned char old_operationByte_p;
+   static BYTE old_operationByte_p;
 
    //Load Registers
    ret = pdou_copyRxPdoToPi();
