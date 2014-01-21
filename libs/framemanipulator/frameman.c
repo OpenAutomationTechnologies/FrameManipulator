@@ -123,7 +123,7 @@ tEplKernel frameman_init(void)
     obdSize = sizeof(controlReg_l[0]);
     varEntries = 2;
 
-    return oplk_linkObject(0x3000, controlReg_l, varEntries, &obdSize, 0x01);
+    return oplk_linkObject(0x3000, controlReg_l, &varEntries, &obdSize, 0x01);
 }
 
 
