@@ -1,4 +1,4 @@
 <library>
     <path path="../**/*"/>
-    <path path="../../../../stacks/openPOWERLINK/fpga/ipcore/altera/components.ipx" />
+    <path path="../../../../stacks/openPOWERLINK/hardware/ipcore/altera/components.ipx" />
 </library>

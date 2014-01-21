@@ -216,7 +216,7 @@
  <parameter name="projectName" value="BeMicro.qpf" />
  <parameter name="sopcBorderPoints" value="false" />
  <parameter name="systemHash" value="1" />
- <parameter name="timeStamp" value="1387214944530" />
+ <parameter name="timeStamp" value="1390294713192" />
  <parameter name="useTestBenchNamingPattern" value="false" />
  <instanceScript></instanceScript>
  <interface name="clk25" internal="clk25.clk_in" type="clock" dir="end" />
@@ -453,6 +453,7 @@
   <parameter name="gui_tmrPulseEn" value="false" />
   <parameter name="gui_tmrPulseWdt" value="10" />
   <parameter name="gui_actEn" value="false" />
+  <parameter name="gui_sdcEn" value="false" />
   <parameter name="AUTO_DMACLK_CLOCK_RATE" value="100000000" />
   <parameter name="AUTO_PKTCLK_CLOCK_RATE" value="-1" />
  </module>

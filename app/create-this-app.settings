@@ -61,26 +61,27 @@ BSP_DIR=./bsp
 ##################################
 # Include path
 INCLUDES=". \
+${STACKROOT_DIR}/apps/common/gpio \
 ${STACKROOT_DIR}/include \
-${STACKROOT_DIR}/libs/omethlib \
-${STACKROOT_DIR}/libs/circbuf \
+${STACKROOT_DIR}/stack/include \
+${STACKROOT_DIR}/hardware/ipcore/drivers/openmac \
+${STACKROOT_DIR}/stack/src/common/circbuf \
 ${STACKROOT_DIR}/stack/include/target \
 ${STACKROOT_DIR}/stack/src/arch/altera_nios2 \
-${STACKROOT_DIR}/stack/src \
+${STACKROOT_DIR}/stack/src
 ${STACKROOT_DIR}/objdicts/generic \
-${STACKROOT_DIR}/examples/common/gpio \
 ${FM_DIR}/app/objdict \
 ${FM_DIR}/libs/framemanipulator"
 
 ##################################
 # Source files
 SRCFILES_COMMON="\
-${STACKROOT_DIR}/libs/ami/amiarm.c \
-${STACKROOT_DIR}/libs/omethlib/omethlib.c \
-${STACKROOT_DIR}/libs/omethlib/omethlibint.c \
-${STACKROOT_DIR}/libs/circbuf/circbuffer.c \
-${STACKROOT_DIR}/libs/circbuf/circbuf-noos.c \
-${STACKROOT_DIR}/libs/trace/trace-printf.c \
+${STACKROOT_DIR}/stack/src/common/ami/amile.c \
+${STACKROOT_DIR}/hardware/ipcore/drivers/openmac/omethlib.c \
+${STACKROOT_DIR}/hardware/ipcore/drivers/openmac/omethlibint.c \
+${STACKROOT_DIR}/stack/src/common/circbuf/circbuffer.c \
+${STACKROOT_DIR}/stack/src/common/circbuf/circbuf-noos.c \
+${STACKROOT_DIR}/contrib/trace/trace-printf.c \
 ${STACKROOT_DIR}/stack/src/arch/altera_nios2/openmac-nios2.c \
 ${STACKROOT_DIR}/stack/src/arch/altera_nios2/target-nios2.c \
 ${STACKROOT_DIR}/stack/src/arch/altera_nios2/lock-localnoos.c \
@@ -136,20 +137,18 @@ ${STACKROOT_DIR}/stack/src/user/sdo/sdo-asndu.c \
 ${STACKROOT_DIR}/stack/src/user/sdo/sdo-sequ.c \
 ${STACKROOT_DIR}/stack/src/user/sdo/sdo-comu.c \
 ${STACKROOT_DIR}/stack/src/user/ledu.c \
-${STACKROOT_DIR}/examples/common/gpio/gpio-nios2.c \
+${STACKROOT_DIR}/apps/common/gpio/gpio-nios2.c \
 ${FM_DIR}/app/main.c \
 ${FM_DIR}/libs/framemanipulator/frameman.c \
 "
 
 SRCFILES_BEMICRO=${SRCFILES_COMMON}"
-${STACKROOT_DIR}/libs/omethlib/omethlib_phycfg_bemicro.c \
+${FM_DIR}/fpga/boards/altera/bemicro_rte/drivers/omethlib_phycfg_bemicro.c \
 "
 
 SRCFILES_INK=${SRCFILES_COMMON}"
-${STACKROOT_DIR}/libs/omethlib/omethlib_phycfg_generic.c \
+${FM_DIR}/fpga/boards/altera/terasic_de2_115/drivers/omethlib_phycfg_ink.c \
 "
-
-# ${STACKROOT_DIR}/libs/omethlib/omethlib_phycfg_ink.c \ TODO!!!!!!
 
 
 ##################################

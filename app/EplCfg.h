@@ -39,8 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _EPLCFG_H_
 #define _EPLCFG_H_
 
-#include "EplInc.h"
-
+#include "global.h"
 
 
 // =========================================================================
@@ -88,25 +87,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // * EPL_DBGLVL_ERROR       =   0x40000000L
 // * EPL_DBGLVL_ALWAYS      =   0x80000000L
 
-// EPL_MODULE_INTEGRATION defines all modules which are included in
-// EPL application. Please add or delete modules for your application.
-
-#define EPL_MODULE_INTEGRATION     (0 \
-                                | EPL_MODULE_OBD \
-                                | EPL_MODULE_PDOU \
-                                | EPL_MODULE_PDOK \
-                                | EPL_MODULE_SDOS \
-                                | EPL_MODULE_SDOC \
-                                | EPL_MODULE_SDO_ASND \
-                                | EPL_MODULE_DLLK \
-                                | EPL_MODULE_DLLU \
-                                | EPL_MODULE_NMT_CN \
-                                | EPL_MODULE_NMTK \
-                                | EPL_MODULE_NMTU \
-                                | EPL_MODULE_LEDU \
-                                )
-
-/*                                | EPL_MODULE_PDOU \ */
+// These macros define all modules which are included
+#define CONFIG_INCLUDE_PDO
+#define CONFIG_INCLUDE_SDOS
+#define CONFIG_INCLUDE_SDOC
+#define CONFIG_INCLUDE_SDO_ASND
+#define CONFIG_INCLUDE_LEDU
 
 
 
