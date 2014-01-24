@@ -141,8 +141,8 @@ Linking of Object 0x3000 for PDO-transfer via callback
 //------------------------------------------------------------------------------
 tEplKernel frameman_syncCb(void)
 {
-   char operationByte       = aControlReg_l[FRAMEMAN_CONTROL_REG_OPERATION];
-   char *pErrorByte_p       = &aControlReg_l[FRAMEMAN_CONTROL_REG_STATUS];
+   BYTE operationByte       = aControlReg_l[FRAMEMAN_CONTROL_REG_OPERATION];
+   BYTE *pErrorByte_p       = &aControlReg_l[FRAMEMAN_CONTROL_REG_STATUS];
 
    tEplKernel ret           = kEplSuccessful;
 
