@@ -206,12 +206,10 @@ tEplKernel frameman_configObdAccessCb(tObdCbParam MEM* pParam_p)
 
     //temporary data signals
     DWORD               *pTmp = (DWORD*)(pParam_p->pArg);
-    unsigned char       temp_char;
     DWORD               temp_ar[2];
 
     //memory pointer
     volatile unsigned long  *t_base = (unsigned long *)FRAMEMAN_TASK_BASE;
-    volatile unsigned char  *c_base = (unsigned char *)FRAMEMAN_CONTROL_BASE;
 
 
     pParam_p->abortCode = 0;
@@ -266,12 +264,6 @@ tEplKernel frameman_configObdAccessCb(tObdCbParam MEM* pParam_p)
                         break;
                     }
             }
-        }
-        else
-        {
-            //TODO: Error detection: if subindex>available tasks
-            //temp_char=0x04;//IORD8(c_base,FRAMEMAN_CONTROL_REG_STATUS);//|0x04;
-            //IOWR8(c_base,FRAMEMAN_CONTROL_REG_STATUS,temp_char);
         }
     }
 
