@@ -7,4 +7,46 @@ Frame Manipulator
 Revision History
 ==============================================================================
 
-2012-08-13  V0.0.1      First release
+2014-01-28  V0.1.0
+
+[FIX] Remove unused code
+[FIX] Change data type
+[FIX] Fix EplCfg.h late release configuration
+[FIX] Add prefix to array and change data type
+[FIX] Fix object link function call
+[TASK] Update user documentation
+[TASK] Update openPOWERLINK stack
+[FIX] Remove obsolete Eclipse project files
+[TASK] Add start of flash download in standalone script
+[TASK] Remove create-this-app in standalone-shell
+[TASK] Add additional options to flash-device.sh
+[TASK] Update timing constraints for BeMicro design
+[FEATURE] Add standalone script
+[FEATURE] Add INK quartus design
+[TASK] Add rmii2mii converter qip-link
+[TASK] Update App for INK-design
+[FIX] Fix makefile rules for freestanding abilities
+[FIX] Add standalone ipcores to CN Qsys subsystems
+[FIX] Select the correct clk for slow-bridge bus
+[FIX] Fix generate statement in read_logic for prescale generic
+[FIX] Fix BeMicro LED assignments
+[FIX] Link VendorID and ProductCode to its objects
+[FIX] Updated sensitivity list of different modules
+[FIX] Reactivate PLK status and error LEDs
+[FIX] Remove counter in CRC_calculator
+[FIX] Updated FM version to 0.1.0 in qsys file
+[TASK] Revise app SW to openPOWERLINK stack
+[TASK] Remove openMAC IP-Core from repository
+[FEATURE] Add script to checkout openPOWERLINK stack
+[FEATURE] Add version object 0x3005h
+[TASK] Revise Framemanipulator SW library
+[TASK] Add software app for Framemanipulator CN
+[TASK] Added BeMicro Framemanipulator board example
+[TASK] Added openmac V1.0.0
+[TASK] Revise Framemanipulator ip-core
+[TASK] Add .gitignore and project.config
+
+2012-08-13  V0.0.1
+
+[TASK] Add first release of Frame Manipulator
+Initial empty repository
