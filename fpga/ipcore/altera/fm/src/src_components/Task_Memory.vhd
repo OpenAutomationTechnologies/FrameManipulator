@@ -97,11 +97,16 @@ architecture two_seg_arch of Task_Memory is
     signal rdTaskMem        : std_logic;                                  --! read task
 
 
-    --! Typedef for read data
-    type tRdData is array (3 downto 0) of
+    --! Typedef for read data Port A
+    type tRdDataA is array (3 downto 0) of
         std_logic_vector(gWordWidth/2-1 downto 0);
 
-    signal readData : tRdData;
+    --! Typedef for read data Port B
+    type tRdDataB is array (3 downto 0) of
+        std_logic_vector(gWordWidth-1 downto 0);
+
+    signal readDataA    : tRdDataA;
+    signal readDataB    : tRdDataB;
 
 begin
 
@@ -114,7 +119,7 @@ begin
     --! - Select write enable as one-hot
     --! - Select read data
     combSelRam :
-    process(iSc_wrEn, slaveSelEn, readData)
+    process(iSc_wrEn, slaveSelEn, readDataA)
     begin
 
         slaveWriteEn    <= (others => '0');
@@ -124,7 +129,7 @@ begin
             slaveWriteEn(to_integer(unsigned(slaveSelEn)))  <= '1'; --! Convert to one-hot
 
         else                    --read
-            oSc_ReadData <= readData(to_integer(unsigned(slaveSelEn)));
+            oSc_ReadData <= readDataA(to_integer(unsigned(slaveSelEn)));
 
         end if;
 
@@ -136,125 +141,44 @@ begin
 
     --Mapping of the four Buffers ---------------------------------------------------------------------
 
-    --! @brief First Memory
-    --! - Object 0x3001 Setting 1
-    ManiDataBuffer1 : entity work.DpramAdjustable
-    generic map(
-                gAddresswidthA  => gAddresswidth+1,
-                gAddresswidthB  => gAddresswidth,
-                gWordWidthA     => gWordWidth/2,
-                gWordWidthB     => gWordWidth
-                )
-    port map(
-            iClock_a    => iS_clk,
-            iClock_b    => iClk,
-            --port A PL-Slave
-            iAddress_a  => slaveWrTaskAddr,
-            iByteena_a  => iSc_byteEn,
-            iData_a     => iSc_writeData,
-            iWren_a     => slaveWriteEn(0),
-            iRden_a     => iSc_rdEn,
-            --port B FM
-            iAddress_b  => iTaskAddr,
-            iByteena_b  => (others=>'1'),
-            iData_b     => (others=>'0'),
-            iWren_b     => iClTaskMem,
-            iRden_b     => rdTaskMem,
-            --output
-            oQ_a        => readData(0),
-            oQ_b        => oSettingData(2*gWordWidth-1 downto gWordWidth)   --first 8Byte
-            );
+    --! @brief task memorys for the four Objects 0x3001-0x3004
+    genTaskMem :
+    for i in 0 to 3 generate
+    begin
+
+        --! @brief Memory
+        ManiDataBuffer : entity work.DpramAdjustable
+        generic map(
+                    gAddresswidthA  => gAddresswidth+1,
+                    gAddresswidthB  => gAddresswidth,
+                    gWordWidthA     => gWordWidth/2,
+                    gWordWidthB     => gWordWidth
+                    )
+        port map(
+                iClock_a    => iS_clk,
+                iClock_b    => iClk,
+                --port A PL-Slave
+                iAddress_a  => slaveWrTaskAddr,
+                iByteena_a  => iSc_byteEn,
+                iData_a     => iSc_writeData,
+                iWren_a     => slaveWriteEn(i),
+                iRden_a     => iSc_rdEn,
+                --port B FM
+                iAddress_b  => iTaskAddr,
+                iByteena_b  => (others=>'1'),
+                iData_b     => (others=>'0'),
+                iWren_b     => iClTaskMem,
+                iRden_b     => rdTaskMem,
+                --output
+                oQ_a        => readDataA(i),
+                oQ_b        => readDataB(i)
+                );
+
+    end generate genTaskMem;
 
 
-    --! @brief Second Memory
-    --! - Object 0x3002 Setting 2
-    ManiDataBuffer2 : entity work.DpramAdjustable
-    generic map(
-                gAddresswidthA  => gAddresswidth+1,
-                gAddresswidthB  => gAddresswidth,
-                gWordWidthA     => gWordWidth/2,
-                gWordWidthB     => gWordWidth
-                )
-    port map(
-            iClock_a    => iS_clk,
-            iClock_b    => iClk,
-            --port A PL-Slave
-            iAddress_a  => slaveWrTaskAddr,
-            iByteena_a  => iSc_byteEn,
-            iData_a     => iSc_writeData,
-            iWren_a     => slaveWriteEn(1),
-            iRden_a     => iSc_rdEn,
-            --port B FM
-            iAddress_b  => iTaskAddr,
-            iByteena_b  => (others=>'1'),
-            iData_b     => (others=>'0'),
-            iWren_b     => iClTaskMem,
-            iRden_b     => rdTaskMem,
-            --output
-            oQ_a        => readData(1),
-            oQ_b        => oSettingData(gWordWidth-1 downto 0)  --second 8Byte
-            );
-
-
-    --! @brief Third Memory
-    --! - Object 0x3003 Frame data
-    CompFrameBuffer : entity work.DpramAdjustable
-    generic map(
-                gAddresswidthA  => gAddresswidth+1,
-                gAddresswidthB  => gAddresswidth,
-                gWordWidthA     => gWordWidth/2,
-                gWordWidthB     => gWordWidth
-                )
-    port map(
-            iClock_a    => iS_clk,
-            iClock_b    => iClk,
-            --port A PL-Slave
-            iAddress_a  => slaveWrTaskAddr,
-            iByteena_a  => iSc_byteEn,
-            iData_a     => iSc_writeData,
-            iWren_a     => slaveWriteEn(2),
-            iRden_a     => iSc_rdEn,
-            --port B FM
-            iAddress_b  => iTaskAddr,
-            iByteena_b  => (others=>'1'),
-            iData_b     => (others=>'0'),
-            iWren_b     => iClTaskMem,
-            iRden_b     => rdTaskMem,
-            --output
-            oQ_a        => readData(2),
-            oQ_b        => oCompFrame
-            );
-
-
-    --! @brief Fourth Memory
-    --! - Object 0x3003 Mask data
-    CompMaskBuffer : entity work.DpramAdjustable
-    generic map(
-                gAddresswidthA  => gAddresswidth+1,
-                gAddresswidthB  => gAddresswidth,
-                gWordWidthA     => gWordWidth/2,
-                gWordWidthB     => gWordWidth
-                )
-    port map(
-            iClock_a     => iS_clk,
-            iClock_b     => iClk,
-            --port A PL-Slave
-            iAddress_a   => slaveWrTaskAddr,
-            iByteena_a   => iSc_byteEn,
-            iData_a      => iSc_writeData,
-            iWren_a      => slaveWriteEn(3),
-            iRden_a      => iSc_rdEn,
-            --port B FM
-            iAddress_b   => iTaskAddr,
-            iByteena_b   => (others=>'1'),
-            iData_b      => (others=>'0'),
-            iWren_b      => iClTaskMem,
-            iRden_b      => rdTaskMem,
-            --output
-            oQ_a         => readData(3),
-            oQ_b         => oCompMask
-            );
-
-
+    oSettingData    <= readDataB(0) & readDataB(1); --! Task setting
+    oCompFrame      <= readDataB(2);                --! Frame data
+    oCompMask       <= readDataB(3);                --! Frame mask
 
 end two_seg_arch;
