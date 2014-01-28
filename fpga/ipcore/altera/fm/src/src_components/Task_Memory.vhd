@@ -92,34 +92,46 @@ end Task_Memory;
 architecture two_seg_arch of Task_Memory is
 
     signal slaveWriteEn     : std_logic_vector(3 downto 0);               --! write enable
-    signal slaveSelEn       : std_logic_vector(2 downto 0);               --! DPRam Selection
+    signal slaveSelEn       : std_logic_vector(1 downto 0);               --! DPRam Selection
     signal slaveWrTaskAddr  : std_logic_vector(gAddresswidth downto 0);   --! write address
     signal rdTaskMem        : std_logic;                                  --! read task
 
-    --data output for PL-Slave
-    signal slaveReadData0   : std_logic_vector(gWordWidth/2-1 downto 0);  --! data of PDRam 0
-    signal slaveReadData1   : std_logic_vector(gWordWidth/2-1 downto 0);  --! data of PDRam 1
-    signal slaveReadData2   : std_logic_vector(gWordWidth/2-1 downto 0);  --! data of PDRam 2
-    signal slaveReadData3   : std_logic_vector(gWordWidth/2-1 downto 0);  --! data of PDRam 3
+
+    --! Typedef for read data
+    type tRdData is array (3 downto 0) of
+        std_logic_vector(gWordWidth/2-1 downto 0);
+
+    signal readData : tRdData;
 
 begin
 
     --Isolate the selection of the Buffers from the address line----------------------------------------
-    slaveSelEn      <= iSc_addr(iSc_addr'left downto iSc_addr'left-1)&iSc_wrEn; --! first two address-bits => DPRam selection + WriteEnable
-    slaveWrTaskAddr <= iSc_addr(gAddresswidth downto 0);                     --! remaining address-bits => real address
+    slaveSelEn      <= iSc_addr(iSc_addr'left downto iSc_addr'left-1);  --! first two address-bits => DPRAM selection
+    slaveWrTaskAddr <= iSc_addr(gAddresswidth downto 0);                --! remaining address-bits => real address
 
 
+    --! @brief Selection of task DPRAM
+    --! - Select write enable as one-hot
+    --! - Select read data
+    combSelRam :
+    process(iSc_wrEn, slaveSelEn, readData)
+    begin
 
-    --Aktivate the different Buffer for Port A ---------------------------------------------------------
-    with slaveSelEn select --last bit=1 => write
-        slaveWriteEn<=  "0001" when "001",  --write 00 => PDRam 0
-                        "0010" when "011",  --write 01 => PDRam 1
-                        "0100" when "101",  --write 10 => PDRam 2
-                        "1000" when "111",  --write 11 => PDRam 3
-                        "0000" when others;
+        slaveWriteEn    <= (others => '0');
+        oSc_ReadData    <= (others => '0');
+
+        if iSc_wrEn  = '1' then  --write
+            slaveWriteEn(to_integer(unsigned(slaveSelEn)))  <= '1'; --! Convert to one-hot
+
+        else                    --read
+            oSc_ReadData <= readData(to_integer(unsigned(slaveSelEn)));
+
+        end if;
+
+    end process;
 
 
-    rdTaskMem   <= not iClTaskMem;
+    rdTaskMem <= not iClTaskMem;
 
 
     --Mapping of the four Buffers ---------------------------------------------------------------------
@@ -149,7 +161,7 @@ begin
             iWren_b     => iClTaskMem,
             iRden_b     => rdTaskMem,
             --output
-            oQ_a        => slaveReadData0,
+            oQ_a        => readData(0),
             oQ_b        => oSettingData(2*gWordWidth-1 downto gWordWidth)   --first 8Byte
             );
 
@@ -179,7 +191,7 @@ begin
             iWren_b     => iClTaskMem,
             iRden_b     => rdTaskMem,
             --output
-            oQ_a        => slaveReadData1,
+            oQ_a        => readData(1),
             oQ_b        => oSettingData(gWordWidth-1 downto 0)  --second 8Byte
             );
 
@@ -209,7 +221,7 @@ begin
             iWren_b     => iClTaskMem,
             iRden_b     => rdTaskMem,
             --output
-            oQ_a        => slaveReadData2,
+            oQ_a        => readData(2),
             oQ_b        => oCompFrame
             );
 
@@ -239,19 +251,9 @@ begin
             iWren_b      => iClTaskMem,
             iRden_b      => rdTaskMem,
             --output
-            oQ_a         => slaveReadData3,
+            oQ_a         => readData(3),
             oQ_b         => oCompMask
             );
-
-
-
-    --Select the Output data for Port A ----------------------------------------------------------------
-    with slaveSelEn select --last bit=0 => read
-        oSc_ReadData<=   slaveReadData0 when "000", --read 00 => DPRam 0
-                        slaveReadData1 when "010", --read 01 => DPRam 1
-                        slaveReadData2 when "100", --read 10 => DPRam 2
-                        slaveReadData3 when "110", --read 11 => DPRam 3
-                        (others=>'0') when others;
 
 
 
