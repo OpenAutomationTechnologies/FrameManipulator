@@ -7,8 +7,16 @@ Frame Manipulator
 Revision History
 ==============================================================================
 
+2014-01-28  V0.1.1
+
+[TASK] Update user documentation
+[TASK] Add status LEDs for INK
+[FEATURE] Add status LEDs for FM
+[TASK] Update FM version to 0.1.1
+
 2014-01-28  V0.1.0
 
+[TASK] Update revision.txt for V0.1.0
 [FIX] Remove unused code
 [FIX] Change data type
 [FIX] Fix EplCfg.h late release configuration
