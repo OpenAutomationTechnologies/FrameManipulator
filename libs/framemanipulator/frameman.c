@@ -68,6 +68,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define FRAMEMAN_NO_OF_TASKS          FRAMEMANIPULATOR_0_ST_SLAVE_TASKS_SPAN/(8*4)    //Whole Span in Bytes
                                         // 8Byte for a Word in 4 Memory-Blocks
 
+#define OPERATION_POS_EDGE_MASK         0x0F    //Mask for edge detected inputs of the status register
+#define OPERATION_DIRECT_MASK           0xF0    //Mask for the directly transfered inputs
+
+
 //------------------------------------------------------------------------------
 // module global vars
 //------------------------------------------------------------------------------
@@ -143,6 +147,7 @@ tEplKernel frameman_syncCb(void)
 {
    BYTE operationByte       = aControlReg_l[FRAMEMAN_CONTROL_REG_OPERATION];
    BYTE *pErrorByte_p       = &aControlReg_l[FRAMEMAN_CONTROL_REG_STATUS];
+   BYTE operation_in;
 
    tEplKernel ret           = kEplSuccessful;
 
@@ -162,13 +167,17 @@ tEplKernel frameman_syncCb(void)
 
    //positive edge detection:   new_value XOR old_value => edge
    //                           edge AND new_value => positive edge
-   operation_pos_edge=(operationByte^old_operationByte_p)&operationByte;
+   //                           plus Mask
+   operation_pos_edge=(operationByte^old_operationByte_p)&operationByte & OPERATION_POS_EDGE_MASK;
 
-   //reading word 1 = status register for PRes
+   //operation input: transfers the directly connected and edge detected inputs
+   operation_in=(operationByte& OPERATION_DIRECT_MASK) | operation_pos_edge;
+
+   //reading word 1 = status register for PRes + Feedback of edge detected inputs
    *pErrorByte_p=operation_pos_edge|IORD8(c_base,FRAMEMAN_CONTROL_REG_STATUS);
 
    //writing word 0 = operation register of PReq
-   IOWR8(c_base,FRAMEMAN_CONTROL_REG_OPERATION,operation_pos_edge);
+   IOWR8(c_base,FRAMEMAN_CONTROL_REG_OPERATION,operation_in);
 
    //storing of old data
    old_operationByte_p=operationByte;
