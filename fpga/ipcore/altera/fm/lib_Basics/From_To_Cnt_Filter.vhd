@@ -42,7 +42,6 @@ entity From_To_Cnt_Filter is
         gWidthOut:natural:=2
         );
     port(
-        clk, reset: in std_logic;
         iCnt:  in std_logic_vector(gWidthIn-1 downto 0);
         oCnt: out std_logic_vector(gWidthOut-1 downto 0);
         oEn : out std_logic;

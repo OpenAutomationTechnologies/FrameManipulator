@@ -75,7 +75,6 @@ architecture two_seg_arch of Frame_collector is
             gWidthOut:natural:=2
             );
         port(
-            clk, reset: in std_logic;
             iCnt:  in std_logic_vector(gWidthIn-1 downto 0);
             oCnt: out std_logic_vector(gWidthOut-1 downto 0);
             oEn : out std_logic;
@@ -120,7 +119,6 @@ begin
     cnt_f_t : From_To_Cnt_Filter    --Logic to select the wanted Bytes
     generic map (gFrom => gFrom, gTo => gTo, gWidthIn => log2c(gTo+2), gWidthOUT => cWidth_ByteCnt)
     port map (
-            clk=>clk, reset=>reset,
             iCnt => cnt,
             oCnt => cntout, oEn => MemEn, oEnd => filter_end
             );
