@@ -77,12 +77,12 @@ architecture Behave of end_of_frame_detection is
     signal addr_next    : std_logic_vector(gBuffAddrWidth-1 downto 0);  --! Next value of address register
     signal rxD_reg      : std_logic_vector(2 downto 0);                 --! In shift register stored RX data valid signal
 
-    signal cutAddr  : std_logic_vector(gBuffAddrWidth-1 downto 0);  --! Manipulated end address of the truncated frame
-    signal newAddr  : std_logic_vector(gBuffAddrWidth-1 downto 0);  --! Next Address
+    signal cutAddr      : std_logic_vector(gBuffAddrWidth-1 downto 0);  --! Manipulated end address of the truncated frame
 
     --register for end of frame
-    signal end_reg  : std_logic;    --! Register of reached-end signal
-    signal end_next : std_logic;    --! Next value of end signal register
+    signal end_reg      : std_logic;    --! Register of reached-end signal
+    signal end_next     : std_logic;    --! Next value of end signal register
+    signal end_posEdge  : std_logic;    --! Positive edge of end signal
 
 begin
 
@@ -116,17 +116,58 @@ begin
 
     cutAddr     <=std_logic_vector(unsigned(iStartAddr)+unsigned(iCutData)+5);   -- +4 cause of CRC   +1 for end
 
-    end_next    <= '1' when (rxD_reg="000") or
-                            (iCutEn ='1' and (iAddr=cutAddr or (unsigned(iCutData)+5<(unsigned(iAddr)-unsigned(iStartAddr)))))
-                            else end_reg and iCutEn;
+    --! @brief End of frame detection comb
+    --! - End, when RX data valid is 0
+    --! - End, when current address is truncated address, until CutEn=0
+    combFrameEnd :
+    process(iCutEn, end_reg, rxD_reg, cutAddr, iAddr)
+    begin
 
-    newAddr     <= iAddr when   (rxD_reg    = "000") or
-                                iCutEn      = '0'
-                                else cutAddr;
+        end_next    <= '0';
 
-    addr_next   <= newAddr when end_next    = '1' and
-                                end_reg     = '0'
-                                else addr_reg;
+        if rxD_reg="000" then
+            end_next    <= '1';
+
+        end if;
+
+        if iCutEn ='1'  then
+            end_next    <= end_reg;
+
+            if iAddr=cutAddr then
+                end_next    <= '1';
+
+            end if;
+        end if;
+
+    end process;
+
+
+    --Edge detection
+    end_posEdge <= '1' when end_next = '1' and end_reg = '0' else '0';
+
+
+    --! @brief End address of frame comb
+    --! - Store at positive edge of frame end
+    combEndAddr :
+    process(addr_reg, end_posEdge, iAddr, cutAddr, iCutEn)
+    begin
+
+        addr_next   <= addr_reg;
+
+        if end_posEdge  = '1' then
+
+            if iCutEn = '0' then
+                addr_next   <= iAddr;
+
+            else
+                addr_next   <= cutAddr;
+
+            end if;
+
+        end if;
+
+    end process;
+
 
     oEndAddr    <= addr_reg;
     oFrameEnd   <= '1' when end_reg='1' else '0';
