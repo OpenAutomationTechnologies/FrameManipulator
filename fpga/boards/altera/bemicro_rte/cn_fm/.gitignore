@@ -19,3 +19,5 @@ cn_fm/
 *.pof
 *.txt
 *.stp
+*.cdf
+*.lck
