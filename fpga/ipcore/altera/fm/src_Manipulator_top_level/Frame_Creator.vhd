@@ -13,6 +13,7 @@
 -- *----------------------------------------------------------------------------------------*
 -- *                                                                                        *
 -- * 09.08.12 V1.0      Frame_Creator                           by Sebastian Muelhausen     *
+-- * 25.11.13 V1.1      Updated for safety manipulations        by Sebastian Muelhausen     *
 -- *                                                                                        *
 -- ******************************************************************************************
 
@@ -20,8 +21,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library work;
+use work.global.all;
+
 entity Frame_Creator is
-    generic(gDataBuffAddrWidth: natural:=11);
+    generic(gDataBuffAddrWidth      : natural:=11;
+            gSafetyPackSelCntWidth  : natural :=8);
     port(
         clk, reset:     in std_logic;
 
@@ -36,6 +41,15 @@ entity Frame_Creator is
         oRdBuffAddr:    out std_logic_vector(gDataBuffAddrWidth-1 downto 0);--read address of data-memory
         oRdBuffEn:      out std_logic;                                      --read-enable
 
+        --Safety packet exchange
+        iPacketExchangeEn   : in std_logic;                                     --Start of the exchange of the safety packet
+        iPacketStart        : in std_logic_vector(cByteLength-1 downto 0);      --Start of safety packet
+        iPacketSize         : in std_logic_vector(cByteLength-1 downto 0);      --Size of safety packet
+        iPacketData         : in std_logic_vector(cByteLength-1 downto 0);      --Data of the new safety packet
+        iPacketExtension    : in std_logic;                                     --Exchange will be extended for several tacts
+        oExchangeData       : out std_logic;                                    --Exchanging safety data
+
+        --Output
         oTXData :       out std_logic_vector(1 downto 0);   --frame-output-data
         oTXDV:          out std_logic                       --frame-output-data-valid
     );
@@ -46,21 +60,27 @@ architecture two_seg_arch of Frame_Creator is
     --create new frame FSM -------------------------------------------------------------------
     --FSM to select between Preamble, frame-data and CRC
     component Frame_Create_FSM
+        generic(gSafetyPackSelCntWidth  : natural :=8);
         port(
             clk, reset:         in std_logic;
 
-            iFrameStart:        in std_logic;   --start of a new frame
-            iReadBuffDone:      in std_logic;   --buffer reading has reched the last position
+            iFrameStart:        in std_logic;                       --start of a new frame
+            iReadBuffDone:      in std_logic;                       --buffer reading has reched the last position
 
-            oPreamble_Active:   out std_logic;  --activate preamble_generator
-            oPreReadBuff:       out std_logic;  --activate pre-reading
-            oReadBuff_Active:   out std_logic;  --activate reading from data-buffer
-            oCRC_Active:        out std_logic;  --activate CRC calculation
+            iPacketExchangeEn   : in std_logic;                                     --Start of the exchange of the safety packet
+            iPacketStart        : in std_logic_vector(cByteLength-1 downto 0);      --Start of safety packet
+            iPacketSize         : in std_logic_vector(cByteLength-1 downto 0);      --Size of safety packet
+            oExchangeData       : out std_logic;                                    --Exchanging safety data
+
+            oPreamble_Active:   out std_logic;                      --activate preamble_generator
+            oPreReadBuff:       out std_logic;                      --activate pre-reading
+            oReadBuff_Active:   out std_logic;                      --activate reading from data-buffer
+            oCRC_Active:        out std_logic;                      --activate CRC calculation
 
             oSelectTX:          out std_logic_vector(1 downto 0);   --selection beween the preamble, payload and crc
             oNextFrame:         out std_logic;                      --FSM is ready for new data
             oTXDV:              out std_logic                       --TX Data Valid
-        );
+         );
     end component;
 
 
@@ -139,11 +159,13 @@ architecture two_seg_arch of Frame_Creator is
     signal nStartReader:    std_logic;
     signal readdone:        std_logic;
 
-    signal TXD_Selection:   std_logic_vector(1 downto 0);
+    signal TXD_Selection    : std_logic_vector(1 downto 0);
+    signal ExchangeData     : std_logic;
 
-    signal TXDPre:          std_logic_vector(1 downto 0);
-    signal TXDBuff:         std_logic_vector(1 downto 0);
-    signal TXDCRC:          std_logic_vector(1 downto 0);
+    signal FrameData        : std_logic_vector(7 downto 0);
+    signal TXDPre           : std_logic_vector(1 downto 0);
+    signal TXDBuff          : std_logic_vector(1 downto 0);
+    signal TXDCRC           : std_logic_vector(1 downto 0);
 
     signal temp_TXD_Mux:    std_logic_vector(7 downto 0);
 
@@ -165,13 +187,16 @@ begin
     --PreReadBuff to eliminate problems with delays of the DPRam and read logic
     ------------------------------------------------------------------------------------------
     FSM: Frame_Create_FSM
+    generic map(gSafetyPackSelCntWidth  => gSafetyPackSelCntWidth)
     port map(
         clk=>clk, reset=>reset,
-        iFrameStart=>iStartNewFrame,        iReadBuffDone=>readdone,
-        oPreamble_Active=>Preamble_Active,  oPreReadBuff=>PreReadBuff,
-        oReadBuff_Active=>ReadBuff_Active,  oCRC_Active=>CRC_Active,
-        oSelectTX=>TXD_Selection,           oNextFrame=>oNextFrame,     oTXDV=>oTXDV);
+        iFrameStart=>iStartNewFrame,            iReadBuffDone=>readdone,
+        iPacketExchangeEn=>iPacketExchangeEn,   iPacketStart=>iPacketStart, iPacketSize=>iPacketSize,
+        oPreamble_Active=>Preamble_Active,      oPreReadBuff=>PreReadBuff,  oExchangeData=>ExchangeData,
+        oReadBuff_Active=>ReadBuff_Active,      oCRC_Active=>CRC_Active,
+        oSelectTX=>TXD_Selection,               oNextFrame=>oNextFrame,     oTXDV=>oTXDV);
 
+    oExchangeData <= ExchangeData;
 
     --preamble generator ---------------------------------------------------------------------
     ------------------------------------------------------------------------------------------
@@ -200,11 +225,14 @@ begin
     --byte to 2bit converter -----------------------------------------------------------------
     --converts the frame data to a width of two bits
     ------------------------------------------------------------------------------------------
+
+    FrameData<= iPacketData when ExchangeData='1' or iPacketExtension='1' else iData;
+
     Byte_to_Tx:Byte_to_TXData
     port map (
-            clk=>clk, reset=>reset,
-            iData=> iData,
-            oTXD=> TXDBuff);
+            clk     => clk,         reset   => reset,
+            iData   => FrameData,
+            oTXD    => TXDBuff);
 
 
     --CRC_calculator -------------------------------------------------------------------------

@@ -21,11 +21,15 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library work;
+use work.global.all;
+
 entity Process_Unit is
     generic(gDataBuffAddrWidth:     natural:=11;
             gTaskWordWidth:         natural:=64;
             gTaskAddrWidth:         natural:=5;
             gManiSettingWidth:      natural:=112;
+            gSafetySetting          : natural :=5*cByteLength;  --5 Byte safety setting
             gCycleCntWidth:         natural:=8;
             gSize_Mani_Time:        natural:=40;
             gNoOfDelFrames:         natural:=255);
@@ -37,9 +41,12 @@ entity Process_Unit is
         iFrameSync:             in std_logic;   --synchronization of the frame-data-stream
         iStartTest:             in std_logic;   --start of a series of test
         iStopTest:              in std_logic;   --abort of a series of test
+        iClearMem               : in std_logic; --clear all tasks
         iNextFrame:             in std_logic;   --a new frame could be created
+        iSafetyActive:          in std_logic;   --safety manipulations are active
         oTestActive:            out std_logic;  --Series of Test is active => Flag for PRes
         oStartNewFrame:         out std_logic;  --data of a new frame is available
+        oError_Task_Conf:       out std_logic;  --Error: Wrong task configuration
 
         --compare Tasks from memory with the frame
         iData:                  in std_logic_vector(7 downto 0);                    --frame-data-stream
@@ -58,8 +65,12 @@ entity Process_Unit is
         --Manipulations in other components
         oTaskManiEn:            out std_logic;                                      --task: header manipulation
         oTaskCutEn:             out std_logic;                                      --task: cut frame
-        oDistCrcEn:             out std_logic;                                      --task: crc distortion
-        oManiSetting:           out std_logic_vector(gManiSettingWidth-1 downto 0)  --settings of the manipulations
+        oDistCrcEn:             out std_logic;
+        oTaskSafetyEn:          out std_logic;                                      --task: safety packet manipulation
+        oSafetyFrame:           out std_logic;                                      --current frame matches to the current or last safety task
+        oFrameIsSoc:            out std_logic;                                      --current frame is a SoC
+        oManiSetting:           out std_logic_vector(gManiSettingWidth-1 downto 0); --settings of the manipulations
+        oSafetySetting          : out std_logic_vector(gSafetySetting-1 downto 0)   --Setting of the current or last safety task
      );
 end Process_Unit;
 
@@ -71,8 +82,9 @@ architecture two_seg_arch of Process_Unit is
         generic(
                 gFrom:              natural:=15;
                 gTo :               natural:=22;
-                gWordWidth:         natural:=64;
+                gWordWidth:         natural:=64;--8*cByte..
                 gManiSettingWidth:  natural:=112;
+                gSafetySetting      : natural :=5*cByteLength;  --5 Byte safety setting
                 gCycleCntWidth:     natural:=8;
                 gBuffAddrWidth:     natural:=5
             );
@@ -83,10 +95,13 @@ architecture two_seg_arch of Process_Unit is
             iFrameSync:         in std_logic;   --sync for collecting header-data
             iStartTest:         in std_logic;   --start series of test
             iStopTest:          in std_logic;   --stop test
+            iClearMem           : in std_logic;     --clear all tasks
+            iSafetyActive:      in std_logic;   --safety manipulations are active
             oStartFrameStorage: out std_logic;  --valid frame was compared and can be stored
             oTestSync:          out std_logic;  --sync of a new test
-            oTestActive:        out std_logic;  --series of test is currently running
+            oManiActive:        out std_logic;  --series of test is currently running
             oFrameIsSoc:        out std_logic;  --current frame is a SoC
+            oError_Task_Conf:   out std_logic;  --Error: Wrong task configuration
             --data signals
             iData:              in std_logic_vector(7 downto 0);                    --frame-stream
             iTaskSettingData:   in std_logic_vector(2*gWordWidth-1 downto 0);       --settings for the tasks
@@ -98,7 +113,10 @@ architecture two_seg_arch of Process_Unit is
             oTaskManiEn:        out std_logic;                                      --task: manipulate header
             oTaskCrcEn:         out std_logic;                                      --task: distort crc
             oTaskCutEn:         out std_logic;                                      --task: truncate frame
-            oManiSetting:       out std_logic_vector(gManiSettingWidth-1 downto 0)  --manipulation setting
+            oTaskSafetyEn:      out std_logic;                                      --task: safety packet manipulation
+            oSafetyFrame:       out std_logic;                                      --current frame matches to the current or last safety task
+            oManiSetting:       out std_logic_vector(gManiSettingWidth-1 downto 0); --manipulation setting
+            oSafetySetting      : out std_logic_vector(gSafetySetting-1 downto 0)   --Setting of the current or last safety task
          );
     end component;
 
@@ -147,8 +165,13 @@ architecture two_seg_arch of Process_Unit is
     signal TaskDelayEn:         std_logic;
     signal TaskCrcEn:           std_logic;
 
-    signal ManiSetting:         std_logic_vector(gManiSettingWidth-1 downto 0);
-    signal DelaySetting:        std_logic_vector(cDelayDataWidth-1 downto 0);
+    signal ManiActive           : std_logic;
+
+    signal ManiSetting          : std_logic_vector(gManiSettingWidth-1 downto 0);
+
+    --reduction of unused bits
+    alias ManiSetting_Delay     : std_logic_vector(cDelayDataWidth-1 downto 0)
+                                    is ManiSetting(cDelayDataWidth+gTaskWordWidth-1 downto gTaskWordWidth);
 
 begin
 
@@ -164,25 +187,37 @@ begin
     generic map(gFrom=>15,gTo=>22,
                 gWordWidth          =>  gTaskWordWidth,
                 gManiSettingWidth   =>  gManiSettingWidth,
+                gSafetySetting      =>  gSafetySetting,
                 gCycleCntWidth      =>  gCycleCntWidth,
                 gBuffAddrWidth      =>  gTaskAddrWidth)
     port map(
             clk=>clk, reset=>reset,
             --control signals
-            iStartFrameProcess=>iStartFrameProcess, iFrameSync=>iFrameSync, iStartTest=>iStartTest,
-            oStartFrameStorage=>StartFrameStorage,  iStopTest=>iStopTest,   oTestSync=>TestSync,
-            oTestActive=>oTestActive,               oFrameIsSoc=>FrameIsSoC,
+            iStartFrameProcess  => iStartFrameProcess,
+            iFrameSync          => iFrameSync,
+            iStartTest          => iStartTest,
+            oStartFrameStorage  => StartFrameStorage,
+            iStopTest           => iStopTest,
+            iClearMem           => iClearMem,
+            iSafetyActive       => iSafetyActive,
+            oTestSync           => TestSync,
+            oManiActive         => ManiActive,
+            oFrameIsSoc         => FrameIsSoC,
+            oError_Task_Conf    => oError_Task_Conf,
             --data signals
             oTaskSelection=>oRdTaskAddr,            iData=>iData,           iTaskSettingData=>iTaskSettingData,
             iTaskCompFrame=>iTaskCompFrame,         iTaskCompMask=>iTaskCompMask,
             --manipulations
-            oTaskDelayEn=>TaskDelayEn,              oTaskManiEn=>oTaskManiEn,oTaskCrcEn=>TaskCrcEn,
-            oTaskCutEn=>oTaskCutEn,                 oManiSetting=>ManiSetting
+            oTaskDelayEn=>TaskDelayEn,              oTaskManiEn=>oTaskManiEn,
+            oTaskCrcEn=>TaskCrcEn,                  oTaskCutEn=>oTaskCutEn,
+            oTaskSafetyEn=>oTaskSafetyEn,           oSafetyFrame=>oSafetyFrame,
+            oManiSetting=>ManiSetting,              oSafetySetting  => oSafetySetting
             );
 
+    --Output of active Bit
+    oTestActive <= ManiActive or iSafetyActive;
+    oFrameIsSoc <= FrameIsSoc;
 
-    --reduction of unused bits
-    DelaySetting<=ManiSetting(cDelayDataWidth+gTaskWordWidth-1 downto gTaskWordWidth);
 
     --memory manager for the data-buffer -----------------------------------------------------
     --Stores the start- and end-address of valid frames (with iDataInEndAddr StartFrameStorage
@@ -207,7 +242,7 @@ begin
             iTestSync=>TestSync,                    iTestStop=>iStopTest,       iNextFrame=>iNextFrame,
             oStartNewFrame=>oStartNewFrame,
             --manipulations
-            iDelaySetting=>DelaySetting,            iTaskDelayEn=>TaskDelayEn,  iTaskCrcEn=>TaskCrcEn,
+            iDelaySetting=>ManiSetting_Delay,       iTaskDelayEn=>TaskDelayEn,  iTaskCrcEn=>TaskCrcEn,
             oDistCrcEn=>oDistCrcEn,
             --memory management
             iDataInEndAddr=>iDataInEndAddr,         oDataInStartAddr=>oDataInStartAddr,

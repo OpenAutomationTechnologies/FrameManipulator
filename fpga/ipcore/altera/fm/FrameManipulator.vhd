@@ -12,6 +12,7 @@
 -- *----------------------------------------------------------------------------------------*
 -- *                                                                                        *
 -- * 09.08.12 V1.0      Ethernet-Framemanipulator               by Sebastian Muelhausen     *
+-- * 25.11.13 V1.1      Updated for safety manipulations        by Sebastian Muelhausen     *
 -- *                                                                                        *
 -- ******************************************************************************************
 
@@ -20,12 +21,19 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library work;
+use work.global.all;
+
 entity FrameManipulator is
     generic(gBytesOfTheFrameBuffer: natural:=1600;
             gTaskBytesPerWord:      natural:=4;
             gTaskAddr:              natural:=8;
             gTaskCount:             natural:=32;
-            gControlBytesPerWord:   natural:=1;             gControlAddr:           natural:=1);
+            gControlBytesPerWord:   natural:=1;
+            gControlAddr:           natural:=1;
+            gBytesOfThePackBuffer   : natural := 16000;
+            gNumberOfPackets        : natural := 500
+            );
     port(
         clk_50, reset:  in std_logic;
         s_clk:          in std_logic;
@@ -102,8 +110,12 @@ architecture two_seg_arch of FrameManipulator is
             --status signals
             iError_Addr_Buff_OV:    in std_logic;   --Error: Overflow address-buffer
             iError_Frame_Buff_OV:   in std_logic;   --Error: Overflow data-buffer
+            iError_Packet_Buff_OV:  in std_logic;   --Error: Overflow packet-buffer
+            iError_Task_Conf:       in std_logic;   --Error: Wrong task configuration
             oStartTest:             out std_logic;  --start a new series of test
             oStopTest:              out std_logic;  --aborts the current test
+            oClearMem               : out std_logic;  --clear all tasks
+            oResetPaketBuff:        out std_logic;  --Resets the packet FIFO and removes the packet lag
             iTestActive:            in std_logic;   --Series of test is active
             --task signals
             iRdTaskAddr:            in std_logic_vector(gTaskAddrWidth-1 downto 0);     --task selection
@@ -177,6 +189,7 @@ architecture two_seg_arch of FrameManipulator is
                 gTaskWordWidth:         natural:=64;
                 gTaskAddrWidth:         natural:=5;
                 gManiSettingWidth:      natural:=112;
+                gSafetySetting          : natural :=5*cByteLength;  --5 Byte safety setting
                 gCycleCntWidth:         natural:=8;
                 gSize_Mani_Time:        natural:=40;
                 gNoOfDelFrames:         natural:=255);
@@ -188,9 +201,12 @@ architecture two_seg_arch of FrameManipulator is
             iFrameSync:             in std_logic;   --synchronization of the frame-data-stream
             iStartTest:             in std_logic;   --start of a series of test
             iStopTest:              in std_logic;   --abort of a series of test
+            iClearMem               : in std_logic; --clear all tasks
             iNextFrame:             in std_logic;   --a new frame could be created
+            iSafetyActive:          in std_logic;   --safety manipulations are active
             oTestActive:            out std_logic;  --Series of Test is active => Flag for PRes
             oStartNewFrame:         out std_logic;  --data of a new frame is available
+            oError_Task_Conf:       out std_logic;  --Error: Wrong task configuration
 
             --compare Tasks from memory with the frame
             iData:                  in std_logic_vector(7 downto 0);                    --frame-data-stream
@@ -209,16 +225,21 @@ architecture two_seg_arch of FrameManipulator is
             --Manipulations in other components
             oTaskManiEn:            out std_logic;                                      --task: header manipulation
             oTaskCutEn:             out std_logic;                                      --task: cut frame
-            oDistCrcEn:             out std_logic;                                      --task: crc distortion
-            oManiSetting:           out std_logic_vector(gManiSettingWidth-1 downto 0)  --settings of the manipulations
-        );
+            oDistCrcEn:             out std_logic;
+            oTaskSafetyEn:          out std_logic;                                      --task: safety packet manipulation
+            oSafetyFrame:           out std_logic;                                      --current frame matches to the current or last safety task
+            oFrameIsSoc:            out std_logic;                                      --current frame is a SoC
+            oManiSetting:           out std_logic_vector(gManiSettingWidth-1 downto 0); --settings of the manipulations
+            oSafetySetting          : out std_logic_vector(gSafetySetting-1 downto 0)   --Setting of the current or last safety task
+         );
     end component;
 
 
     --component for generating a new frame --------------------------------------------------
     --creates a new frame with new generated Preamble and CRC
     component Frame_Creator
-        generic(gDataBuffAddrWidth: natural:=11);
+        generic(gDataBuffAddrWidth      : natural:=11;
+                gSafetyPackSelCntWidth  : natural :=8);
         port(
             clk, reset:     in std_logic;
 
@@ -233,14 +254,52 @@ architecture two_seg_arch of FrameManipulator is
             oRdBuffAddr:    out std_logic_vector(gDataBuffAddrWidth-1 downto 0);--read address of data-memory
             oRdBuffEn:      out std_logic;                                      --read-enable
 
+            --Safety packet exchange
+            iPacketExchangeEn   : in std_logic;                                    --Start of the exchange of the safety packet
+            iPacketStart        : in std_logic_vector(cByteLength-1 downto 0);     --Start of safety packet
+            iPacketSize         : in std_logic_vector(cByteLength-1 downto 0);     --Size of safety packet
+            iPacketData         : in std_logic_vector(cByteLength-1 downto 0);     --Data of the new safety packet
+            iPacketExtension    : in std_logic;                                    --Exchange will be extended for several tacts
+            oExchangeData       : out std_logic;                                   --Exchanging safety data
+
+            --Output
             oTXData :       out std_logic_vector(1 downto 0);   --frame-output-data
             oTXDV:          out std_logic                       --frame-output-data-valid
         );
     end component;
 
 
+    --component for safety packet manipulations ---------------------------------------------
+    --! @brief Stores and exchanges safety packets
+    component Packet_Buffer
+        generic(gSafetySetting      : natural:=5*cByteLength;
+                gPacketAddrWidth    : natural := 14;    --enough for 500 Packets with the size of 28 Bytes
+                gAddrMemoryWidth    : natural := 9);    --Width of address memory, should store at least 500 addresses
+        port(
+            clk, reset              : in std_logic;
 
-    constant cDataBuffAddrWidth: natural:=log2c(gBytesOfTheFrameBuffer);
+            iResetPaketBuff         : in std_logic;     --Resets the packet FIFO and removes the packet lag
+            iStopTest               : in std_logic;     --abort of a series of test
+            oSafetyActive           : out std_logic;    --safety manipulations are active
+            oError_Packet_Buff_OV   : out std_logic;    --Error: Overflow packet-buffer
+
+            iTaskSafetyEn           : in std_logic;                                     --task: safety packet manipulation
+            iExchangeData           : in std_logic;                                     --exchange packet data
+            iSafetyFrame            : in std_logic;                                     --current frame matches to the current or last safety task
+            iFrameIsSoc             : in std_logic;                                     --current frame is a SoC
+            iManiSetting            : in std_logic_vector(gSafetySetting-1 downto 0);   --settings of the manipulations
+            oPacketExchangeEn       : out std_logic;                                    --Start of the exchange of the safety packet
+            oPacketExtension        : out std_logic;                                    --Exchange will be extended for several tacts
+            oPacketStart            : out std_logic_vector(cByteLength-1 downto 0);     --Start of safety packet
+            oPacketSize             : out std_logic_vector(cByteLength-1 downto 0);     --Size of safety packet
+
+            iFrameData              : in std_logic_vector(cByteLength-1 downto 0);      --Data of the current frame
+            oPacketData             : out std_logic_vector(cByteLength-1 downto 0)      --Data of the safety packet
+         );
+    end component;
+
+
+    constant cDataBuffAddrWidth:    natural:=log2c(gBytesOfTheFrameBuffer);
 
     constant cSlaveTaskWordWidth:   natural:=gTaskBytesPerWord*8;
     constant cSlaveTaskAddr:        natural:=gTaskAddr;
@@ -257,10 +316,17 @@ architecture two_seg_arch of FrameManipulator is
     constant cManiSettingWidth:     natural:=2*cTaskWordWidth-cCycleCntWidth-8;
                                             --two task objects - Cycle Word - Task Byte
 
+    constant cSafetySetting         : natural:=6*cByteLength;   --6 Byte Safety Setting
+    constant cSafetyPackSelCntWidth : natural:=11;              --Width of counter to select packet: 11 bit to change the whole frame
+    constant cPacketAddrWidth       : natural:=log2c(gBytesOfThePackBuffer);
+    constant cAddrMemoryWidth       : natural:=log2c(gNumberOfPackets);
+
 
     --signals memory interface
-    signal Error_Addr_Buff_OV:  std_logic;
-    signal Error_Frame_Buff_OV: std_logic;
+    signal Error_Addr_Buff_OV   : std_logic;
+    signal Error_Frame_Buff_OV  : std_logic;
+    signal Error_Packet_Buff_OV : std_logic;
+    signal Error_Task_Conf      : std_logic;
 
     signal RdTaskAddr:          std_logic_vector(cTaskAddrWidth-1 downto 0);
 
@@ -292,22 +358,43 @@ architecture two_seg_arch of FrameManipulator is
     --Test control
     signal StartTest:           std_logic;
     signal StopTest:            std_logic;
+    signal ClearMem             : std_logic;
     signal TestActive:          std_logic;
 
     --Outgoing frames
     signal NextFrame:           std_logic;
     signal StartNewFrame:       std_logic;
+    signal FrameIsSoc           : std_logic;                                    --current frame is a SoC
 
     --Manipulations
     signal ManiSetting:         std_logic_vector(cManiSettingWidth-1 downto 0);
     signal TaskManiEn:          std_logic;
     signal TaskCutEn:           std_logic;
-    signal TaskCutData:         std_logic_vector(cDataBuffAddrWidth-1 downto 0):=(others=>'0');
     signal DistCrcEn:           std_logic;
+
+
+    --Reducing ManiSetting via alias
+    alias ManiSetting_Cut      : std_logic_vector(cDataBuffAddrWidth-1 downto 0)
+                                    is ManiSetting(cDataBuffAddrWidth+cTaskWordWidth-1 downto cTaskWordWidth);
+
+
+    --Safety
+    signal TaskSafetyEn         : std_logic;                                    --task: safety packet manipulation
+    signal SafetyFrame          : std_logic;                                    --Current Frame is a selected safety frame
+    signal PacketExchangeEn     : std_logic;                                    --Start of the exchange of the safety packet
+    signal PacketStart          : std_logic_vector(cByteLength-1 downto 0);     --Start of safety packet
+    signal PacketSize           : std_logic_vector(cByteLength-1 downto 0);     --Size of safety packet
+    signal PacketData           : std_logic_vector(cByteLength-1 downto 0);     --Data of the safety packet
+    signal SafetyActive         : std_logic;                                    --safety manipulations are active
+    signal ExchangeData         : std_logic;                                    --exchange packet data
+    signal PacketExtension      : std_logic;                                    --Exchange will be extended for several tacts
+    signal SafetySetting        : std_logic_vector(cSafetySetting-1 downto 0);  --Setting of the current or last safety task
+    signal ResetPaketBuff       : std_logic;                                    --Resets the packet FIFO and removes the packet lag
 
     --Output
     signal TXData:              std_logic_vector(1 downto 0);
     signal TXDV:                std_logic;
+
 
 
 begin
@@ -335,9 +422,17 @@ begin
             sc_address=>sc_address,     sc_writedata=>sc_writedata,     sc_write=>sc_write,
             sc_read=>sc_read,           sc_readdata=>sc_readdata,       sc_byteenable=>sc_byteenable,
 
-            iRdTaskAddr=>RdTaskAddr,
-            iError_Addr_Buff_OV=>Error_Addr_Buff_OV,    iError_Frame_Buff_OV=>Error_Frame_Buff_OV,
-            oStartTest=>StartTest,              oStopTest=>StopTest,            iTestActive=>TestActive,
+            iError_Addr_Buff_OV     => Error_Addr_Buff_OV,
+            iError_Frame_Buff_OV    => Error_Frame_Buff_OV,
+            iError_Packet_Buff_OV   => Error_Packet_Buff_OV,
+            iError_Task_Conf        => Error_Task_Conf,
+            oStartTest              => StartTest,
+            oStopTest               => StopTest,
+            oClearMem               => ClearMem,
+            oResetPaketBuff         => ResetPaketBuff,
+            iTestActive             => TestActive,
+
+            iRdTaskAddr             => RdTaskAddr,
             oTaskSettingData=>TaskSettingData,  oTaskCompFrame=>TaskCompFrame,  oTaskCompMask=>TaskCompMask
             );
 
@@ -357,11 +452,11 @@ begin
     port map (
             clk=>clk_50, reset=>reset,
             iRXDV => iRXDV,     iRXD =>  iRXD,              iDataStartAddr=>DataInStartAddr,
-            iTaskCutEn=>TaskCutEn,  iTaskCutData=>TaskCutData,
+            iTaskCutEn=>TaskCutEn,  iTaskCutData=>ManiSetting_Cut,
 
-            oData => DataToBuff,            oWrBuffAddr => WrBuffAddr,  oWrBuffEn => WrBuffEn,
+            oData => DataToBuff,                oWrBuffAddr => WrBuffAddr,  oWrBuffEn => WrBuffEn,
             oDataEndAddr => DataInEndAddr,
-            oStartFrameProcess =>StartFrameProc,oFrameEnded=>FrameEnded,oFrameSync=>FrameSync);
+            oStartFrameProcess =>StartFrameProc,oFrameEnded=>FrameEnded,    oFrameSync=>FrameSync);
 
 
 
@@ -399,32 +494,40 @@ begin
                 gTaskWordWidth      =>  cTaskWordWidth,
                 gTaskAddrWidth      =>  cTaskAddrWidth,
                 gManiSettingWidth   =>  cManiSettingWidth,
+                gSafetySetting      =>  cSafetySetting,
                 gCycleCntWidth      =>  cCycleCntWidth,
                 gSize_Mani_Time     =>  cSize_Mani_Time,
                 gNoOfDelFrames      =>  cNoOfDelFrames)
     port map(
-            clk=>clk_50,reset=>reset,
+            clk                 => clk_50,              reset           => reset,
 
-            iStartFrameProcess=>StartFrameProc, iFrameEnded=>FrameEnded,iFrameSync=>FrameSync,
-            iStartTest=>StartTest,              iStopTest=>StopTest,    iNextFrame=>NextFrame,
-            oTestActive=>TestActive,            oStartNewFrame=>StartNewFrame,
+            iStartFrameProcess  => StartFrameProc,
+            iFrameEnded         => FrameEnded,
+            iFrameSync          => FrameSync,
+            iNextFrame          => NextFrame,
+            iStartTest          => StartTest,
+            iStopTest           => StopTest,
+            iClearMem           => ClearMem,
+            iSafetyActive       => SafetyActive,
+            oTestActive         => TestActive,
+            oStartNewFrame      => StartNewFrame,
+            oError_Task_Conf    => Error_Task_Conf,
 
-            iData=>DataToBuff,
-            iTaskSettingData=>TaskSettingData,  iTaskCompFrame=>TaskCompFrame,
-            iTaskCompMask=>TaskCompMask,        oRdTaskAddr=>RdTaskAddr,
+            iData               => DataToBuff,
+            iTaskSettingData    => TaskSettingData,     iTaskCompFrame  => TaskCompFrame,
+            iTaskCompMask       => TaskCompMask,        oRdTaskAddr     => RdTaskAddr,
 
-            oDataInStartAddr=>DataInStartAddr,  iDataInEndAddr=>DataInEndAddr,
-            oDataOutStartAddr=>DataOutStartAddr,oDataOutEndAddr=>DataOutEndAddr,
-            oError_Addr_Buff_OV=>Error_Addr_Buff_OV,
+            oDataInStartAddr    => DataInStartAddr,     iDataInEndAddr  => DataInEndAddr,
+            oDataOutStartAddr   => DataOutStartAddr,    oDataOutEndAddr => DataOutEndAddr,
+            oError_Addr_Buff_OV => Error_Addr_Buff_OV,
 
-            oTaskManiEn=>TaskManiEn,            oTaskCutEn=>TaskCutEn,  oDistCrcEn=>DistCrcEn,
-            oManiSetting=>ManiSetting);
+            oTaskManiEn         => TaskManiEn,          oTaskCutEn      => TaskCutEn,
+            oDistCrcEn          => DistCrcEn,           oTaskSafetyEn   => TaskSafetyEn,
+            oSafetyFrame        => SafetyFrame,         oFrameIsSoc     => FrameIsSoc,
+            oManiSetting        => ManiSetting,         oSafetySetting  => SafetySetting);
 
 
 
-
-    --reducing the setting data for the cut-task
-    TaskCutData<=ManiSetting(cDataBuffAddrWidth+cTaskWordWidth-1 downto cTaskWordWidth);
 
 
 
@@ -432,16 +535,48 @@ begin
     --readout the data-buffer and generates a new frame
     -----------------------------------------------------------------------------------------
     F_Creator : Frame_Creator
-    generic map(gDataBuffAddrWidth=>cDataBuffAddrWidth)
+    generic map(gDataBuffAddrWidth      => cDataBuffAddrWidth,
+                gSafetyPackSelCntWidth  => cSafetyPackSelCntWidth)
     port map (
-            clk=>clk_50, reset=>reset,
+            clk=>clk_50,                                reset               => reset,
 
-            iStartNewFrame =>StartNewFrame, oNextFrame=>NextFrame,      iDistCrcEn => DistCrcEn,
+            iStartNewFrame      => StartNewFrame,       oNextFrame          => NextFrame,
+            iDistCrcEn          => DistCrcEn,
 
-            iDataEndAddr => DataOutEndAddr, iDataStartAddr=>DataOutStartAddr,
-            iData => DataFromBuff,          oRdBuffEn=>RdBuffEn,        oRdBuffAddr => RdBuffAddr,
+            iDataEndAddr        => DataOutEndAddr,      iDataStartAddr      => DataOutStartAddr,
+            iData               => DataFromBuff,        oRdBuffEn           => RdBuffEn,
+            oRdBuffAddr         => RdBuffAddr,
 
-            oTXData => TXData, oTXDV=>TXDV);
+            iPacketExchangeEn   => PacketExchangeEn,
+            iPacketStart        => PacketStart,         iPacketSize         => PacketSize,
+            iPacketData         => PacketData,          iPacketExtension    => PacketExtension,
+            oExchangeData       => ExchangeData,
+
+            oTXData             => TXData,              oTXDV               => TXDV);
+
+
+    --component for safety packet manipulations ---------------------------------------------
+    --stores and exchanges safety packets
+    -----------------------------------------------------------------------------------------
+    P_Buff : Packet_Buffer
+    generic map(gSafetySetting      => cSafetySetting,
+                gPacketAddrWidth    => cPacketAddrWidth,
+                gAddrMemoryWidth    => cAddrMemoryWidth)
+    port map(
+            clk                 => clk_50,              reset                   => reset,
+
+            iResetPaketBuff         => ResetPaketBuff,
+            iStopTest               => StopTest,
+            oSafetyActive           => SafetyActive,
+            oError_Packet_Buff_OV   => Error_Packet_Buff_OV,
+
+            iTaskSafetyEn       => TaskSafetyEn,        iExchangeData           => ExchangeData,
+            iSafetyFrame        => SafetyFrame,         iFrameIsSoc             => FrameIsSoc,
+            iManiSetting        => SafetySetting,
+            oPacketExchangeEn   => PacketExchangeEn,    oPacketExtension        => PacketExtension,
+            oPacketStart        => PacketStart,         oPacketSize             => PacketSize,
+
+            iFrameData          => DataFromBuff,        oPacketData             => PacketData);
 
 
 

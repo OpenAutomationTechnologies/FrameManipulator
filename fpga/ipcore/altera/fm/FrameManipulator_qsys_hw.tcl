@@ -81,11 +81,12 @@ set_module_property FIX_110_VIP_PATH false
 # +-----------------------------------
 # | files
 # |
-add_file "../../../../stacks/openPOWERLINK/hardware/ipcore/common/lib/src/global.vhd" {SYNTHESIS SIM
-ULATION}
+add_file "../../../../stacks/openPOWERLINK/hardware/ipcore/common/lib/src/global.vhd" {SYNTHESIS SIMULATION}
+add_file framemanipulatorPkg.vhd {SYNTHESIS SIMULATION}
 add_file FrameManipulator.vhd {SYNTHESIS SIMULATION}
 add_file lib_Basics/adder_2121.vhd {SYNTHESIS SIMULATION}
 add_file lib_Basics/Basic_Cnter.vhd {SYNTHESIS SIMULATION}
+add_file lib_Basics/Basic_DownCnter.vhd {SYNTHESIS SIMULATION}
 add_file lib_Basics/From_To_Cnt_Filter.vhd {SYNTHESIS SIMULATION}
 add_file lib_Basics/Mux1D.vhd {SYNTHESIS SIMULATION}
 add_file lib_Basics/Mux2D.vhd {SYNTHESIS SIMULATION}
@@ -111,13 +112,19 @@ add_file src_components/Delay_Handler.vhd {SYNTHESIS SIMULATION}
 add_file src_components/Frame_collector.vhd {SYNTHESIS SIMULATION}
 add_file src_components/Frame_Create_FSM.vhd {SYNTHESIS SIMULATION}
 add_file src_components/Manipulation_Manager.vhd {SYNTHESIS SIMULATION}
+add_file src_components/Packet_MemCnter.vhd {SYNTHESIS SIMULATION}
+add_file src_components/Packet_Memory.vhd {SYNTHESIS SIMULATION}
+add_file src_components/Packet_StartAddrMem.vhd {SYNTHESIS SIMULATION}
+add_file src_components/PacketControl_FSM.vhd {SYNTHESIS SIMULATION}
 add_file src_components/ReadAddress_FSM.vhd {SYNTHESIS SIMULATION}
 add_file src_components/RXData_to_Byte.vhd {SYNTHESIS SIMULATION}
+add_file src_components/SafetyTaskSelection.vhd {SYNTHESIS SIMULATION}
 add_file src_components/SoC_Cnter.vhd {SYNTHESIS SIMULATION}
 add_file src_components/StoreAddress_FSM.vhd {SYNTHESIS SIMULATION}
 add_file src_components/Task_Mem_Reset.vhd {SYNTHESIS SIMULATION}
 add_file src_components/Task_Memory.vhd {SYNTHESIS SIMULATION}
 add_file src_Manipulator_top_level/Data_Buffer.vhd {SYNTHESIS SIMULATION}
+add_file src_Manipulator_top_level/Packet_Buffer.vhd {SYNTHESIS SIMULATION}
 add_file src_Manipulator_top_level/Frame_Creator.vhd {SYNTHESIS SIMULATION}
 add_file src_Manipulator_top_level/Frame_Receiver.vhd {SYNTHESIS SIMULATION}
 add_file src_Manipulator_top_level/Memory_Interface.vhd {SYNTHESIS SIMULATION}
@@ -180,6 +187,22 @@ set_parameter_property gControlAddr UNITS None
 set_parameter_property gControlAddr ALLOWED_RANGES 0:2147483647
 set_parameter_property gControlAddr AFFECTS_GENERATION false
 set_parameter_property gControlAddr HDL_PARAMETER true
+add_parameter gBytesOfThePackBuffer NATURAL 16000
+set_parameter_property gBytesOfThePackBuffer DEFAULT_VALUE 16000
+set_parameter_property gBytesOfThePackBuffer DISPLAY_NAME gBytesOfThePackBuffer
+set_parameter_property gBytesOfThePackBuffer TYPE NATURAL
+set_parameter_property gBytesOfThePackBuffer UNITS None
+set_parameter_property gBytesOfThePackBuffer ALLOWED_RANGES 0:2147483647
+set_parameter_property gBytesOfThePackBuffer AFFECTS_GENERATION false
+set_parameter_property gBytesOfThePackBuffer HDL_PARAMETER true
+add_parameter gNumberOfPackets NATURAL 1000
+set_parameter_property gNumberOfPackets DEFAULT_VALUE 1000
+set_parameter_property gNumberOfPackets DISPLAY_NAME gNumberOfPackets
+set_parameter_property gNumberOfPackets TYPE NATURAL
+set_parameter_property gNumberOfPackets UNITS None
+set_parameter_property gNumberOfPackets ALLOWED_RANGES 0:2147483647
+set_parameter_property gNumberOfPackets AFFECTS_GENERATION false
+set_parameter_property gNumberOfPackets HDL_PARAMETER true
 # |
 # +-----------------------------------
 

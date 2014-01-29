@@ -16,6 +16,7 @@
 -- *----------------------------------------------------------------------------------------*
 -- *                                                                                        *
 -- * 09.08.12 V1.0      Control_Register                        by Sebastian Muelhausen     *
+-- * 20.11.13 V1.1      Added Safety Registers                  by Sebastian Muelhausen     *
 -- *                                                                                        *
 -- ******************************************************************************************
 
@@ -33,10 +34,13 @@ entity Control_Register is
         oStartTest:             out std_logic;  --Opertaion: Start new series of test
         oStopTest:              out std_logic;  --Opertaion: Stop current sereis of test
         oClearMem:              out std_logic;  --Opertaion: clear all tasks
+        oResetPaketBuff:        out std_logic;  --Opertaion:aborts the current test
         iTestActive:            in std_logic;   --Status: Test is active
         --Error messages
         iError_Addr_Buff_OV:    in std_logic;   --Error: Address-buffer overflow
         iError_Frame_Buff_OV:   in std_logic;   --Error: Data-buffer overflow
+        iError_Packet_Buff_OV:  in std_logic;   --Error: Overflow packet-buffer
+        iError_Task_Conf:       in std_logic;   --Error: Wrong task configuration
         --avalon bus (s_clk-domain)
         s_iAddr:                in std_logic_vector(gAddresswidth-1 downto 0);
         s_iWrEn:                in std_logic;
@@ -75,15 +79,18 @@ architecture two_seg_arch of Control_Register is
     end component;
 
     --positions of operation and status bits
-    constant OpStart:       natural:= 0;
-    constant OpStop:        natural:= 1;
-    constant OpClearMem:    natural:= 2;
-    constant OpClearErrors: natural:= 3;
+    constant cOpStart:       natural:= 0;
+    constant cOpStop:        natural:= 1;
+    constant cOpClearMem:    natural:= 2;
+    constant cOpClearErrors: natural:= 3;
+    constant cOpClearPaket:  natural:= 4;
 
-    constant StActive:      natural:= 0;
+    constant cStActive:      natural:= 0;
 
-    constant ErDataOv:      natural:= 4;
-    constant ErFrameOv:     natural:= 5;
+    constant cErDataOv:      natural:= 4;
+    constant cErFrameOv:     natural:= 5;
+    constant cErPacketOv:    natural:= 6;
+    constant cErTaskConf:    natural:= 7;
 
 
     --data variables
@@ -124,14 +131,20 @@ begin
     end process;
 
     --store test staus (first nibble) D-FF:
-    StatusByte_next(StActive)<=iTestActive;
+    StatusByte_next(cStActive)<=iTestActive;
 
     --store errors (second nibble) RS-FF:
         --set of bits with error-signal, reset of bits with clear-operation
-    StatusByte_next(ErDataOv)   <=(StatusByte_reg(ErDataOv)     or iError_Addr_Buff_OV)
+    StatusByte_next(cErDataOv)   <=(StatusByte_reg(cErDataOv)     or iError_Addr_Buff_OV)
                                                                 and not ClearErrors;
 
-    StatusByte_next(ErFrameOv)  <=(StatusByte_reg(ErFrameOv)    or iError_Frame_Buff_OV)
+    StatusByte_next(cErFrameOv)  <=(StatusByte_reg(cErFrameOv)    or iError_Frame_Buff_OV)
+                                                                and not ClearErrors;
+
+    StatusByte_next(cErPacketOv)  <=(StatusByte_reg(cErPacketOv)    or iError_Packet_Buff_OV)
+                                                                and not ClearErrors;
+
+    StatusByte_next(cErTaskConf)  <=(StatusByte_reg(cErTaskConf)    or iError_Task_Conf)
                                                                 and not ClearErrors;
 
 
@@ -160,16 +173,18 @@ begin
     --update register, when data is read
     OperationByte_next<=DataB_out(OperationByte_next'range) when rden_b='1' else OperationByte_reg;
 
-    oStartTest  <='1' when OperationByte_reg(OpStart)='1'   and OperationByte_reg(OpStop)='0'
-                                                            and OperationByte_reg(OpClearMem)='0'
+    oStartTest  <='1' when OperationByte_reg(cOpStart)='1'   and OperationByte_reg(cOpStop)='0'
+                                                            and OperationByte_reg(cOpClearMem)='0'
                         else '0';
 
-    oStopTest   <='1' when OperationByte_reg(OpStop)='1'    or OperationByte_reg(OpClearMem)='1'
+    oStopTest   <='1' when OperationByte_reg(cOpStop)='1'    or OperationByte_reg(cOpClearMem)='1'
                                                             or StatusByte_reg(7 downto 4)/="0000"
                         else '0';
 
-    oClearMem   <='1' when OperationByte_reg(OpClearMem)='1' else '0';
+    oClearMem   <='1' when OperationByte_reg(cOpClearMem)='1' else '0';
 
-    ClearErrors <='1' when OperationByte_reg(OpClearErrors)='1' else '0';
+    ClearErrors <='1' when OperationByte_reg(cOpClearErrors)='1' else '0';
+
+    oResetPaketBuff <='1' when OperationByte_reg(cOpClearPaket)='1' else '0';
 
 end two_seg_arch;

@@ -12,6 +12,7 @@
 -- *----------------------------------------------------------------------------------------*
 -- *                                                                                        *
 -- * 09.08.12 V1.0      Memory_Interface                        by Sebastian Muelhausen     *
+-- * 20.11.13 V1.1      Added Safety Registers                  by Sebastian Muelhausen     *
 -- *                                                                                        *
 -- ******************************************************************************************
 
@@ -47,8 +48,12 @@ entity Memory_Interface is
         --status signals
         iError_Addr_Buff_OV:    in std_logic;   --Error: Overflow address-buffer
         iError_Frame_Buff_OV:   in std_logic;   --Error: Overflow data-buffer
+        iError_Packet_Buff_OV:  in std_logic;   --Error: Overflow packet-buffer
+        iError_Task_Conf:       in std_logic;   --Error: Wrong task configuration
         oStartTest:             out std_logic;  --start a new series of test
         oStopTest:              out std_logic;  --aborts the current test
+        oClearMem               : out std_logic;  --clear all tasks
+        oResetPaketBuff:        out std_logic;  --Resets the packet FIFO and removes the packet lag
         iTestActive:            in std_logic;   --Series of test is active
         --task signals
         iRdTaskAddr:            in std_logic_vector(gTaskAddrWidth-1 downto 0);     --task selection
@@ -87,10 +92,13 @@ architecture two_seg_arch of Memory_Interface is
             oStartTest:             out std_logic;  --Start new series of test
             oStopTest:              out std_logic;  --Stop current sereis of test
             oClearMem:              out std_logic;  --clear all tasks
+            oResetPaketBuff:        out std_logic;  --Opertaion:aborts the current test
             iTestActive:            in std_logic;   --Status: Test is active
             --Error messages
             iError_Addr_Buff_OV:    in std_logic;   --Error: Address-buffer overflow
             iError_Frame_Buff_OV:   in std_logic;   --Error: Data-buffer overflow
+            iError_Packet_Buff_OV:  in std_logic;   --Error: Overflow packet-buffer
+            iError_Task_Conf:       in std_logic;   --Error: Wrong task configuration
             --avalon bus (s_clk-domain)
             s_iAddr:                in std_logic_vector(gAddresswidth-1 downto 0);
             s_iWrEn:                in std_logic;
@@ -125,7 +133,7 @@ architecture two_seg_arch of Memory_Interface is
                 gSlaveAddrWidth:    natural :=11;
                 gAddresswidth:      natural :=8);
         port(
-            clk, reset:     in std_logic;
+            clk:            in std_logic;
             --avalon bus (s_clk domain)
             s_clk:          in std_logic;   --Clock of the slave
             s_iAddr:        in std_logic_vector(gSlaveAddrWidth-1 downto 0);
@@ -160,15 +168,20 @@ begin
     port map(
             clk=>clk,   s_clk=>s_clk,       reset=>reset,
             --operations
-            oStartTest=>oStartTest,         oStopTest=>oStopTest,           oClearMem=>ClearMem,
+            oStartTest=>oStartTest,         oStopTest=>oStopTest,
+            oClearMem=>ClearMem,            oResetPaketBuff=>oResetPaketBuff,
             iTestActive=>iTestActive,
             --Error messages
             iError_Addr_Buff_OV=>iError_Addr_Buff_OV,
             iError_Frame_Buff_OV=>iError_Frame_Buff_OV,
+            iError_Packet_Buff_OV=>iError_Packet_Buff_OV,
+            iError_Task_Conf=>iError_Task_Conf,
             --avalon bus (s_clk-domain)
             s_iAddr=>sc_address,            s_iWriteData=>sc_writedata,     s_iWrEn=>sc_write,
             s_iRdEn=>sc_read,               s_iByteEn=>sc_byteenable,       s_oReadData=>sc_readdata
             );
+
+    oClearMem   <= ClearMem;
 
 
 
@@ -196,7 +209,7 @@ begin
     generic map(gSlaveWordWidth=>gSlaveTaskWordWidth,
                 gWordWidth=>gTaskWordWidth,gSlaveAddrWidth=>gSlaveTaskAddrWidth,gAddresswidth=>gTaskAddrWidth)
     port map (
-            clk=>clk,s_clk=>s_clk, reset=>reset,
+            clk=>clk,s_clk=>s_clk,
             --avalon bus (s_clk domain)
             s_iAddr=>st_address,        s_iWriteData=>st_writedata, s_iWrEn=>st_write,
             s_iRdEn=>st_read,

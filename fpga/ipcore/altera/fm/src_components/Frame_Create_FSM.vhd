@@ -1,36 +1,45 @@
--- **********************************************************************
--- *                       Frame_Create_FSM V2.0                        *
--- **********************************************************************
--- *                                                                    *
--- * The FSM for creating Ethernet frames and the TXDV signal           *
--- *                                                                    *
--- * States:                                                            *
--- *  sIdle:        ready for the next frame-data                       *
--- *  sPreamble:    starts the Preamble_Generator                       *
--- *  sPre_read:    pre-start of Read Logic to compensate delay         *
--- *  sRead:        loads and converts frame payload                    *
--- *  sCrc:         starts CRC_calculator                               *
--- *  sWait_IPG:    waits a few cycles to keep the Inter Packet Gap of  *
--- *                960ns                                               *
--- *--------------------------------------------------------------------*
--- *                                                                    *
--- * 08.05.12 V1.0 created Frame_starter  by Sebastian Muelhausen       *
--- * 12.06.12 V1.1 updated FSM for Frames by Sebastian Muelhausen       *
--- *               with Size=0                                          *
--- * 09.08.12 V2.0 redesign with sWait_IPG by Sebastian Muelhausen      *
--- *                                                                    *
--- **********************************************************************
+-- ******************************************************************************************
+-- *                                   Frame_Create_FSM V2.0                                *
+-- ******************************************************************************************
+-- *                                                                                        *
+-- * The FSM for creating Ethernet frames and the TXDV signal                               *
+-- *                                                                                        *
+-- * States:                                                                                *
+-- *  sIdle:        ready for the next frame-data                                           *
+-- *  sPreamble:    starts the Preamble_Generator                                           *
+-- *  sPre_read:    pre-start of Read Logic to compensate delay                             *
+-- *  sRead:        loads and converts frame payload                                        *
+-- *  sCrc:         starts CRC_calculator                                                   *
+-- *  sWait_IPG:    waits a few cycles to keep the Inter Packet Gap of 960ns                *
+-- *                                                                                        *
+-- *----------------------------------------------------------------------------------------*
+-- *                                                                                        *
+-- * 08.05.12 V1.0      created Frame_starter                   by Sebastian Muelhausen     *
+-- * 12.06.12 V1.1      updated FSM for Frames with Size=0      by Sebastian Muelhausen     *
+-- * 09.08.12 V2.0      redesign with sWait_IPG                 by Sebastian Muelhausen     *
+-- * 25.11.13 V2.1      Updated for safety manipulations        by Sebastian Muelhausen     *
+-- *                                                                                        *
+-- ******************************************************************************************
 
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library work;
+use work.global.all;
+
 entity Frame_Create_FSM is
+    generic(gSafetyPackSelCntWidth  : natural :=8);
     port(
         clk, reset:         in std_logic;
 
         iFrameStart:        in std_logic;                       --start of a new frame
         iReadBuffDone:      in std_logic;                       --buffer reading has reched the last position
+
+        iPacketExchangeEn   : in std_logic;                                     --Start of the exchange of the safety packet
+        iPacketStart        : in std_logic_vector(cByteLength-1 downto 0);      --Start of safety packet
+        iPacketSize         : in std_logic_vector(cByteLength-1 downto 0);      --Size of safety packet
+        oExchangeData       : out std_logic;                                    --Exchanging safety data
 
         oPreamble_Active:   out std_logic;                      --activate preamble_generator
         oPreReadBuff:       out std_logic;                      --activate pre-reading
@@ -68,26 +77,47 @@ architecture Behave of Frame_Create_FSM is
     constant cIPG_Time:         natural:=43;    --Whole delay of 960ns => here 880ns + process time
 
 
+
     --States
     type mc_state_type is
-        (sIdle,sPreamble,sPre_read,sRead,sCrc,sWait_IPG);
+        (sIdle,sPreamble,sPre_read,sRead,sSafetyRead,sCrc,sWait_IPG);
 
     signal state_reg:   mc_state_type;
     signal state_next:  mc_state_type;
 
     --counter variables
-    signal ClearCnt:    std_logic;
-    signal Cnt:         std_logic_vector(cCntWidth-1 downto 0);
+    signal ClearCnt:    std_logic;                                              --Clear of timing counter
+    signal ClearPCnt:   std_logic;                                              --Clear of packet counter
+    signal Cnt:         std_logic_vector(cCntWidth-1 downto 0);                 --Counter for timings
+    signal PCnt:        std_logic_vector(gSafetyPackSelCntWidth-1 downto 0);    --Byte counter for packet exchange
+    signal PCntPre:     std_logic;                                              --Prescaler for packet counter
 
 begin
 
-    --counter
+    --counter for timings
     FSM_Cnter:Basic_Cnter
     generic map(gCntWidth=>cCntWidth)
     port map(
             clk=>clk,reset=>reset,
             iClear=>ClearCnt,iEn=>'1',iStartValue=>(others=>'0'),iEndValue=>(others=>'1'),
             oQ=>Cnt,oOv=>open);
+
+
+    --prescaler for safety counter
+    Packet_Prescaler:Basic_Cnter
+    generic map(gCntWidth=>2)
+    port map(
+            clk=>clk,reset=>reset,
+            iClear=>ClearPCnt,iEn=>'1',iStartValue=>"11",iEndValue=>(others=>'1'),
+            oQ=>open,oOv=>PCntPre);                 --starts with Ov to eliminate register delay
+
+    --safety counter for packet exchange
+    Packet_Cnter:Basic_Cnter
+    generic map(gCntWidth   => gSafetyPackSelCntWidth)
+    port map(
+            clk=>clk,reset=>reset,
+            iClear=>ClearPCnt,iEn=>PCntPre,iStartValue=>(0=>'1',others=>'0'),iEndValue=>(others=>'1'),
+            oQ=>PCnt,oOv=>open);                    --starts at 1
 
 
     --state register
@@ -103,7 +133,7 @@ begin
     end process;
 
     --next-state logic
-    process(state_reg, iFrameStart, iReadBuffDone,Cnt)
+    process(state_reg, iFrameStart, iReadBuffDone,Cnt,PCnt,iPacketExchangeEn,iPacketStart,iPacketSize)
     begin
         case state_reg is
 
@@ -141,8 +171,20 @@ begin
                 if iReadBuffDone='1' then
                     state_next<=sCrc;   --start CRC after reaching the end
 
+                elsif (iPacketExchangeEn='1' and unsigned(PCnt)=unsigned(iPacketStart)) then
+                    state_next<=sSafetyRead;
+
                 else
                     state_next<=sRead;
+
+                end if;
+
+            when sSafetyRead =>
+                if unsigned(PCnt)=unsigned(iPacketStart)+unsigned(iPacketSize) then
+                    state_next<=sRead;
+
+                else
+                    state_next<=sSafetyRead;
 
                 end if;
 
@@ -164,9 +206,6 @@ begin
 
                 end if;
 
-            when others =>
-                state_next<=sIdle;
-
         end case;
     end process;
 
@@ -181,30 +220,36 @@ begin
 
         oNextFrame<='0';
 
-        ClearCnt<='0';
+        ClearCnt    <='0';
+        ClearPCnt   <='1';              --always inactive
 
         case state_reg is
             when sIdle=>                --IDLE:
-                ClearCnt<='1';          --deaktivates Cnter
-                oNextFrame<='1';        --FSM is ready for new data
+                ClearCnt        <= '1'; --deaktivates Cnter
+                oNextFrame      <= '1'; --FSM is ready for new data
 
             when sPreamble=>            --PREAMBLE
-                oPreamble_Active<='1';  --preamble is active
+                oPreamble_Active<= '1'; --preamble is active
 
             when sPre_read=>            --PRE-READ
-                oPreamble_Active<='1';  --preamble is active
-                oPreReadBuff<='1';      --Read-Logic is active, too
+                oPreamble_Active<= '1'; --preamble is active
+                oPreReadBuff    <= '1'; --Read-Logic is active, too
 
             when sRead=>                --READ
-                ClearCnt<='1';          --Cnter is inactive
-                oReadBuff_Active<='1';  --Read-Logic is active
+                ClearCnt        <= '1'; --Cnter is inactive
+                ClearPCnt       <= '0'; --Packet Cnter is active
+                oReadBuff_Active<= '1'; --Read-Logic is active
+
+            when sSafetyRead=>          --READ
+                ClearCnt        <= '1'; --Cnter is inactive
+                ClearPCnt       <= '0'; --Packet Cnter is active
+                oReadBuff_Active<= '1'; --Read-Logic is active
 
             when sCrc=>                 --CRC (is Meely to compensate one cycle of delay)
+                null;
 
             when sWait_IPG=>            --WAIT_IPG (doesn't need output)
-
-
-            when others =>
+                null;
 
         end case;
 
@@ -218,30 +263,36 @@ begin
     --Select TX and TXDV
     process(state_reg,state_next)
     begin
-        oSelectTX<="00";
-        oTXDV<='0';
+        oSelectTX       <="00";
+        oTXDV           <='0';
+        oExchangeData   <='0';
 
         case state_reg is
             when sIdle=>
 
             when sPreamble=>
-                oSelectTX<="01";
-                oTXDV<='1';
+                oSelectTX   <= "01";
+                oTXDV       <= '1';
 
             when sPre_read=>
-                oSelectTX<="01";
-                oTXDV<='1';
+                oSelectTX   <= "01";
+                oTXDV       <= '1';
 
             when sRead=>
-                oSelectTX<="11";
-                oTXDV<='1';
+                oSelectTX   <= "11";
+                oTXDV       <= '1';
+
+            when sSafetyRead=>
+                oSelectTX       <= "11";
+                oTXDV           <= '1';
+                oExchangeData   <= '1';
 
             when sCrc=>
                 --below the case with state_next to save one cycle
+                null;
 
             when sWait_IPG=>
-
-            when others =>
+                null;
 
         end case;
 

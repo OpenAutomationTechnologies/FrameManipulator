@@ -31,7 +31,7 @@ entity Task_Memory is
             gSlaveAddrWidth:    natural :=11;
             gAddresswidth:      natural :=8);
     port(
-        clk, reset:     in std_logic;
+        clk:            in std_logic;
         --avalon bus (s_clk domain)
         s_clk:          in std_logic;   --Clock of the slave
         s_iAddr:        in std_logic_vector(gSlaveAddrWidth-1 downto 0);
@@ -171,10 +171,10 @@ begin
 
     --Select the Output data for Port A ----------------------------------------------------------------
     with s_SelEn select --last bit=0 => read
-        s_oReadData<=   s_ReadData0 when "000", --read 00 => PDRam 0
-                        s_ReadData1 when "010", --read 01 => PDRam 1
-                        s_ReadData2 when "100", --read 10 => PDRam 2
-                        s_ReadData3 when "110", --read 11 => PDRam 3
+        s_oReadData<=   s_ReadData0 when "000", --read 00 => DPRam 0
+                        s_ReadData1 when "010", --read 01 => DPRam 1
+                        s_ReadData2 when "100", --read 10 => DPRam 2
+                        s_ReadData3 when "110", --read 11 => DPRam 3
                         (others=>'0') when others;
 
 
