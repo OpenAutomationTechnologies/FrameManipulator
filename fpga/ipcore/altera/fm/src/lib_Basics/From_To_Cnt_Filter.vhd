@@ -54,6 +54,8 @@ entity From_To_Cnt_Filter is
         gWidthOut   : natural:=2    --! Value cnt out
         );
     port(
+        iClk    : in std_logic;                                 --! Clock
+        iReset  : in std_logic;                                 --! Reset
         iCnt    : in std_logic_vector(gWidthIn-1 downto 0);     --! Input data for the filter
         oCnt    : out std_logic_vector(gWidthOut-1 downto 0);   --! Output data
         oEn     : out std_logic;                                --! Input data is between the limits
@@ -76,23 +78,98 @@ end From_To_Cnt_Filter;
 --!       17  ||   0  |  0  |  1
 architecture two_seg_arch of From_To_Cnt_Filter is
 
-    signal cnt      : natural;      --! iCnt as number
-    signal cntout   : natural;      --! oCnt as number
-    signal en       : std_logic;    --! oEn
-    signal endo     : std_logic;    --! oEnd
+    constant cNumbZero  : std_logic_vector(gWidthIn-1 downto 0) := std_logic_vector(to_unsigned(0,gWidthIn));      --! Zero
+    constant cNumbFrom  : std_logic_vector(gWidthIn-1 downto 0) := std_logic_vector(to_unsigned(gFrom,gWidthIn));  --! From: lower limit
+    constant cNumbEnd   : std_logic_vector(gWidthIn-1 downto 0) := std_logic_vector(to_unsigned(gTo+1,gWidthIn));  --! To+1: beyond upper limit
+
+     --! Typedef for registers
+    type tReg is record
+        en      : std_logic;                                --! Register of En
+        endo    : std_logic;                                --! Register of End
+        cnt     : std_logic_vector(gWidthIn-1 downto 0);    --! Register of iCnt for edge detection
+        q       : unsigned(gWidthOut-1 downto 0);           --! Stored cnt value
+    end record;
+
+
+    --! Init for registers
+    constant cRegInit   : tReg :=(
+                                en      => '0',
+                                endo    => '0',
+                                cnt     => (others=>'0'),
+                                q       => (others=>'0')
+                                );
+
+    signal reg      : tReg; --! Registers
+    signal reg_next : tReg; --! Next register value
+
 
 begin
 
 
-    cnt <=to_integer(unsigned(iCnt));
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
+    process(iClk, iReset)
+    begin
+        if iReset='1' then
+            reg <= cRegInit;
 
-    endo <= '1' when cnt > gTo   else '0';
-    en  <= '1' when (cnt > (gFrom-1))and (endo = '0')  else '0';
+        elsif rising_edge(iClk) then
+            reg <= reg_next;
 
-    cntout <= cnt-gFrom when en='1' else 0;
+        end if;
+    end process;
 
-    oCnt <= std_logic_vector(to_unsigned(cntout,gWidthOut));
-    oEnd <= endo;
-    oEn  <= en;
+
+
+    --! @brief Next register logic
+    --! - Next signal is also the output signal
+    --! - Set/Reset of En and End
+    --! - Count up at edge of iCnt
+    combNext :
+    process(iCnt, reg)
+    begin
+
+        reg_next        <= reg;
+        reg_next.cnt    <= iCnt;
+
+
+        --Cnt out at edge (while en=1)
+        if reg.cnt /= iCnt and
+            reg.En  = '1' then
+
+            reg_next.q  <= reg.q+1;
+
+        end if;
+
+
+        --Set/Reset En
+        if iCnt = cNumbFrom then
+            reg_next.en <= '1';
+
+        elsif iCnt = cNumbEnd then
+            reg_next.en <= '0';
+
+        end if;
+
+
+        --Set/Reset End
+        if iCnt = cNumbEnd then
+            reg_next.endo   <= '1';
+            reg_next.q      <= cRegInit.q;
+
+        elsif iCnt = cNumbZero then
+            reg_next.endo   <= '0';
+
+        end if;
+
+
+    end process;
+
+
+    oEnd    <= reg_next.endo;
+    oEn     <= reg_next.en;
+    oCnt    <= std_logic_vector(reg_next.q);
+
 
 end two_seg_arch;

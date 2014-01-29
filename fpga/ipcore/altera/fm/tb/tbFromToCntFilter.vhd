@@ -79,6 +79,7 @@ architecture two_seg_arch of tbFromToCntFilter is
     signal dutEnd       : std_logic;                                                --! oEnd from DUT
 
     signal clk          : std_logic :='0';  --! Generated clock for testbench: 50MHz
+    signal reset        : std_logic :='1';  --! Reset
 
     signal testDone     : std_logic := '0'; --! Test has finished
 
@@ -86,6 +87,8 @@ architecture two_seg_arch of tbFromToCntFilter is
 begin
 
     clk <= not clk after cPeriode/2 when testDone /= '1' else '0' after cPeriode/2;
+
+    reset   <= '1', '0' after 50 ns;
 
 
     --! Read stimulation file
@@ -116,10 +119,14 @@ begin
 
         end if;
 
+        wait until reset='0';
+
 
         while not endfile(fInFile) loop
 
             wait until rising_edge(clk);
+            wait until rising_edge(clk);
+            -- hold stimuli (Cnt signal) for two clock cycles to see if the DUT holds it's outputs as well
 
             readline(fInFile, vInLine);
             HREAD(vInLine, vCnt, vGood);
@@ -149,6 +156,8 @@ begin
                 gWidthOut   => gWidthOut
                 )
     port map(
+            iClk    => clk,
+            iReset  => reset,
             iCnt    => Cnt,
             oCnt    => dutCnt,
             oEn     => dutEn,
@@ -169,9 +178,7 @@ begin
 
         while testDone='0' loop
 
-            wait until Cnt'event;
-
-            wait for 2 ns;  -- wait to update signals
+            wait until rising_edge(clk);
 
             hwrite(vLineData, Cnt);
             write(vLineData, string'(" ") );

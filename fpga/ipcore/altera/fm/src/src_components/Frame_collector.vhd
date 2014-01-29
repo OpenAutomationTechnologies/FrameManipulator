@@ -142,6 +142,8 @@ begin
                 gWidthIn    => LogDualis(gTo+2),
                 gWidthOUT   => cWidth_ByteCnt)
     port map(
+            iClk    => iClk,
+            iReset  => iReset,
             iCnt    => cnt,
             oCnt    => cntout,
             oEn     => memEn,
