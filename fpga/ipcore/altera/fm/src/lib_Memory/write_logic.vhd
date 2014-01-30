@@ -77,14 +77,17 @@ end write_logic;
 --! - With adjustable prescaler
 architecture two_seg_arch of write_logic is
 
-    signal preEn    : std_logic_vector(LogDualis(gPrescaler)-1 downto 0) := (others=>'0');  --! Prescaler enable
-    signal add_en   : std_logic;                                                            --! Enable address counter
+    signal add_en   : std_logic;    --! Enable address counter
 
 begin
 
     --! @brief Included prescaler
     Prescale:
     if gPrescaler>1 generate
+
+        signal preCnt   : std_logic_vector(LogDualis(gPrescaler)-1 downto 0) := (others=>'0');  --! Prescaler enable
+
+    begin
 
         --! @brief Prescaler with counter
         difpre_clk : entity work.FixCnter
@@ -99,14 +102,24 @@ begin
                 iReset  => iReset,
                 iClear  => iSync,
                 iEn     => iEn,
-                oQ      => preEn,
+                oQ      => preCnt,
                 oOv     => open
                 );
+
+    add_en  <= '1' when preCnt = (preCnt'range=>'0') and iEn = '1' else '0';
+
     end generate;
 
-    --TODO Case gPrescaler=0
 
-    add_en  <= '1' when preEn = (preEn'range=>'0') and iEn = '1' else '0';
+    --! @brief Prescaler disabled
+    WithoutPrescale:
+    if gPrescaler<=1 generate
+
+        add_en  <= iEn;
+
+    end generate;
+
+
     oWrEn   <= add_en;
 
     --! @brief Address counter

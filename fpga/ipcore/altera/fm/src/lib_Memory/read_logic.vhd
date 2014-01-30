@@ -75,8 +75,7 @@ end read_logic;
 --! @details A read logic for memories with prescaler
 architecture two_seg_arch of read_logic is
 
-    signal cntpre   : std_logic_vector(LogDualis(gPrescaler)-1 downto 0);   --! counter value of prescaler
-    signal preEn    : std_logic;                                            --! prescaled Enable
+    signal preEn    : std_logic;    --! prescaled Enable
 
     signal addr         : std_logic_vector(oAddr'range);    --! New read address
     signal addr_next    : std_logic_vector(oAddr'range);    --! Delayed read address
@@ -103,6 +102,11 @@ begin
     Prescale:
     if gPrescaler>1 generate
 
+        signal cntpre   : std_logic_vector(LogDualis(gPrescaler)-1 downto 0) := (others=>'0');  --! counter value of prescaler
+
+    begin
+
+
         --! @brief Prescaler via counter
         difpre_clk : entity work.FixCnter
         generic map (
@@ -120,9 +124,11 @@ begin
                 oOv     => open
                 );
 
-        preEn   <='1' when cntpre=(cntpre'range=>'0') and iEn='1' else '0';--TODO: gPrescaler can only be a two's complement
+        preEn   <='1' when cntpre=(cntpre'range=>'0') and iEn='1' else '0';
 
     end generate;
+
+
 
     --! @brief Prescaler disabled
     WithoutPrescale:
