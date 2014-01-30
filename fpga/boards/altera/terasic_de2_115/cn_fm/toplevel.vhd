@@ -147,10 +147,10 @@ architecture rtl of toplevel is
             -- KEY
             key_pio_export                                  : in    std_logic_vector(3 downto 0)  := (others => 'X');
             -- FRAMEMANIPULATOR
-            framemanipulator_0_conduit_end_iRXDV            : in    std_logic                     := 'X';             -- iRXDV
-            framemanipulator_0_conduit_end_iRXD             : in    std_logic_vector(1 downto 0)  := (others => 'X'); -- iRXD
-            framemanipulator_0_conduit_end_oTXData          : out   std_logic_vector(1 downto 0);                     -- oTXData
-            framemanipulator_0_conduit_end_oTXDV            : out   std_logic;                                        -- oTXDV
+            framemanipulator_0_stream_to_dut_iRXDV          : in    std_logic                     := 'X';             -- iRXDV
+            framemanipulator_0_stream_to_dut_iRXD           : in    std_logic_vector(1 downto 0)  := (others => 'X'); -- iRXD
+            framemanipulator_0_stream_to_dut_oTXData        : out   std_logic_vector(1 downto 0);                     -- oTXData
+            framemanipulator_0_stream_to_dut_oTXDV          : out   std_logic;                                        -- oTXDV
             framemanipulator_0_led_export                   : out   std_logic_vector(1 downto 0)                      -- export
           );
     end component cn_fm;
@@ -286,10 +286,10 @@ begin
             ledr_pio_export                                 => LEDR,
             key_pio_export                                  => KEY,
 
-            framemanipulator_0_conduit_end_iRXDV            => fmRx.enable,
-            framemanipulator_0_conduit_end_iRXD             => fmRx.data,
-            framemanipulator_0_conduit_end_oTXData          => fmTx.data,
-            framemanipulator_0_conduit_end_oTXDV            => fmTx.enable,
+            framemanipulator_0_stream_to_dut_iRXDV          => fmRx.enable,
+            framemanipulator_0_stream_to_dut_iRXD           => fmRx.data,
+            framemanipulator_0_stream_to_dut_oTXData        => fmTx.data,
+            framemanipulator_0_stream_to_dut_oTXDV          => fmTx.enable,
             framemanipulator_0_led_export                   => fmLed
         );
 

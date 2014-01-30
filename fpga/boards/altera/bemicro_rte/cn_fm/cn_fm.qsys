@@ -216,7 +216,7 @@
  <parameter name="projectName" value="BeMicro.qpf" />
  <parameter name="sopcBorderPoints" value="false" />
  <parameter name="systemHash" value="1" />
- <parameter name="timeStamp" value="1390991268930" />
+ <parameter name="timeStamp" value="1390991268931" />
  <parameter name="useTestBenchNamingPattern" value="false" />
  <instanceScript></instanceScript>
  <interface name="clk25" internal="clk25.clk_in" type="clock" dir="end" />
@@ -264,8 +264,8 @@
    type="conduit"
    dir="end" />
  <interface
-   name="framemanipulator_0_conduit_end"
-   internal="FrameManipulator_0.conduit_end"
+   name="framemanipulator_0_stream_to_dut"
+   internal="FrameManipulator_0.stream_to_dut"
    type="conduit"
    dir="end" />
  <interface

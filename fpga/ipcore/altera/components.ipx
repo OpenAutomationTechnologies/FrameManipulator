@@ -7,7 +7,7 @@
  <!--   -->
  <component
    name="FrameManipulator"
-   file="fm/FrameManipulator_qsys_hw.tcl"
+   file="fm/FrameManipulator_hw.tcl"
    displayName="FrameManipulator"
    version="0.2.0"
    description=""

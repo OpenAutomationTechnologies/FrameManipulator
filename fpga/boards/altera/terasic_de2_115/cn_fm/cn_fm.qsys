@@ -310,7 +310,7 @@
  <parameter name="projectName" value="ink_de2-115.qpf" />
  <parameter name="sopcBorderPoints" value="false" />
  <parameter name="systemHash" value="1" />
- <parameter name="timeStamp" value="1390991227261" />
+ <parameter name="timeStamp" value="1390991227262" />
  <parameter name="useTestBenchNamingPattern" value="false" />
  <instanceScript></instanceScript>
  <interface name="clk50" internal="clk50.clk_in" type="clock" dir="end" />
@@ -372,8 +372,8 @@
    type="conduit"
    dir="end" />
  <interface
-   name="framemanipulator_0_conduit_end"
-   internal="FrameManipulator_0.conduit_end"
+   name="framemanipulator_0_stream_to_dut"
+   internal="FrameManipulator_0.stream_to_dut"
    type="conduit"
    dir="end" />
  <interface
