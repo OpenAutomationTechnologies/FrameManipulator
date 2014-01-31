@@ -21,6 +21,9 @@ use ieee.numeric_std.all;
 library work;
 --! use global library
 use work.global.all;
+--! use fm library
+use work.framemanipulatorPkg.all;
+
 
 entity Delay_Handler is
     generic(
@@ -82,12 +85,6 @@ architecture two_seg_arch of Delay_Handler is
     --constants
     --width of the time-variables: DelaySettings -1Byte for operation +1Bit toprevent overflow
     constant cSize_Time: natural:=gDelayDataWidth-8+1;
-
-    --Values of the 3rd Task Byte: delay-operation (procession of other frames, while delay)
-    constant cDelay_pass:       std_logic_vector(cByteLength-1 downto 0):=X"01";    --pass all
-    constant cDelay_delete:     std_logic_vector(cByteLength-1 downto 0):=X"02";    --deleat all
-    constant cDelay_passSoC:    std_logic_vector(cByteLength-1 downto 0):=X"04";    --pass only SoCs
-
 
     --signals
     signal PassFrame:   std_logic;  --Frame is processed (not dropped)
@@ -212,9 +209,9 @@ begin
 
         if active='1' then  --if active...
                 case Reg_OtherFrameOperation is
-                    when cDelay_pass    => PassFrame<=iStart;                   --pass
-                    when cDelay_delete  => PassFrame<='0';                      --delete all
-                    when cDelay_passSoC => PassFrame<=iStart and iFrameIsSoC;   --pass SoCs
+                    when cDelayType.Pass    => PassFrame<=iStart;                   --pass
+                    when cDelayType.Delete  => PassFrame<='0';                      --delete all
+                    when cDelayType.PassSoC => PassFrame<=iStart and iFrameIsSoC;   --pass SoCs
                     when others         => PassFrame<=iStart;
 
                 end case;

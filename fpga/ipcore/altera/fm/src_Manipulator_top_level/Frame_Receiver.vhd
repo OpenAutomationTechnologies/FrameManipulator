@@ -26,9 +26,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--! Use work library
 library work;
 --! use global library
 use work.global.all;
+--! use fm library
+use work.framemanipulatorPkg.all;
 
 
 entity Frame_Receiver is
@@ -139,7 +142,7 @@ architecture two_seg_arch of Frame_Receiver is
     constant cEtherTypeSize     : natural := 2*cByteLength; --! Size of EtherType = 2 Bytes
 
     --! Number of Ethertype filter
-    constant cNumbFilter        : natural := gEtherTypeFilter'length/cEtherTypeSize;
+    constant cNumbFilter        : natural := gEtherTypeFilter'length/cEth.SizeEtherType;
 
     signal data:                std_logic_vector(cByteLength-1 downto 0);
     signal sync:                std_logic;
@@ -187,7 +190,9 @@ begin
     --collector has finisched   =>  oCollectorFinished
     -----------------------------------------------------------------------------------------
     EtherType_Collector : Frame_collector
-    generic map(gFrom=>13,gTo=>14)     --Ethertype=Byte 13 and 14
+    generic map(gFrom   => cEth.StartEtherType,
+                gTo     => cEth.EndEtherType
+                )
     port map(
             clk=>clk,reset=>reset,
             iData=>data,iSync=>sync,
@@ -198,7 +203,7 @@ begin
     EthertypeMatch :
     for i in MatchFilter'range generate
 
-        MatchFilter(i)  <=  '1' when EtherType = cEtherTypeFilter(15+cEtherTypeSize*i downto 0+cEtherTypeSize*i) else '0';
+        MatchFilter(i)  <=  '1' when EtherType = cEtherTypeFilter(cEth.SizeEtherType*(i+1)-1 downto cEth.SizeEtherType*i) else '0';
 
     end generate EthertypeMatch;
 

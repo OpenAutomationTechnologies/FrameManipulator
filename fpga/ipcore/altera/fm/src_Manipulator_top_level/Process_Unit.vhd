@@ -21,8 +21,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--! Use work library
 library work;
+--! use global library
 use work.global.all;
+--! use fm library
+use work.framemanipulatorPkg.all;
 
 entity Process_Unit is
     generic(gDataBuffAddrWidth:     natural:=11;
@@ -185,7 +189,8 @@ begin
     --enables the active manipulation
     ------------------------------------------------------------------------------------------
     M_Manager:Manipulation_Manager
-    generic map(gFrom=>15,gTo=>22,
+    generic map(gFrom               => cEth.StartFrameFilter,
+                gTo                 => cEth.EndFrameFilter,
                 gWordWidth          =>  gTaskWordWidth,
                 gManiSettingWidth   =>  gManiSettingWidth,
                 gSafetySetting      =>  gSafetySetting,

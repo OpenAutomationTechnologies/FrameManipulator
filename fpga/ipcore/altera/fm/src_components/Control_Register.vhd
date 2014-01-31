@@ -28,6 +28,9 @@ use ieee.numeric_std.all;
 library work;
 --! use global library
 use work.global.all;
+--! use fm library
+use work.framemanipulatorPkg.all;
+
 
 entity Control_Register is
     generic(gWordWidth:         natural :=cByteLength;
@@ -83,20 +86,6 @@ architecture two_seg_arch of Control_Register is
         );
     end component;
 
-    --positions of operation and status bits
-    constant cOpStart:       natural:= 0;
-    constant cOpStop:        natural:= 1;
-    constant cOpClearMem:    natural:= 2;
-    constant cOpClearErrors: natural:= 3;
-    constant cOpClearPaket:  natural:= 4;
-
-    constant cStActive:      natural:= 0;
-
-    constant cErDataOv:      natural:= 4;
-    constant cErFrameOv:     natural:= 5;
-    constant cErPacketOv:    natural:= 6;
-    constant cErTaskConf:    natural:= 7;
-
 
     --data variables
     signal DataB_out:   std_logic_vector(gWordWidth-1 downto 0);
@@ -139,20 +128,20 @@ begin
 
 
     --store test staus (first nibble) D-FF:
-    StatusByte_next(cStActive)<=iTestActive;
+    StatusByte_next(cSt.TestActive)<=iTestActive;
 
     --store errors (second nibble) RS-FF:
         --set of bits with error-signal, reset of bits with clear-operation
-    StatusByte_next(cErDataOv)   <=(StatusByte_reg(cErDataOv)     or iError_Addr_Buff_OV)
+    StatusByte_next(cSt.ErDataOv)   <=(StatusByte_reg(cSt.ErDataOv)     or iError_Addr_Buff_OV)
                                                                 and not ClearErrors;
 
-    StatusByte_next(cErFrameOv)  <=(StatusByte_reg(cErFrameOv)    or iError_Frame_Buff_OV)
+    StatusByte_next(cSt.ErFrameOv)  <=(StatusByte_reg(cSt.ErFrameOv)    or iError_Frame_Buff_OV)
                                                                 and not ClearErrors;
 
-    StatusByte_next(cErPacketOv)  <=(StatusByte_reg(cErPacketOv)    or iError_Packet_Buff_OV)
+    StatusByte_next(cSt.ErPacketOv)  <=(StatusByte_reg(cSt.ErPacketOv)    or iError_Packet_Buff_OV)
                                                                 and not ClearErrors;
 
-    StatusByte_next(cErTaskConf)  <=(StatusByte_reg(cErTaskConf)    or iError_Task_Conf)
+    StatusByte_next(cSt.ErTaskConf)  <=(StatusByte_reg(cSt.ErTaskConf)    or iError_Task_Conf)
                                                                 and not ClearErrors;
 
 
@@ -181,18 +170,18 @@ begin
     --update register, when data is read
     OperationByte_next<=DataB_out(OperationByte_next'range) when rden_b='1' else OperationByte_reg;
 
-    oStartTest  <='1' when OperationByte_reg(cOpStart)='1'   and OperationByte_reg(cOpStop)='0'
-                                                            and OperationByte_reg(cOpClearMem)='0'
+    oStartTest  <='1' when OperationByte_reg(cOp.Start)='1'   and OperationByte_reg(cOp.Stop)='0'
+                                                            and OperationByte_reg(cOp.ClearMem)='0'
                         else '0';
 
-    oStopTest   <='1' when OperationByte_reg(cOpStop)='1'    or OperationByte_reg(cOpClearMem)='1'
+    oStopTest   <='1' when OperationByte_reg(cOp.Stop)='1'    or OperationByte_reg(cOp.ClearMem)='1'
                                                             or StatusByte_reg(7 downto 4)/="0000"
                         else '0';
 
-    oClearMem   <='1' when OperationByte_reg(cOpClearMem)='1' else '0';
+    oClearMem   <='1' when OperationByte_reg(cOp.ClearMem)='1' else '0';
 
-    ClearErrors <='1' when OperationByte_reg(cOpClearErrors)='1' else '0';
+    ClearErrors <='1' when OperationByte_reg(cOp.ClearErrors)='1' else '0';
 
-    oResetPaketBuff <='1' when OperationByte_reg(cOpClearPaket)='1' else '0';
+    oResetPaketBuff <='1' when OperationByte_reg(cOp.ClearPaket)='1' else '0';
 
 end two_seg_arch;

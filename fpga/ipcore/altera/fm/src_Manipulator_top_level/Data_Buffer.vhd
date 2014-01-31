@@ -21,9 +21,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--! Use work library
 library work;
 --! use global library
 use work.global.all;
+--! use fm library
+use work.framemanipulatorPkg.all;
 
 entity Data_Buffer is
     generic(gDataWidth:         natural:=cByteLength;
@@ -107,9 +110,6 @@ architecture two_seg_arch of Data_Buffer is
     --size selection of the selection counter
     constant cCntWidth:natural:=LogDualis(gNoOfHeadMani+1);
 
-    constant cSizeManiHeaderData    : natural:=8;
-    constant cSizeManiHeaderOffset  : natural:=6;
-
 
     --! Typedef for registers
     type tReg is record
@@ -135,8 +135,8 @@ architecture two_seg_arch of Data_Buffer is
     signal TaskManiEn_posEdge   : std_logic;    --! positive edge of iTaskManiEn
 
     --Selected Data of the Register-----
-    signal SelManiOffset:   std_logic_vector(cSizeManiHeaderOffset-1 downto 0);
-    signal SelManiWords:    std_logic_vector(cSizeManiHeaderData-1 downto 0);
+    signal SelManiOffset:   std_logic_vector(cParam.SizeManiHeaderOffset-1 downto 0);
+    signal SelManiWords:    std_logic_vector(cParam.SizeManiHeaderData-1 downto 0);
 
     --Selection of several Bytes---------
     signal CntEn:   std_logic;
@@ -218,7 +218,7 @@ begin
 
     --DeMultiplexer to select the Data-------------------------------------------------------------
     OffsetMux:Mux2D
-        generic map(gWordsWidth=>cSizeManiHeaderOffset,
+        generic map(gWordsWidth => cParam.SizeManiHeaderOffset,
                     gWordsNo=>gNoOfHeadMani,
                     gWidthSel=>cCntWidth)
         port map(
@@ -226,7 +226,7 @@ begin
                 iSel=>std_logic_vector(SelData),oWord=>SelManiOffset);
 
     WordMux:Mux2D
-        generic map(gWordsWidth=>cSizeManiHeaderData,
+        generic map(gWordsWidth => cParam.SizeManiHeaderData,
                     gWordsNo=>gNoOfHeadMani,
                     gWidthSel=>cCntWidth)
         port map(

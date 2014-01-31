@@ -21,8 +21,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--! Use work library
 library work;
+--! use global library
 use work.global.all;
+--! use fm library
+use work.framemanipulatorPkg.all;
 
 entity FrameManipulator is
     generic(gBytesOfTheFrameBuffer: natural:=1600;
@@ -295,15 +299,9 @@ architecture two_seg_arch of FrameManipulator is
     constant cTaskAddrWidth:        natural:=LogDualis(gTaskCount);
 
     constant cCycleCntWidth:        natural:=cByteLength;   --maximal number of POWERLINK cycles for the series of test, 1 Byte
-    constant cSize_Mani_Time:       natural:=5*cByteLength; --size of time setting of the delay task, 5 Byte
-    constant cNoOfHeadMani:         natural:=8;             --Number of manipulated header bytes
-    constant cNoOfDelFrames:        natural:=255;           --Maximal number of delayed frame tasks
-
     constant cManiSettingWidth:     natural:=2*cTaskWordWidth-cCycleCntWidth-8;
-                                            --two task objects - Cycle Word - Task Byte
 
-    constant cSafetySetting         : natural:=6*cByteLength;   --6 Byte Safety Setting
-    constant cSafetyPackSelCntWidth : natural:=11;              --Width of counter to select packet: 11 bit to change the whole frame
+
     constant cPacketAddrWidth       : natural:=LogDualis(gBytesOfThePackBuffer);
     constant cAddrMemoryWidth       : natural:=LogDualis(gNumberOfPackets);
 
@@ -365,17 +363,17 @@ architecture two_seg_arch of FrameManipulator is
 
 
     --Safety
-    signal TaskSafetyEn         : std_logic;                                    --task: safety packet manipulation
-    signal SafetyFrame          : std_logic;                                    --Current Frame is a selected safety frame
-    signal PacketExchangeEn     : std_logic;                                    --Start of the exchange of the safety packet
-    signal PacketStart          : std_logic_vector(cByteLength-1 downto 0);     --Start of safety packet
-    signal PacketSize           : std_logic_vector(cByteLength-1 downto 0);     --Size of safety packet
-    signal PacketData           : std_logic_vector(cByteLength-1 downto 0);     --Data of the safety packet
-    signal SafetyActive         : std_logic;                                    --safety manipulations are active
-    signal ExchangeData         : std_logic;                                    --exchange packet data
-    signal PacketExtension      : std_logic;                                    --Exchange will be extended for several tacts
-    signal SafetySetting        : std_logic_vector(cSafetySetting-1 downto 0);  --Setting of the current or last safety task
-    signal ResetPaketBuff       : std_logic;                                    --Resets the packet FIFO and removes the packet lag
+    signal TaskSafetyEn         : std_logic;                                        --task: safety packet manipulation
+    signal SafetyFrame          : std_logic;                                        --Current Frame is a selected safety frame
+    signal PacketExchangeEn     : std_logic;                                        --Start of the exchange of the safety packet
+    signal PacketStart          : std_logic_vector(cByteLength-1 downto 0);         --Start of safety packet
+    signal PacketSize           : std_logic_vector(cByteLength-1 downto 0);         --Size of safety packet
+    signal PacketData           : std_logic_vector(cByteLength-1 downto 0);         --Data of the safety packet
+    signal SafetyActive         : std_logic;                                        --safety manipulations are active
+    signal ExchangeData         : std_logic;                                        --exchange packet data
+    signal PacketExtension      : std_logic;                                        --Exchange will be extended for several tacts
+    signal SafetySetting        : std_logic_vector(cSettingSize.Safety-1 downto 0); --Setting of the current or last safety task
+    signal ResetPaketBuff       : std_logic;                                        --Resets the packet FIFO and removes the packet lag
 
     --Output
     signal TXData:              std_logic_vector(1 downto 0);
@@ -433,7 +431,7 @@ begin
     F_Receiver : Frame_Receiver
     generic map(
                 gBuffAddrWidth      => cDataBuffAddrWidth,
-                gEtherTypeFilter    => X"88AB_0800_0806"    --POWERLINK, IP and ARP frames are valid
+                gEtherTypeFilter    => cEth.FilterEtherType
                 )
     port map (
             clk=>clk_50, reset=>reset,
@@ -455,7 +453,7 @@ begin
     D_Buffer : Data_Buffer
     generic map(gDataWidth          =>  cByteLength,
                 gDataAddrWidth      =>  cDataBuffAddrWidth,
-                gNoOfHeadMani       =>  cNoOfHeadMani,
+                gNoOfHeadMani       =>  cParam.NoOfHeadMani,
                 gTaskWordWidth      =>  cTaskWordWidth,
                 gManiSettingWidth   =>  cManiSettingWidth)
     port map (
@@ -480,10 +478,10 @@ begin
                 gTaskWordWidth      =>  cTaskWordWidth,
                 gTaskAddrWidth      =>  cTaskAddrWidth,
                 gManiSettingWidth   =>  cManiSettingWidth,
-                gSafetySetting      =>  cSafetySetting,
+                gSafetySetting      =>  cSettingSize.Safety,
                 gCycleCntWidth      =>  cCycleCntWidth,
-                gSize_Mani_Time     =>  cSize_Mani_Time,
-                gNoOfDelFrames      =>  cNoOfDelFrames)
+                gSize_Mani_Time     =>  cSettingSize.Delay,
+                gNoOfDelFrames      =>  cParam.NoDelFrames)
     port map(
             clk                 => clk_50,              reset           => reset,
 
@@ -522,7 +520,7 @@ begin
     -----------------------------------------------------------------------------------------
     F_Creator : Frame_Creator
     generic map(gDataBuffAddrWidth      => cDataBuffAddrWidth,
-                gSafetyPackSelCntWidth  => cSafetyPackSelCntWidth)
+                gSafetyPackSelCntWidth  => cParam.SafetyPackSelCntWidth)
     port map (
             clk=>clk_50,                                reset               => reset,
 
@@ -545,7 +543,7 @@ begin
     --stores and exchanges safety packets
     -----------------------------------------------------------------------------------------
     P_Buff : Packet_Buffer
-    generic map(gSafetySetting      => cSafetySetting,
+    generic map(gSafetySetting      => cSettingSize.Safety,
                 gPacketAddrWidth    => cPacketAddrWidth,
                 gAddrMemoryWidth    => cAddrMemoryWidth)
     port map(

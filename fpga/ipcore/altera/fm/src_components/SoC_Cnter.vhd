@@ -27,8 +27,13 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--! Use work library
 library work;
+--! use global library
 use work.global.all;
+--! use fm library
+use work.framemanipulatorPkg.all;
+
 
 entity SoC_Cnter is
     generic(gCnterWidth:natural:=8);
@@ -103,14 +108,16 @@ begin
 
     --Collector for POWERLINK SoC
     MessageType_Collector : Frame_collector
-    generic map(gFrom=>15,gTo=>15)     --POWERLINK MessageType=Byte 15
+    generic map(gFrom   => cEth.StartMessageType,
+                gTo     => cEth.StartMessageType
+                )
     port map(
             clk=>clk,reset=>reset,
             iData=>iData,iSync=>iFrameSync,
             oFrameData=>MessageType,oCollectorFinished=>CollectorFinished);
 
     --Frame is SoC, when Messagetype=SoC and data is valid
-    Next_FrameFit<=CollectorFinished when MessageType=X"01" else '0';
+    Next_FrameFit<=CollectorFinished when MessageType=cEth.MessageTypeSoC else '0';
 
     --Edge Detection for Counter
     cntEn<='1' when iEn='1' and Next_FrameFit='1' and Reg_FrameFit='0' else '0';
