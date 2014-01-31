@@ -119,17 +119,22 @@ begin
     cnt_stop <= filter_end or iSync;--reset at every new Frame and stop after reaching the last Byte
 
 
-    --Regiser to Save the new Data-----------------------------------------------------------------------------
-    process(clk)
+    --Register to Save the new Data----------------------------------------------------------------------------
+
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
+    process(clk, reset)
     begin
-        if clk='1' and clk'event then
-            if reset = '1' then
-                reg_q <= (others=>'0');
-            else
-                reg_q <=reg_next;
-            end if;
+        if reset='1' then
+            reg_q <= (others=>'0');
+
+        elsif rising_edge(clk) then
+            reg_q <=reg_next;
+
         end if;
     end process;
+
 
     process(iData, reg_q, cntout,MemEn,filter_end)
     begin

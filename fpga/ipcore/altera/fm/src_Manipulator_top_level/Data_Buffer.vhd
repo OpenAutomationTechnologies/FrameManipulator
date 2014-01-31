@@ -111,14 +111,28 @@ architecture two_seg_arch of Data_Buffer is
     constant cSizeManiHeaderOffset  : natural:=6;
 
 
-    --Mani Enable Edge Detection--------
-    signal ManiEdge:    std_logic;
-    signal ManiNext:    std_logic:='0';
+    --! Typedef for registers
+    type tReg is record
+        TaskManiEn      : std_logic;                                                        --! Register for detection for iTaskManiEn
+        DataStartAddr   : std_logic_vector(gDataAddrWidth-1 downto 0);                      --! Start Byte of manipulated frame header
+        ManiOffset      : std_logic_vector(gManiSettingWidth-gTaskWordWidth-1 downto 0);    --! Offsets of header manipulation
+        ManiWords       : std_logic_vector(gTaskWordWidth-1 downto 0);                      --! New header data
+    end record;
 
-    --Register of Manipulation Data-----
-    signal DataStartAddr:   std_logic_vector(gDataAddrWidth-1 downto 0)                     :=(others=>'0');
-    signal ManiOffset:      std_logic_vector(gManiSettingWidth-gTaskWordWidth-1 downto 0)   :=(others=>'0');
-    signal ManiWords:       std_logic_vector(gTaskWordWidth-1 downto 0)                     :=(others=>'0');
+
+    --! Init for registers
+    constant cRegInit   : tReg :=(
+                                TaskManiEn      => '0',
+                                DataStartAddr   => (others=>'0'),
+                                ManiOffset      => (others=>'0'),
+                                ManiWords       => (others=>'0')
+                                );
+
+    signal reg          : tReg; --! Registers
+    signal reg_next     : tReg; --! Next value of registers
+
+
+    signal TaskManiEn_posEdge   : std_logic;    --! positive edge of iTaskManiEn
 
     --Selected Data of the Register-----
     signal SelManiOffset:   std_logic_vector(cSizeManiHeaderOffset-1 downto 0);
@@ -148,26 +162,45 @@ begin
 
 
     --Edge Detection of Manipulation Enable-------------------------------------------------------
-    process(clk)
+
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
+    process(clk, reset)
     begin
-        if clk'event and clk='1' then
-            if reset='1' then
-                ManiNext<='0';
-            else
-                ManiNext<=iTaskManiEn;
+        if reset='1' then
+            reg <= cRegInit;
 
-                if ManiEdge='1' then --stores the task setting at the receiving edge
-                    DataStartAddr   <=iDataStartAddr;
-                    ManiOffset      <=iManiSetting(gManiSettingWidth-1 downto gTaskWordWidth);
-                    ManiWords       <=iManiSetting(gTaskWordWidth-1 downto 0);
+        elsif rising_edge(clk) then
+            reg <= reg_next;
 
-                end if;
-
-            end if;
         end if;
     end process;
 
-    ManiEdge<='1' when ManiNext='0' and iTaskManiEn='1' else '0';
+
+    --! @brief Next register value
+    --! - Storing of iTaskManiEn for edge detection
+    --! - Storing of manipulation setting at edge
+    nextComb :
+    process(reg, iTaskManiEn, TaskManiEn_posEdge, iDataStartAddr, iManiSetting)
+    begin
+        reg_next    <= reg;
+
+        reg_next.TaskManiEn <= iTaskManiEn;
+
+        if TaskManiEn_posEdge='1' then
+            reg_next.DataStartAddr  <= iDataStartAddr;
+            reg_next.ManiOffset     <= iManiSetting(gManiSettingWidth-1 downto gTaskWordWidth);
+            reg_next.ManiWords      <= iManiSetting(gTaskWordWidth-1 downto 0); --TODO alias
+
+        end if;
+
+    end process;
+
+
+
+
+    TaskManiEn_posEdge  <= '1' when reg.TaskManiEn = '0' and iTaskManiEn = '1' else '0';
 
 
 
@@ -178,7 +211,8 @@ begin
     SelCntr:Basic_Cnter
         generic map(gCntWidth=>cCntWidth)
         port map(clk=>clk,reset=>reset,
-                iClear=>ManiEdge,iEn=>CntEn,iStartValue=>(others=>'0'),iEndValue=>(others=>'1'),
+                iClear  => TaskManiEn_posEdge,
+                iEn=>CntEn,iStartValue=>(others=>'0'),iEndValue=>(others=>'1'),
                 oQ=>SelData,oOv=>open);
 
 
@@ -187,20 +221,24 @@ begin
         generic map(gWordsWidth=>cSizeManiHeaderOffset,
                     gWordsNo=>gNoOfHeadMani,
                     gWidthSel=>cCntWidth)
-        port map (iData=>ManiOffset,iSel=>std_logic_vector(SelData),oWord=>SelManiOffset);
+        port map(
+                iData   => reg.ManiOffset,
+                iSel=>std_logic_vector(SelData),oWord=>SelManiOffset);
 
     WordMux:Mux2D
         generic map(gWordsWidth=>cSizeManiHeaderData,
                     gWordsNo=>gNoOfHeadMani,
                     gWidthSel=>cCntWidth)
-        port map (iData=>ManiWords,iSel=>std_logic_vector(SelData),oWord=>SelManiWords);
+        port map(
+                iData   => reg.ManiWords,
+                iSel=>std_logic_vector(SelData),oWord=>SelManiWords);
 
 
     --Usage of Port B------------------------------------------------------------------------------
     WrEnB<='1' when CntEn='1' and SelManiOffset/=(SelManiOffset'range =>'0') else '0';
         --Write Enabled when Manipulation is active(CntEn) and a Manipulation exists(Offset not 00..0)
 
-    AddressB<=std_logic_vector(unsigned(DataStartAddr)+unsigned(SelManiOffset)) when WrEnB='1' else iRdAddress;
+    AddressB    <= std_logic_vector(unsigned(reg.DataStartAddr)+unsigned(SelManiOffset)) when WrEnB='1' else iRdAddress;
         --selection between write-manipulation- and read-address
 
 

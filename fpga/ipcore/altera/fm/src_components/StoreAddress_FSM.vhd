@@ -71,20 +71,22 @@ begin
 
 
     --register
-    process(clk)
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
+    process(clk, reset)
     begin
-        if clk='1' and clk'event then
-            if reset = '1' then
-                Reg_DataInStartAddr<=(others=>'0');
-                state_reg<=sIdle;
+        if reset='1' then
+            Reg_DataInStartAddr <= (others=>'0');
+            state_reg           <= sIdle;
 
-            else
-                Reg_DataInStartAddr<=Next_DataInStartAddr;
-                state_reg<=state_next;
+        elsif rising_edge(clk) then
+            Reg_DataInStartAddr <= Next_DataInStartAddr;
+            state_reg           <= state_next;
 
-            end if;
         end if;
     end process;
+
 
     --next state logic
     process(state_reg,iStartStorage,iFrameEnd)

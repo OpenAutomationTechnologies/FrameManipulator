@@ -78,16 +78,20 @@ architecture two_seg_arch of Byte_to_TXData is
     signal TXD_Reg: std_logic_vector(1 downto 0);
 begin
 
-    process(clk)
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
+    process(clk, reset)
     begin
-        if clk='1' and clk'event then
-            if reset = '1' then
-                oTXD <= (others => '0');
-            else
-                oTXD<=TXD_Reg;
-            end if;
+        if reset='1' then
+            oTXD <= (others => '0');
+
+        elsif rising_edge(clk) then
+            oTXD<=TXD_Reg;
+
         end if;
     end process;
+
 
     syncronizer : sync_newData
     generic map (WIDTH => cByteLength)

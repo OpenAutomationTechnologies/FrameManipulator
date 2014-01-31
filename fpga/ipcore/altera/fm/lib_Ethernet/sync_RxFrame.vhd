@@ -34,30 +34,30 @@ architecture two_seg_arch of sync_RxFrame is
     signal syn: std_logic := '0';                         --synchronisation signal
 begin
 
---setting of the Sync signal
-    process(clk)
+
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
+    process(clk, reset)
     begin
-        if clk='1' and clk'event then
+        if reset='1' then
+            set_q <= (others=>'0');
 
-            if reset = '1' then
+        elsif rising_edge(clk) then
+            set_q <= set_next;
+            res_q <= res_next;
 
-                set_q <= (others=>'0');
+            if (set_q="110") then
+                syn <= '1';
 
-            else
-
-                set_q <= set_next;
-                res_q <= res_next;
-
-                if (set_q="110") then
-                    syn <= '1';
-                elsif (res_q="10") then
-                   syn <= '0';
-                end if;
+            elsif (res_q="10") then
+                syn <= '0';
 
             end if;
 
         end if;
     end process;
+
 
     res_next <= iRXD1 & res_q(1);
     set_next <= iRXDV & set_q(2 downto 1);

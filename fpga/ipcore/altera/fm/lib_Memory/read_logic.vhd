@@ -74,14 +74,21 @@ architecture Behave of read_logic is
 
 begin
 
+
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
     process(clk, reset)
     begin
-        if reset = '1' then
-            Addr_next<=(others=>'0');
-        elsif clk'event and clk='1' then
-            Addr_next<=Addr;
+        if reset='1' then
+           Addr_next    <= (others=>'0');
+
+        elsif rising_edge(clk) then
+            Addr_next   <= Addr;
+
         end if;
     end process;
+
 
 
     Prescale:

@@ -120,20 +120,23 @@ architecture two_seg_arch of Control_Register is
 begin
 
     --Register Storage---------------------------------------------------
-    process(clk)
+
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
+    process(clk, reset)
     begin
-        if clk='1' and clk'event then
-            if reset='1' then
-                StatusByte_reg<=    (others=>'0');
-                OperationByte_reg<=(others=>'0');
+        if reset='1' then
+            StatusByte_reg      <= (others=>'0');
+            OperationByte_reg   <= (others=>'0');
 
-            else
-                StatusByte_reg<=StatusByte_next;
-                OperationByte_reg<=OperationByte_next;
+        elsif rising_edge(clk) then
+            StatusByte_reg      <= StatusByte_next;
+            OperationByte_reg   <= OperationByte_next;
 
-            end if;
         end if;
     end process;
+
 
     --store test staus (first nibble) D-FF:
     StatusByte_next(cStActive)<=iTestActive;

@@ -85,18 +85,20 @@ architecture two_seg_arch of SoC_Cnter is
     signal Reg_FrameFit:        std_logic;
 begin
 
-    --register storage
-    process(clk)
+
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
+    process(clk, reset)
     begin
-        if clk='1' and clk'event then
-            if reset = '1' then
-                Reg_FrameFit <= '0';
-            else
-                Reg_FrameFit <=Next_FrameFit;
-            end if;
+        if reset='1' then
+            Reg_FrameFit    <= '0';
+
+        elsif rising_edge(clk) then
+            Reg_FrameFit    <= Next_FrameFit;
+
         end if;
     end process;
-
 
 
     --Collector for POWERLINK SoC

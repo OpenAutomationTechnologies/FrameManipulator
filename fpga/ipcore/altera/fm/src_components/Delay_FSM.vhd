@@ -52,18 +52,21 @@ architecture two_seg_arch of Delay_FSM is
 begin
 
     --register
-    process(clk)
+
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
+    process(clk, reset)
     begin
-        if clk='1' and clk'event then
-            if reset = '1' or iTestStop='1' then
-                state_reg<=sIdle;       --reset at test abort
+        if reset='1' then
+            state_reg   <= sIdle;
 
-            else
-                state_reg<=state_next;
+        elsif rising_edge(clk) then
+            state_reg   <= state_next;
 
-            end if;
         end if;
     end process;
+
 
     --next state logic
     process(state_reg,iDelayEn,iTestSync,iNoDelFrameInBuffer)

@@ -121,16 +121,21 @@ begin
 
 
     --state register
-    process(clk)
+
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
+    process(clk, reset)
     begin
-        if clk='1' and clk'event then
-            if reset = '1' then
-                state_reg <= sIdle;
-            else
-                state_reg <= state_next;
-            end if;
+        if reset='1' then
+            state_reg <= sIdle;
+
+        elsif rising_edge(clk) then
+            state_reg <= state_next;
+
         end if;
     end process;
+
 
     --next-state logic
     process(state_reg, iFrameStart, iReadBuffDone,Cnt,PCnt,iPacketExchangeEn,iPacketStart,iPacketSize)

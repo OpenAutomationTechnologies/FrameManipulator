@@ -120,22 +120,25 @@ architecture two_seg_arch of Delay_Handler is
 begin
 
     --edge detections----------------------------------------------------------------------
-    process(clk)
+
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
+    process(clk, reset)
     begin
-        if clk='1' and clk'event then
-            if reset = '1' then
-                Reg_DelFrameLoaded      <='0';
-                Reg_DelayFrame              <='0';
-                Reg_OtherFrameOperation <=(others=>'0');
+        if reset='1' then   --TODO rebuild with register type
+            Reg_DelFrameLoaded      <='0';
+            Reg_DelayFrame          <='0';
+            Reg_OtherFrameOperation <=(others=>'0');
 
-            else
-                Reg_DelFrameLoaded      <=iDelFrameLoaded;
-                Reg_DelayFrame          <=iDelayEn and PassFrame;
-                Reg_OtherFrameOperation <=Next_OtherFrameOperation;
+        elsif rising_edge(clk) then
+            Reg_DelFrameLoaded      <= iDelFrameLoaded;
+            Reg_DelayFrame          <= iDelayEn and PassFrame;
+            Reg_OtherFrameOperation <= Next_OtherFrameOperation;
 
-            end if;
         end if;
     end process;
+
 
     nEdge_DelFrameLoaded<= '1' when iDelFrameLoaded='0' and Reg_DelFrameLoaded='1' else '0';
             --Counting on the negativ Edge => Frame was already loaded
@@ -202,7 +205,7 @@ begin
 
 
     --handling of undelayed frames--------------------------------------------------------
-    process(Reg_OtherFrameOperation,iStart)     --not on change of the active-signal
+    process(Reg_OtherFrameOperation,iStart)     --not on change of the active-signal TODO
     begin
 
         PassFrame<='0';

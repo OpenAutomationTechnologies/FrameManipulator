@@ -23,54 +23,48 @@ end FiFo_Sync_Ctrl;
 
 architecture arch of FiFo_Sync_Ctrl is
 
-    --add component for LFSR
+    --! Typedef for registers
+    type tReg is record
+        w_ptr   : std_logic_vector(N-1 downto 0);   --! write pointer
+        r_ptr   : std_logic_vector(N-1 downto 0);   --! read pointer
+        full    : std_logic;                        --! FiFo is full
+        empty   : std_logic;                        --! FiFo is empty
+    end record;
 
-    --constant LFSR_CTR: natural:=0;
+    --! Init for registers
+    constant cRegInit   : tReg :=(
+                                w_ptr   => (others=>'0'),
+                                r_ptr   => (others=>'0'),
+                                full    => '0',
+                                empty   => '1'              --is empty at begin
+                                );
 
-    signal w_ptr_reg:   std_logic_vector(N-1 downto 0);
-    signal w_ptr_next:  std_logic_vector(N-1 downto 0);
+    signal reg          : tReg; --! Registers
+    signal reg_next     : tReg; --! Next value of registers
+
     signal w_ptr_succ:  std_logic_vector(N-1 downto 0);
-
-    signal r_ptr_reg:   std_logic_vector(N-1 downto 0);
-    signal r_ptr_next:  std_logic_vector(N-1 downto 0);
     signal r_ptr_succ:  std_logic_vector(N-1 downto 0);
-
-    signal full_reg:    std_logic;
-    signal empty_reg:   std_logic;
-    signal full_next:   std_logic;
-    signal empty_next:  std_logic;
 
     signal wr_op:   std_logic_vector(1 downto 0);
 
 begin
 
-    --register for read and write pointers
-    process(clk)
+
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    --! - For read and write pointers and states
+    registers :
+    process(clk, reset)
     begin
-        if clk='1' and clk'event then
-            if reset = '1' then
-                w_ptr_reg<=(others=>'0');
-                r_ptr_reg<=(others=>'0');
-            else
-                w_ptr_reg<=w_ptr_next;
-                r_ptr_reg<=r_ptr_next;
-            end if;
+        if reset='1' then
+            reg <= cRegInit;
+
+        elsif rising_edge(clk) then
+            reg <= reg_next;
+
         end if;
     end process;
 
-    --statue FF
-    process(clk)
-    begin
-        if clk='1' and clk'event then
-            if reset = '1' then
-                full_reg<='0';
-                empty_reg<='1';
-            else
-                full_reg<=full_next;
-                empty_reg<=empty_next;
-            end if;
-        end if;
-    end process;
 
     --successive value for LFSR counter
 
@@ -79,55 +73,55 @@ begin
     --successive value for binary counter
     --g_bin
     --if (CNT_MODE/=LFSR_CTR) generate
-        w_ptr_succ<=std_logic_vector(unsigned(w_ptr_reg)+1);
-        r_ptr_succ<=std_logic_vector(unsigned(r_ptr_reg)+1);
+        w_ptr_succ  <= std_logic_vector(unsigned(reg.w_ptr)+1);
+        r_ptr_succ  <= std_logic_vector(unsigned(reg.r_ptr)+1);
     --end generate
 
     --next-state logic for read and write pointers
 
     wr_op<=iWr & iRd;
 
-    process(w_ptr_reg,w_ptr_succ,r_ptr_reg,r_ptr_succ,wr_op,empty_reg,full_reg)
+    process(reg,w_ptr_succ,r_ptr_succ,wr_op)
     begin
-        w_ptr_next<=w_ptr_reg;
-        r_ptr_next<=r_ptr_reg;
+        reg_next.w_ptr  <= reg.w_ptr;
+        reg_next.r_ptr  <= reg.r_ptr;
 
-        full_next<=full_reg;
-        empty_next<=empty_reg;
+        reg_next.full   <= reg.full;
+        reg_next.empty  <= reg.empty;
 
         case wr_op is
             when "00" =>    --no operation
 
             when "01" =>    --read
-                if (empty_reg /= '1') then  --not empty
-                    r_ptr_next<=r_ptr_succ;
-                    full_next<='0';
-                    if (r_ptr_succ=w_ptr_reg) then
-                        empty_next<='1';
+                if (reg.empty /= '1') then  --not empty
+                    reg_next.r_ptr  <= r_ptr_succ;
+                    reg_next.full   <= '0';
+                    if (r_ptr_succ = reg.w_ptr) then
+                        reg_next.empty  <= '1';
                     end if;
                 end if;
 
             when "10" =>    --write
-                if (full_reg /= '1') then   --not full
-                    w_ptr_next<=w_ptr_succ;
-                    empty_next<='0';
-                    if (w_ptr_succ=r_ptr_reg) then
-                        full_next<='1';
+                if (reg.full /= '1') then   --not full
+                    reg_next.w_ptr  <= w_ptr_succ;
+                    reg_next.empty  <= '0';
+                    if (w_ptr_succ = reg.r_ptr) then
+                        reg_next.full   <= '1';
                     end if;
                 end if;
 
             when others=>   --write/read
-                w_ptr_next<=w_ptr_succ;
-                r_ptr_next<=r_ptr_succ;
+                reg_next.w_ptr  <= w_ptr_succ;
+                reg_next.r_ptr  <= r_ptr_succ;
         end case;
     end process;
 
     --output
 
-    oWrAddr <=w_ptr_reg;
-    oRdAddr <=r_ptr_reg;
+    oWrAddr <=reg.w_ptr;
+    oRdAddr <=reg.r_ptr;
 
-    oFull   <=full_reg;
-    oEmpty  <=empty_reg;
+    oFull   <=reg.full;
+    oEmpty  <=reg.empty;
 
 end arch;

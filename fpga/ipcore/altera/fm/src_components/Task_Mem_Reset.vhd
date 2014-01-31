@@ -58,26 +58,27 @@ architecture two_seg_arch of Task_Mem_Reset is
 
 begin
 
-    --RS-FF for cnter-enable
-    process(clk)
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    --! - RS-FF for cnter-enable
+    process(clk, reset)
     begin
-        if clk'event and clk='1' then
-            if reset='1' then
-                ClearEn<='0';
-                ClearMem_Reg<='0';
+        if reset='1' then
+            ClearEn         <= '0';
+            ClearMem_Reg    <= '0';
 
-            else
-                if iClearMem='1' and ClearMem_Reg='0' then  --enable cnter on edge
-                    ClearEn<='1';
+        elsif rising_edge(clk) then
 
-                elsif addrOv='1' then                       --disable cnter at overflow
-                    ClearEn<='0';
+            if iClearMem='1' and ClearMem_Reg='0' then  --enable cnter on edge
+                ClearEn <= '1';
 
-                end if;
-
-                ClearMem_Reg<=iClearMem;
+            elsif addrOv='1' then                       --disable cnter at overflow
+                ClearEn <= '0';
 
             end if;
+
+            ClearMem_Reg    <= iClearMem;
+
         end if;
     end process;
 

@@ -37,7 +37,8 @@ architecture arch_Altera of FiFo_File is
 
 begin
 
-    --register array
+    --! @brief Registers
+    --! - Register array without reset
     process(clk)
     begin
         if (clk'event and clk='1') then

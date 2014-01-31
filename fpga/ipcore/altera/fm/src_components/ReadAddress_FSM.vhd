@@ -64,22 +64,25 @@ architecture two_seg_arch of ReadAddress_FSM is
 begin
 
     --register
-    process(clk)
+
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
+    process(clk, reset)
     begin
-        if clk='1' and clk'event then
-            if reset = '1' then
-                Reg_DataOutEnd<=(others=>'0');
-                Reg_DataOutStart<=(others=>'0');
-                state_reg<=sIdle;
+        if reset='1' then
+            Reg_DataOutEnd          <= (others=>'0');
+                Reg_DataOutStart    <= (others=>'0');
+                state_reg           <= sIdle;
 
-            else
-                Reg_DataOutEnd<=Next_DataOutEnd;
-                Reg_DataOutStart<=Next_DataOutStart;
-                state_reg<=state_next;
+        elsif rising_edge(clk) then
+            Reg_DataOutEnd          <= Next_DataOutEnd;
+                Reg_DataOutStart    <= Next_DataOutStart;
+                state_reg           <= state_next;
 
-            end if;
         end if;
     end process;
+
 
     --next state logic
     process(state_reg,iDataReady,iNextFrame)

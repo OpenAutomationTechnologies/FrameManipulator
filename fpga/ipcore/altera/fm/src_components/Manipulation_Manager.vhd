@@ -137,11 +137,27 @@ architecture two_seg_arch of Manipulation_Manager is
          );
     end component;
 
+    --! Typedef for registers
+    type tReg is record
+        StartTest   : std_logic;                                                --! Register for edge detection of iStartTest
+        TestActive  : std_logic;                                                --! Test is active
+        ManiSetting : std_logic_vector(2*gWordWidth-gCycleCntWidth-1 downto 0); --!settings for the task
+    end record;
+
+
+    --! Init for registers
+    constant cRegInit   : tReg :=(
+                                StartTest   => '0',
+                                TestActive  => '0',
+                                ManiSetting => (others => '0')
+                                );
+
+    signal reg          : tReg; --! Registers
+    signal reg_next     : tReg; --! Next value of registers
+
 
     --Test signals
-    signal regStartTest:        std_logic;  --start register for edge detection
-    signal TestActive:          std_logic;  --test is active
-    signal TestSync:            std_logic;  --reset for new test
+    signal TestSync : std_logic;  --!reset for new test at positive edge of iStartTest
 
     --collector signals
     signal CollFinished:        std_logic;                                  --collector received the header data
@@ -166,16 +182,15 @@ architecture two_seg_arch of Manipulation_Manager is
     --manipulation tasks:
     signal TaskDropEn:          std_logic;                                                  --drop frame
     signal SafetyTask:          std_logic_vector(cByteLength-1 downto 0);                   --safety task of the test
-    signal ManiSetting:         std_logic_vector(2*gWordWidth-gCycleCntWidth-1 downto 0);   --settings for the task
-    signal ManiSetting_next:    std_logic_vector(2*gWordWidth-gCycleCntWidth-1 downto 0);
+
 
     --Manipulation setting of whole setting:
-    alias iTaskSettingData_ManiSetting  : std_logic_vector(ManiSetting'range)
-                                            is iTaskSettingData(ManiSetting'left downto 0);
+    alias iTaskSettingData_ManiSetting  : std_logic_vector(reg.ManiSetting'range)
+                                            is iTaskSettingData(reg.ManiSetting'left downto 0);
 
     --Manipulation setting for safety packets
     alias iTaskSettingData_Safety       : std_logic_vector(gSafetySetting-1 downto 0)
-                                            is iTaskSettingData(ManiSetting'left downto ManiSetting'left-gSafetySetting+1);
+                                            is iTaskSettingData(reg.ManiSetting'left downto reg.ManiSetting'left-gSafetySetting+1);
 
     --Cycle of whole setting
     alias iTaskSettingData_Cycle        : std_logic_vector(gCycleCntWidth-1 downto 0)
@@ -183,11 +198,11 @@ architecture two_seg_arch of Manipulation_Manager is
 
     --Task of whole setting
     alias iTaskSettingData_Task         : std_logic_vector(cByteLength-1 downto 0)
-                                            is iTaskSettingData(ManiSetting'left downto ManiSetting'left-cByteLength+1);
+                                            is iTaskSettingData(reg.ManiSetting'left downto reg.ManiSetting'left-cByteLength+1);
 
     --Setting of the selected manipulation:
     alias ManiSetting_Task              : std_logic_vector(cByteLength-1 downto 0)
-                                            is ManiSetting(ManiSetting'left downto ManiSetting'left-cByteLength+1);
+                                            is reg.ManiSetting(reg.ManiSetting'left downto reg.ManiSetting'left-cByteLength+1);
 
 
     -- safety tasks:
@@ -198,36 +213,75 @@ begin
 
     --MENAGER CONTROL (start, stop, ...)-------------------------------------------------------
 
-    --Test is active RS-FF:
-    process(clk)
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
+    process(clk, reset)
     begin
-        if (clk'event and clk='1') then
+        if reset='1' then
+            reg <= cRegInit;
 
-            if (reset='1') then
-                regStartTest<='0';
-                TestActive<='0';
-
-            else
-                regStartTest<=iStartTest;
-
-                if TestSync='1' then
-                    TestActive<='1';    --set active on test start
-
-                elsif (CurrentCycle=(gCycleCntWidth-1 downto 0 => '1'))or(iStopTest='1')
-                                    or unsigned(CurrentCycle)>unsigned(CycleLastTask) then
-                    TestActive<='0';    --set inactive, when cycle-counter reached its limit (="11...1")
-                                                    --  when test is stoped by an operations
-                                                    --  when the last task was processed (current>lastTask)
-
-                end if;
-
-            end if;
+        elsif rising_edge(clk) then
+            reg <= reg_next;
 
         end if;
     end process;
 
+
+    --! @brief Next register value logic
+    --! - Set test-active at test start.
+    --!   Reset at end of cycle counter, last task or an abort
+    --! - Set ManiSetting when the matching task of the current frame was found.
+    --!   Reset when new frame arrives
+    nextComb :
+    process(reg, iStartTest, TestSync, iStopTest, CurrentCycle, CycleLastTask, SelectedTask, iFrameSync)
+    begin
+        reg_next    <= reg;
+
+        reg_next.StartTest  <= iStartTest;
+
+        --start of a test
+        if TestSync='1' then
+            reg_next.TestActive <= '1';
+
+        end if;
+
+
+        --end of cycle counter
+        if CurrentCycle=(gCycleCntWidth-1 downto 0 => '1')  then
+            reg_next.TestActive <= '0';
+
+        end if;
+
+
+        --last task was processed (current>lastTask)
+        if unsigned(CurrentCycle)>unsigned(CycleLastTask)  then
+            reg_next.TestActive <= '0';
+
+        end if;
+
+
+        --test is stoped by an operation
+        if iStopTest='1'  then
+            reg_next.TestActive <= '0';
+
+        end if;
+
+        --Set Mani setting at start of Frame
+        if (SelectedTask='1') then          --task fits => store setting
+            reg_next.ManiSetting    <= iTaskSettingData_ManiSetting;
+
+        elsif (iFrameSync='1') then         --reset => delete setting
+            reg_next.ManiSetting    <= cRegInit.ManiSetting;
+
+        end if;
+
+    end process;
+
+
+
     --Test reset after positive edge of start signal
-    TestSync    <= '1' when (iStartTest='1' and regStartTest='0')  else '0';
+    TestSync    <= '1' when (iStartTest = '1' and reg.StartTest = '0')  else '0';
     oTestSync   <= TestSync;
 
     --Soc Counter: counts PL-cycles as long as TestActive is '1'
@@ -235,7 +289,7 @@ begin
     generic map(gCnterWidth=>gCycleCntWidth)
     port map(
             clk=>clk,reset=>reset,
-            iTestSync=>TestSync,        iFrameSync=>iFrameSync, iEn=>TestActive,    iData=>iData,
+            iTestSync=>TestSync,        iFrameSync=>iFrameSync, iEn=>reg.TestActive,    iData=>iData,
             oFrameIsSoc=>FrameIsSoc,   oSocCnt=>CurrentCycle);
 
 
@@ -300,12 +354,12 @@ begin
         end if;
     end process;
 
-    CycleLastTask_next <= (0=>'1', others => '0') when TestActive = '0' else --at least a series of test with one PL cycle
+    CycleLastTask_next <= (0=>'1', others => '0') when reg.TestActive = '0' else --at least a series of test with one PL cycle
                           iTaskSettingData_Cycle when unsigned(iTaskSettingData_Cycle) > unsigned(CycleLastTask) and ReadEn = '1' else
                           CycleLastTask;
 
     --Task Cycle=current cycle => Frame fits with selected task
-    SelectedTask<= '1' when (HeaderConformance='1' and CollFinished='1' and TestActive='1'
+    SelectedTask<= '1' when (HeaderConformance='1' and CollFinished='1' and reg.TestActive='1'
                         and (CurrentCycle=iTaskSettingData_Cycle or iTaskSettingData_Cycle=X"FF") ) else '0';
 
 
@@ -314,35 +368,6 @@ begin
 
 
     --DATA HANDLING (select the right manipulation, output)----------------------------------
-
-    --storing data
-    process(iFrameSync,SelectedTask,iTaskSettingData,ManiSetting)
-    begin
-        if (SelectedTask='1') then          --task fits => store setting
-            ManiSetting_next<= iTaskSettingData_ManiSetting;
-
-        elsif (iFrameSync='1') then         --reset => delete setting
-            ManiSetting_next<=(others=>'0');
-
-        else                                --task doesn't fit => keep data
-            ManiSetting_next<= ManiSetting;
-
-        end if;
-    end process;
-
-    --! @brief Registers
-    --! - Storing with asynchronous reset
-    reg : process(clk, reset)
-    begin
-        if reset='1' then
-            ManiSetting <= (others=>'0');
-
-        elsif rising_edge(clk) then
-            ManiSetting<=ManiSetting_next;
-
-        end if;
-    end process;
-
 
     --Second Byte: Definnition of the kind of manipulation with the second Byte
     TaskDropEn<=    '1' when ManiSetting_Task = cTask.Drop      else '0';
@@ -354,9 +379,9 @@ begin
                         else '0';
 
     --output
-    oManiSetting <= ManiSetting(oManiSetting'left downto 0);
+    oManiSetting    <= reg.ManiSetting(oManiSetting'left downto 0);
     oTaskSelection<=TaskSelection;
-    oManiActive<=TestActive;
+    oManiActive     <= reg.TestActive;
 
     --frame can be stored, after comparing and not dropping the frame
     oStartFrameStorage<=iStartFrameProcess and CompFinished and not TaskDropEn;
@@ -378,7 +403,7 @@ begin
             clk                 => clk,
             reset               => reset,
             iClearMem           => iClearMem,
-            iTestActive         => TestActive,
+            iTestActive         => reg.TestActive,
             iSafetyActive       => iSafetyActive,
             iReadEn             => ReadEn,
             iCycleNr            => CurrentCycle,

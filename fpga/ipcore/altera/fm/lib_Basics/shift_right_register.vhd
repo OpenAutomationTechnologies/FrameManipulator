@@ -31,14 +31,17 @@ architecture two_seg_arch of shift_right_register is
     signal r_q: std_logic_vector(gWidth-1 downto 0);
 begin
 
-    process(clk)
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
+    process(clk, reset)
     begin
-        if clk='1' and clk'event then
-            if reset = '1' then
-                r_q <= (others=>'0');
-            else
-                r_q <= r_next;
-            end if;
+        if reset='1' then
+            r_q <= (others=>'0');
+
+        elsif rising_edge(clk) then
+            r_q <= r_next;
+
         end if;
     end process;
 

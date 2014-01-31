@@ -64,18 +64,22 @@ architecture Behave of end_of_frame_detection is
 
 begin
 
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    registers :
     process(clk, reset)
     begin
-        if clk='1' and clk'event then
-            if reset = '1' then
-                Addr_reg <= (others => '0');
-                end_reg<='0';
-            else
-                Addr_reg <= Addr_next;
-                end_reg <= end_next;
-            end if;
+        if reset='1' then
+            Addr_reg    <= (others => '0');
+            end_reg     <= '0';
+
+        elsif rising_edge(clk) then
+            Addr_reg    <= Addr_next;
+            end_reg     <= end_next;
+
         end if;
     end process;
+
 
     --shift register to save the last values of RXDV
     RX_shift:shift_right_register

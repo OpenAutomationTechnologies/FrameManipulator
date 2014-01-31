@@ -35,17 +35,22 @@ architecture two_seg_arch of sync_newData is
 
 begin
 
---setting of the Sync signal
-    process(clk)
+
+    --! @brief Registers
+    --! - Storing with asynchronous reset
+    --! - setting of the Sync signal
+    registers :
+    process(clk, reset)
     begin
-        if clk='1' and clk'event then
-            if reset = '1' then
-                r_q <= (others=>'0');
-            else
-                r_q <= r_next;
-            end if;
+        if reset='1' then
+            r_q <= (others=>'0');
+
+        elsif rising_edge(clk) then
+            r_q <= r_next;
+
         end if;
     end process;
+
 
     r_next <= iData;
 
