@@ -20,12 +20,17 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--! Use work library
+library work;
+--! use global library
+use work.global.all;
+
 entity Memory_Interface is
-    generic(gSlaveTaskWordWidth:    natural:=32;
+    generic(gSlaveTaskWordWidth:    natural:=4*cByteLength;
             gSlaveTaskAddrWidth:    natural:=8;
-            gTaskWordWidth:         natural:=64;
+            gTaskWordWidth:         natural:=8*cByteLength;
             gTaskAddrWidth:         natural:=5;
-            gSlaveControlWordWidth: natural:=8;
+            gSlaveControlWordWidth: natural:=cByteLength;
             gSlaveControlAddrWidth: natural:=1
         );
     port(
@@ -37,14 +42,14 @@ entity Memory_Interface is
         st_write:               in std_logic;
         st_read:                in std_logic;
         st_readdata:            out std_logic_vector(gSlaveTaskWordWidth-1 downto 0);
-        st_byteenable:          in std_logic_vector((gSlaveTaskWordWidth/8)-1 downto 0);
+        st_byteenable:          in std_logic_vector((gSlaveTaskWordWidth/cByteLength)-1 downto 0);
         --Avalon Slave Contol Memory
         sc_address:             in std_logic_vector(gSlaveControlAddrWidth-1 downto 0);
         sc_writedata:           in std_logic_vector(gSlaveControlWordWidth-1 downto 0);
         sc_write:               in std_logic;
         sc_read:                in std_logic;
         sc_readdata:            out std_logic_vector(gSlaveControlWordWidth-1 downto 0);
-        sc_byteenable:          in std_logic_vector(gSlaveControlWordWidth/8-1 downto 0);
+        sc_byteenable:          in std_logic_vector(gSlaveControlWordWidth/cByteLength-1 downto 0);
         --status signals
         iError_Addr_Buff_OV:    in std_logic;   --Error: Overflow address-buffer
         iError_Frame_Buff_OV:   in std_logic;   --Error: Overflow data-buffer
@@ -66,24 +71,10 @@ end Memory_Interface;
 architecture two_seg_arch of Memory_Interface is
 
 
-    --function of the logarithm to the base of 2
-    function log2c(n:natural) return natural is
-        variable m, p: natural;
-    begin
-        m:=0;
-        p:=1;
-        while p<n loop
-            m:=m+1;
-            p:=p*2;
-        end loop;
-        return m;
-    end log2c;
-
-
     --control register -----------------------------------------------------------------------
     --interface to the PL-Slave for the different operations and error-messages
     component Control_Register is
-        generic(gWordWidth:         natural :=8;
+        generic(gWordWidth:         natural :=cByteLength;
                 gAddresswidth:      natural :=1);
         port(
             clk, reset:             in std_logic;
@@ -103,7 +94,7 @@ architecture two_seg_arch of Memory_Interface is
             s_iAddr:                in std_logic_vector(gAddresswidth-1 downto 0);
             s_iWrEn:                in std_logic;
             s_iRdEn:                in std_logic;
-            s_iByteEn:              in std_logic_vector((gWordWidth/8)-1 DOWNTO 0);
+            s_iByteEn:              in std_logic_vector((gWordWidth/cByteLength)-1 DOWNTO 0);
             s_iWriteData:           in std_logic_vector(gWordWidth-1 downto 0);
             s_oReadData:            out std_logic_vector(gWordWidth-1 downto 0)
          );
@@ -128,8 +119,8 @@ architecture two_seg_arch of Memory_Interface is
     --task-memory ----------------------------------------------------------------------------
     --memory for the different manipulation tasks
     component Task_Memory
-        generic(gSlaveWordWidth:    natural :=32;
-                gWordWidth:         natural :=64;
+        generic(gSlaveWordWidth:    natural :=4*cByteLength;
+                gWordWidth:         natural :=8*cByteLength;
                 gSlaveAddrWidth:    natural :=11;
                 gAddresswidth:      natural :=8);
         port(
@@ -139,7 +130,7 @@ architecture two_seg_arch of Memory_Interface is
             s_iAddr:        in std_logic_vector(gSlaveAddrWidth-1 downto 0);
             s_iWrEn:        in std_logic;
             s_iRdEn:        in std_logic;
-            s_iByteEn:      in std_logic_vector((gSlaveWordWidth/8)-1 DOWNTO 0);
+            s_iByteEn:      in std_logic_vector((gSlaveWordWidth/cByteLength)-1 DOWNTO 0);
             s_iWriteData:   in std_logic_vector(gSlaveWordWidth-1 downto 0);
             s_oReadData:    out std_logic_vector(gSlaveWordWidth-1 downto 0);
             --memory signals

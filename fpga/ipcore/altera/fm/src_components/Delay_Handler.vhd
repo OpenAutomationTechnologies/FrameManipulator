@@ -17,9 +17,14 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--! Use work library
+library work;
+--! use global library
+use work.global.all;
+
 entity Delay_Handler is
     generic(
-            gDelayDataWidth:    natural:=48;
+            gDelayDataWidth:    natural:=6*cByteLength;
             gNoOfDelFrames:     natural:=255
     );
     port(
@@ -34,25 +39,13 @@ entity Delay_Handler is
         iDelayEn:           in std_logic;                                       --task: delay enable
         iDelayData:         in std_logic_vector(gDelayDataWidth-1 downto 0);    --delay data
         iDelFrameLoaded:    in std_logic;                                       --a deleted frame was loaded from the address-fifo
-        oCurrentTime:       out std_logic_vector(gDelayDataWidth-8 downto 0);   --timeline which starts with the first delayed frame
-        oDelayTime:         out std_logic_vector(gDelayDataWidth-8 downto 0)    --start time of the stored frame
+        oCurrentTime:       out std_logic_vector(gDelayDataWidth-cByteLength downto 0);   --timeline which starts with the first delayed frame
+        oDelayTime:         out std_logic_vector(gDelayDataWidth-cByteLength downto 0)    --start time of the stored frame
      );                                        --size=gDelayDataWidth-stateByte+1 bit to prevent overflow
 end Delay_Handler;
 
 architecture two_seg_arch of Delay_Handler is
 
-    --function of the logarithm to the base of 2
-    function log2c(n:natural) return natural is
-        variable m, p: natural;
-    begin
-        m:=0;
-        p:=1;
-        while p<n loop
-            m:=m+1;
-            p:=p*2;
-        end loop;
-        return m;
-    end log2c;
 
     --FSM for the Delay-Handler
     --Handles the different cnters and the current state of the component
@@ -91,17 +84,17 @@ architecture two_seg_arch of Delay_Handler is
     constant cSize_Time: natural:=gDelayDataWidth-8+1;
 
     --Values of the 3rd Task Byte: delay-operation (procession of other frames, while delay)
-    constant cDelay_pass:       std_logic_vector(7 downto 0):=X"01";    --pass all
-    constant cDelay_delete:     std_logic_vector(7 downto 0):=X"02";    --deleat all
-    constant cDelay_passSoC:    std_logic_vector(7 downto 0):=X"04";    --pass only SoCs
+    constant cDelay_pass:       std_logic_vector(cByteLength-1 downto 0):=X"01";    --pass all
+    constant cDelay_delete:     std_logic_vector(cByteLength-1 downto 0):=X"02";    --deleat all
+    constant cDelay_passSoC:    std_logic_vector(cByteLength-1 downto 0):=X"04";    --pass only SoCs
 
 
     --signals
     signal PassFrame:   std_logic;  --Frame is processed (not dropped)
 
     --register of delay-operation
-    signal Reg_OtherFrameOperation: std_logic_vector(7 downto 0);
-    signal Next_OtherFrameOperation:std_logic_vector(7 downto 0);
+    signal Reg_OtherFrameOperation: std_logic_vector(cByteLength-1 downto 0);
+    signal Next_OtherFrameOperation:std_logic_vector(cByteLength-1 downto 0);
 
     --signal for FSM
     signal active:              std_logic;  --delay is active
@@ -110,8 +103,8 @@ architecture two_seg_arch of Delay_Handler is
     --Counter for Stored and loaded Delayed Frames
     signal DelCntSync:  std_logic;                                          --reset cnter
     signal PushCntEn:   std_logic;
-    signal DelCntPush:  std_logic_vector(log2c(gNoOfDelFrames)-1 downto 0); --Number of "pushed" delayed frames to the buffer
-    signal DelCntPull:  std_logic_vector(log2c(gNoOfDelFrames)-1 downto 0); --Number of "pulled" delayed frames to the buffer
+    signal DelCntPush:  std_logic_vector(LogDualis(gNoOfDelFrames)-1 downto 0); --Number of "pushed" delayed frames to the buffer
+    signal DelCntPull:  std_logic_vector(LogDualis(gNoOfDelFrames)-1 downto 0); --Number of "pulled" delayed frames to the buffer
 
     --negative edge detection of outgoing delayed-frames
     signal Reg_DelFrameLoaded   :std_logic;
@@ -166,7 +159,7 @@ begin
 
     --Number of stored Delayed Frame
     PushCnter:Basic_Cnter   --push delayed frame to buffer
-    generic map(gCntWidth=>log2c(gNoOfDelFrames))
+    generic map(gCntWidth=>LogDualis(gNoOfDelFrames))
     port map(
             clk=>clk,           reset=>reset,
             iClear=>DelCntSync, iEn=>PushCntEn, iStartValue=>(others=>'0'), iEndValue=>(others=>'1'),
@@ -175,7 +168,7 @@ begin
 
     --Number of loaded Delayed Frame
     PullCnter:Basic_Cnter   --delayed frame was pulled from buffer
-    generic map(gCntWidth=>log2c(gNoOfDelFrames))
+    generic map(gCntWidth=>LogDualis(gNoOfDelFrames))
     port map(
             clk=>clk,           reset=>reset,
             iClear=>DelCntSync, iEn=>nEdge_DelFrameLoaded,  iStartValue=>(others=>'0'), iEndValue=>(others=>'1'),

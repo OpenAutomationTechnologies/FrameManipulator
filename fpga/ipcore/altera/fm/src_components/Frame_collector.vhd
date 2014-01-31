@@ -24,6 +24,10 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library work;
+--! use global library
+use work.global.all;
+
 entity Frame_collector is
         generic(
             gFrom:natural:=13;
@@ -31,26 +35,14 @@ entity Frame_collector is
         );
         port(
             clk, reset:         in std_logic;
-            iData:              in std_logic_vector(7 downto 0);
+            iData:              in std_logic_vector(cByteLength-1 downto 0);
             iSync:              in std_logic;
-            oFrameData :        out std_logic_vector((gTo-gFrom+1)*8-1 downto 0);
+            oFrameData :        out std_logic_vector((gTo-gFrom+1)*cByteLength-1 downto 0);
             oCollectorFinished: out std_logic
         );
 end Frame_collector;
 
 architecture two_seg_arch of Frame_collector is
-
-    function log2c(n:natural) return natural is
-        variable m, p: natural;
-    begin
-        m:=0;
-        p:=1;
-        while p<n loop
-            m:=m+1;
-            p:=p*2;
-        end loop;
-        return m;
-    end log2c;
 
     --Counter
     component Basic_Cnter
@@ -82,18 +74,18 @@ architecture two_seg_arch of Frame_collector is
         );
     end component;
 
-    constant cWidth_ByteCnt:natural :=log2c(gTo-gFrom+1)+1;
+    constant cWidth_ByteCnt:natural :=LogDualis(gTo-gFrom+1)+1;
 
     signal div4:    std_logic;                                      --Prescaler
-    signal cnt:     std_logic_vector(log2c(gTo+2)-1 downto 0);      --Number of Current Byte
+    signal cnt:     std_logic_vector(LogDualis(gTo+2)-1 downto 0);      --Number of Current Byte
     signal cntout:  std_logic_vector(cWidth_ByteCnt-1 downto 0);    --Number of Current Byte - gFrom
 
     signal filter_end:  std_logic;                                  --Reached the last Byte (gTo)
     signal cnt_stop:    std_logic;                                  --Clear Signal after filter_end and iSync
     signal MemEn:       std_logic;                                  --Enable to store the data
 
-    signal reg_q:   std_logic_vector((gTo-gFrom+1)*8-1 downto 0);   --Register for output data
-    signal reg_next:std_logic_vector((gTo-gFrom+1)*8-1 downto 0);   --Register for output data
+    signal reg_q:   std_logic_vector((gTo-gFrom+1)*cByteLength-1 downto 0);   --Register for output data
+    signal reg_next:std_logic_vector((gTo-gFrom+1)*cByteLength-1 downto 0);   --Register for output data
 begin
 
 
@@ -107,7 +99,7 @@ begin
             );
 
     cnt_5bit : Basic_Cnter  --Counter, which counts the Bytes
-    generic map (gCntWidth => log2c(gTo+2))
+    generic map (gCntWidth => LogDualis(gTo+2))
     port map (
             clk=>clk, reset=>reset,
             iClear=>iSync,iEn => div4, iStartValue=>(others=>'0'),iEndValue=>(others=>'1'),
@@ -117,7 +109,7 @@ begin
 
     --Selecting the important Bytes----------------------------------------------------------------------------
     cnt_f_t : From_To_Cnt_Filter    --Logic to select the wanted Bytes
-    generic map (gFrom => gFrom, gTo => gTo, gWidthIn => log2c(gTo+2), gWidthOUT => cWidth_ByteCnt)
+    generic map (gFrom => gFrom, gTo => gTo, gWidthIn => LogDualis(gTo+2), gWidthOUT => cWidth_ByteCnt)
     port map (
             iCnt => cnt,
             oCnt => cntout, oEn => MemEn, oEnd => filter_end
@@ -147,9 +139,9 @@ begin
         if (MemEn='0' and filter_end='0') then --deleting the last Ethertype
             reg_next<=(others=>'0');
 
-        elsif (MemEn='1' and filter_end='0') then
-            reg_next((gTo-gFrom-to_integer(unsigned(cntout))+1)*8-1 downto (gTo-gFrom-to_integer(unsigned(cntout)))*8)<=iData(7 downto 0);
---  e.g.    reg_next(    (10    -                      3    +1)*8-1 downto (    10    -                       3   )*8)<=iData(7 downto 0);
+        elsif (MemEn='1' and filter_end='0') then --TODO alias
+            reg_next((gTo-gFrom-to_integer(unsigned(cntout))+1)*cByteLength-1 downto (gTo-gFrom-to_integer(unsigned(cntout)))*cByteLength)<=iData(cByteLength-1 downto 0);
+--  e.g.    reg_next(    (10    -                      3    +1)*cByteLength-1 downto (    10    -                       3   )*cByteLength)<=iData(7 downto 0);
 --  =       reg_next(8*8-1 downto 7*8) =reg_next(63 downto 56)<=iData(7 downto 0);
 
         end if;

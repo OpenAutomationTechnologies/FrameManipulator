@@ -27,17 +27,20 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library work;
+use work.global.all;
+
 entity SoC_Cnter is
     generic(gCnterWidth:natural:=8);
     port(
         clk, reset:     in std_logic;
-        iTestSync:      in std_logic;                   --sync for counter reset
-        iFrameSync:     in std_logic;                   --sync for new incoming frame
-        iEn:            in std_logic;                   --counter enable
-        iData:          in std_logic_vector(7 downto 0);--frame-data
-        oFrameIsSoc:    out std_logic;                  --current frame is a SoC
-        oSocCnt  :      out std_logic_vector(7 downto 0)--number of received SoCs
-     );
+        iTestSync:      in std_logic;                                   --sync for counter reset
+        iFrameSync:     in std_logic;                                   --sync for new incoming frame
+        iEn:            in std_logic;                                   --counter enable
+        iData:          in std_logic_vector(cByteLength-1 downto 0);    --frame-data
+        oFrameIsSoc:    out std_logic;                                  --current frame is a SoC
+        oSocCnt  :      out std_logic_vector(cByteLength-1 downto 0)    --number of received SoCs
+    );
 end SoC_Cnter;
 
 
@@ -66,16 +69,16 @@ architecture two_seg_arch of SoC_Cnter is
         );
         port(
             clk, reset:         in std_logic;
-            iData:              in std_logic_vector(7 downto 0);
+            iData:              in std_logic_vector(cByteLength-1 downto 0);
             iSync:              in std_logic;
-            oFrameData :        out std_logic_vector((gTo-gFrom+1)*8-1 downto 0);
+            oFrameData :        out std_logic_vector((gTo-gFrom+1)*cByteLength-1 downto 0);
             oCollectorFinished: out std_logic
         );
     end component;
 
     signal cntEn:               std_logic;                      --Counter Enable
     signal CollectorFinished:   std_logic;                      --Messagetype has received
-    signal MessageType:         std_logic_vector(7 downto 0);   --value of Messagetype
+    signal MessageType:         std_logic_vector(cByteLength-1 downto 0);   --value of Messagetype
 
     --Edge Detection
     signal Next_FrameFit:       std_logic;  --Messagetype fit / frame is Soc

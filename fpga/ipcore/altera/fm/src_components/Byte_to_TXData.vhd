@@ -13,13 +13,22 @@
 -- *                                                              *
 -- ****************************************************************
 
+--! Use standard ieee library
 library ieee;
+--! Use logic elements
 use ieee.std_logic_1164.all;
+--! Use numeric functions
+use ieee.numeric_std.all;
+
+--! Use work library
+library work;
+--! use global library
+use work.global.all;
 
 entity Byte_to_TXData is
     port(
         clk, reset: in std_logic;
-        iData: in std_logic_vector(7 downto 0);
+        iData: in std_logic_vector(cByteLength-1 downto 0);
         oTXD:  out std_logic_vector(1 downto 0)
     );
 end Byte_to_TXData;
@@ -65,7 +74,7 @@ architecture two_seg_arch of Byte_to_TXData is
 
     signal sync:    std_logic;                          --Synchronise Reset
     signal cnt:     std_logic_vector(1 downto 0);
-    signal data:    std_logic_vector(7 downto 0);
+    signal data:    std_logic_vector(cByteLength-1 downto 0);
     signal TXD_Reg: std_logic_vector(1 downto 0);
 begin
 
@@ -81,7 +90,7 @@ begin
     end process;
 
     syncronizer : sync_newData
-    generic map (WIDTH => 8)
+    generic map (WIDTH => cByteLength)
     port map (clk=>clk, reset=>reset, iData => iData, oData => data, oSync => sync);
 
     cnt_2bit : Basic_Cnter      --Counter, which controlls the DMux

@@ -28,8 +28,8 @@ entity Manipulation_Manager is
     generic(
             gFrom:              natural:=15;
             gTo :               natural:=22;
-            gWordWidth:         natural:=64;--8*cByte..
-            gManiSettingWidth:  natural:=112;
+            gWordWidth:         natural:=8*cByteLength;
+            gManiSettingWidth:  natural:=14*cByteLength;
             gSafetySetting      : natural :=5*cByteLength;  --5 Byte safety setting
             gCycleCntWidth:     natural:=8;
             gBuffAddrWidth:     natural:=5
@@ -49,7 +49,7 @@ entity Manipulation_Manager is
         oFrameIsSoc:        out std_logic;  --current frame is a SoC
         oError_Task_Conf:   out std_logic;  --Error: Wrong task configuration
         --data signals
-        iData:              in std_logic_vector(7 downto 0);                    --frame-stream
+        iData:              in std_logic_vector(cByteLength-1 downto 0);        --frame-stream
         iTaskSettingData:   in std_logic_vector(2*gWordWidth-1 downto 0);       --settings for the tasks
         iTaskCompFrame:     in std_logic_vector(gWordWidth-1 downto 0);         --frame-header-data for the tasks
         iTaskCompMask:      in std_logic_vector(gWordWidth-1 downto 0);         --frame-mask for the tasks
@@ -76,7 +76,7 @@ architecture two_seg_arch of Manipulation_Manager is
         );
         port(
             clk, reset:         in std_logic;
-            iData:              in std_logic_vector(7 downto 0);
+            iData:              in std_logic_vector(cByteLength-1 downto 0);
             iSync:              in std_logic;
             oFrameData :        out std_logic_vector((gTo-gFrom+1)*8-1 downto 0);
             oCollectorFinished: out std_logic
@@ -102,12 +102,12 @@ architecture two_seg_arch of Manipulation_Manager is
         generic(gCnterWidth:natural:=8);
         port(
             clk, reset:     in std_logic;
-            iTestSync:      in std_logic;                   --sync for counter reset
-            iFrameSync:     in std_logic;                   --sync for new incoming frame
-            iEn:            in std_logic;                   --counter enable
-            iData:          in std_logic_vector(7 downto 0);--frame-data
-            oFrameIsSoc:    out std_logic;                  --current frame is a SoC
-            oSocCnt  :      out std_logic_vector(7 downto 0)--number of received SoCs
+            iTestSync:      in std_logic;                                   --sync for counter reset
+            iFrameSync:     in std_logic;                                   --sync for new incoming frame
+            iEn:            in std_logic;                                   --counter enable
+            iData:          in std_logic_vector(cByteLength-1 downto 0);    --frame-data
+            oFrameIsSoc:    out std_logic;                                  --current frame is a SoC
+            oSocCnt  :      out std_logic_vector(cByteLength-1 downto 0)    --number of received SoCs
         );
     end component;
 
@@ -165,7 +165,7 @@ architecture two_seg_arch of Manipulation_Manager is
 
     --manipulation tasks:
     signal TaskDropEn:          std_logic;                                                  --drop frame
-    signal SafetyTask:          std_logic_vector(7 downto 0);                               --safety task of the test
+    signal SafetyTask:          std_logic_vector(cByteLength-1 downto 0);                   --safety task of the test
     signal ManiSetting:         std_logic_vector(2*gWordWidth-gCycleCntWidth-1 downto 0);   --settings for the task
     signal ManiSetting_next:    std_logic_vector(2*gWordWidth-gCycleCntWidth-1 downto 0);
 
@@ -182,12 +182,12 @@ architecture two_seg_arch of Manipulation_Manager is
                                             is iTaskSettingData(iTaskSettingData'left downto iTaskSettingData'left-gCycleCntWidth+1);
 
     --Task of whole setting
-    alias iTaskSettingData_Task         : std_logic_vector(7 downto 0)
-                                            is iTaskSettingData(ManiSetting'left downto ManiSetting'left-7);
+    alias iTaskSettingData_Task         : std_logic_vector(cByteLength-1 downto 0)
+                                            is iTaskSettingData(ManiSetting'left downto ManiSetting'left-cByteLength+1);
 
     --Setting of the selected manipulation:
-    alias ManiSetting_Task              : std_logic_vector(7 downto 0)
-                                            is ManiSetting(ManiSetting'left downto ManiSetting'left-7);
+    alias ManiSetting_Task              : std_logic_vector(cByteLength-1 downto 0)
+                                            is ManiSetting(ManiSetting'left downto ManiSetting'left-cByteLength+1);
 
 
     -- safety tasks:

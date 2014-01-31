@@ -21,13 +21,17 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library work;
+--! use global library
+use work.global.all;
+
 entity Data_Buffer is
-    generic(gDataWidth:         natural:=8;
+    generic(gDataWidth:         natural:=cByteLength;
             gDataAddrWidth:     natural:=11;
             gNoOfHeadMani:      natural:=8;
-            gTaskWordWidth:     natural:=64;
-            gManiSettingWidth:  natural:=112
-    );
+            gTaskWordWidth:     natural:=8*cByteLength;
+            gManiSettingWidth:  natural:=14*cByteLength
+            );
     port
     (
         clk, reset:             in std_logic;
@@ -47,19 +51,6 @@ end Data_Buffer;
 
 
 architecture two_seg_arch of Data_Buffer is
-
-    --function of the logarithm to the base of 2
-    function log2c(n:natural) return natural is
-        variable m, p: natural;
-    begin
-        m:=0;
-        p:=1;
-        while p<n loop
-            m:=m+1;
-            p:=p*2;
-        end loop;
-        return m;
-    end log2c;
 
 
     --frame-data memory ----------------------------------------------------------------------
@@ -114,10 +105,10 @@ architecture two_seg_arch of Data_Buffer is
     end component;
 
     --size selection of the selection counter
-    constant cCntWidth:natural:=log2c(gNoOfHeadMani+1);
+    constant cCntWidth:natural:=LogDualis(gNoOfHeadMani+1);
 
-    constant cSizeManiHeaderData:   natural:=8;
-    constant cSizeManiHeaderOffset: natural:=6;
+    constant cSizeManiHeaderData    : natural:=8;
+    constant cSizeManiHeaderOffset  : natural:=6;
 
 
     --Mani Enable Edge Detection--------

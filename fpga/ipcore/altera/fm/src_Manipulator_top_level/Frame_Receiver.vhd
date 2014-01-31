@@ -41,7 +41,7 @@ entity Frame_Receiver is
         iRXDV:              in std_logic;                                   --frame data valid
         iRXD:               in std_logic_vector(1 downto 0);                --frame data (2bit)
         --write data
-        oData:              out std_logic_vector(7 downto 0);               --frame data (1byte)
+        oData:              out std_logic_vector(cByteLength-1 downto 0);   --frame data (1byte)
         oWrBuffAddr:        out std_logic_vector(gBuffAddrWidth-1 downto 0);--write address
         oWrBuffEn :         out std_logic;                                  --write data-memory enable
         iDataStartAddr:     in std_logic_vector(gBuffAddrWidth-1 downto 0); --first byte of frame data
@@ -65,7 +65,7 @@ architecture two_seg_arch of Frame_Receiver is
             clk, reset: in std_logic;
             iRXDV: in std_logic;
             iRXD:  in std_logic_vector(1 downto 0);
-            oData: out std_logic_vector(7 downto 0);
+            oData: out std_logic_vector(cByteLength-1 downto 0);
             oEn:   out std_logic;
             oSync: out std_logic
         );
@@ -93,9 +93,9 @@ architecture two_seg_arch of Frame_Receiver is
         );
         port(
             clk, reset:         in std_logic;
-            iData:              in std_logic_vector(7 downto 0);
+            iData:              in std_logic_vector(cByteLength-1 downto 0);
             iSync:              in std_logic;
-            oFrameData :        out std_logic_vector((gTo-gFrom+1)*8-1 downto 0);
+            oFrameData :        out std_logic_vector((gTo-gFrom+1)*cByteLength-1 downto 0);
             oCollectorFinished: out std_logic
         );
     end component;
@@ -141,7 +141,7 @@ architecture two_seg_arch of Frame_Receiver is
     --! Number of Ethertype filter
     constant cNumbFilter        : natural := gEtherTypeFilter'length/cEtherTypeSize;
 
-    signal data:                std_logic_vector(7 downto 0);
+    signal data:                std_logic_vector(cByteLength-1 downto 0);
     signal sync:                std_logic;
 
     signal EnWL:                std_logic;

@@ -37,7 +37,7 @@ entity Frame_Creator is
         --Read data buffer
         iDataStartAddr: in std_logic_vector(gDataBuffAddrWidth-1 downto 0); --Position of the first frame-byte
         iDataEndAddr:   in std_logic_vector(gDataBuffAddrWidth-1 downto 0); --Position of the last
-        iData:          in std_logic_vector(7 downto 0);                    --frame-data
+        iData:          in std_logic_vector(cByteLength-1 downto 0);        --frame-data
         oRdBuffAddr:    out std_logic_vector(gDataBuffAddrWidth-1 downto 0);--read address of data-memory
         oRdBuffEn:      out std_logic;                                      --read-enable
 
@@ -162,12 +162,12 @@ architecture two_seg_arch of Frame_Creator is
     signal TXD_Selection    : std_logic_vector(1 downto 0);
     signal ExchangeData     : std_logic;
 
-    signal FrameData        : std_logic_vector(7 downto 0);
+    signal FrameData        : std_logic_vector(cByteLength-1 downto 0);
     signal TXDPre           : std_logic_vector(1 downto 0);
     signal TXDBuff          : std_logic_vector(1 downto 0);
     signal TXDCRC           : std_logic_vector(1 downto 0);
 
-    signal temp_TXD_Mux:    std_logic_vector(7 downto 0);
+    signal temp_TXD_Mux:    std_logic_vector(cByteLength-1 downto 0);
 
 
 

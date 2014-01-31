@@ -25,10 +25,15 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--! Use work library
+library work;
+--! use global library
+use work.global.all;
+
 entity StoreAddress_FSM is
         generic(
                 gAddrDataWidth: natural:=11;
-                gSize_Time:     natural:=40;
+                gSize_Time:     natural:=5*cByteLength;
                 gFiFoBitWidth:  natural:=52
         );
         port(

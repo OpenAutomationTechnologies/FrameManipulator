@@ -26,13 +26,14 @@ use work.global.all;
 
 entity Process_Unit is
     generic(gDataBuffAddrWidth:     natural:=11;
-            gTaskWordWidth:         natural:=64;
+            gTaskWordWidth:         natural:=8*cByteLength;
             gTaskAddrWidth:         natural:=5;
-            gManiSettingWidth:      natural:=112;
+            gManiSettingWidth:      natural:=14*cByteLength;
             gSafetySetting          : natural :=5*cByteLength;  --5 Byte safety setting
-            gCycleCntWidth:         natural:=8;
-            gSize_Mani_Time:        natural:=40;
-            gNoOfDelFrames:         natural:=255);
+            gCycleCntWidth:         natural:=cByteLength;
+            gSize_Mani_Time:        natural:=5*cByteLength;
+            gNoOfDelFrames:         natural:=255
+            );
     port(
         clk, reset:             in std_logic;
 
@@ -49,7 +50,7 @@ entity Process_Unit is
         oError_Task_Conf:       out std_logic;  --Error: Wrong task configuration
 
         --compare Tasks from memory with the frame
-        iData:                  in std_logic_vector(7 downto 0);                    --frame-data-stream
+        iData:                  in std_logic_vector(cByteLength-1 downto 0);        --frame-data-stream
         iTaskSettingData:       in std_logic_vector(gTaskWordWidth*2-1 downto 0);   --task settings
         iTaskCompFrame:         in std_logic_vector(gTaskWordWidth-1 downto 0);     --frame-selection-data
         iTaskCompMask:          in std_logic_vector(gTaskWordWidth-1 downto 0);     --frame-selection-mask
@@ -82,10 +83,10 @@ architecture two_seg_arch of Process_Unit is
         generic(
                 gFrom:              natural:=15;
                 gTo :               natural:=22;
-                gWordWidth:         natural:=64;--8*cByte..
-                gManiSettingWidth:  natural:=112;
+                gWordWidth:         natural:=8*cByteLength;
+                gManiSettingWidth:  natural:=14*cByteLength;
                 gSafetySetting      : natural :=5*cByteLength;  --5 Byte safety setting
-                gCycleCntWidth:     natural:=8;
+                gCycleCntWidth:     natural:=cByteLength;
                 gBuffAddrWidth:     natural:=5
             );
         port(
@@ -103,7 +104,7 @@ architecture two_seg_arch of Process_Unit is
             oFrameIsSoc:        out std_logic;  --current frame is a SoC
             oError_Task_Conf:   out std_logic;  --Error: Wrong task configuration
             --data signals
-            iData:              in std_logic_vector(7 downto 0);                    --frame-stream
+            iData:              in std_logic_vector(cByteLength-1 downto 0);        --frame-stream
             iTaskSettingData:   in std_logic_vector(2*gWordWidth-1 downto 0);       --settings for the tasks
             iTaskCompFrame:     in std_logic_vector(gWordWidth-1 downto 0);         --frame-header-data for the tasks
             iTaskCompMask:      in std_logic_vector(gWordWidth-1 downto 0);         --frame-mask for the tasks
@@ -127,7 +128,7 @@ architecture two_seg_arch of Process_Unit is
     component Address_Manager
         generic(
                 gAddrDataWidth:     natural:=11;
-                gDelayDataWidth:    natural:=112;
+                gDelayDataWidth:    natural:=6*cByteLength;
                 gNoOfDelFrames:     natural:=8
         );
         port(

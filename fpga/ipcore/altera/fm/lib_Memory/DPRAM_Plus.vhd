@@ -45,6 +45,12 @@ USE ieee.std_logic_1164.all;
 LIBRARY altera_mf;
 USE altera_mf.all;
 
+--! Use work library
+library work;
+--! use global library
+use work.global.all;
+
+
 ENTITY DPRAM_Plus IS
     generic(gAddresswidthA:     natural :=7;
             gAddresswidthB:     natural :=6;
@@ -54,8 +60,8 @@ ENTITY DPRAM_Plus IS
     (
         address_a   : IN STD_LOGIC_VECTOR (gAddresswidthA-1 DOWNTO 0);
         address_b   : IN STD_LOGIC_VECTOR (gAddresswidthB-1 DOWNTO 0);
-        byteena_a   : IN STD_LOGIC_VECTOR ((gWordWidthA/8)-1 DOWNTO 0) :=  (OTHERS => '1');
-        byteena_b   : IN STD_LOGIC_VECTOR ((gWordWidthB/8)-1 DOWNTO 0) :=  (OTHERS => '1');
+        byteena_a   : IN STD_LOGIC_VECTOR ((gWordWidthA/cByteLength)-1 DOWNTO 0) :=  (OTHERS => '1');
+        byteena_b   : IN STD_LOGIC_VECTOR ((gWordWidthB/cByteLength)-1 DOWNTO 0) :=  (OTHERS => '1');
         clock_a     : IN STD_LOGIC  := '1';
         clock_b     : IN STD_LOGIC ;
         data_a      : IN STD_LOGIC_VECTOR (gWordWidthA-1 DOWNTO 0);

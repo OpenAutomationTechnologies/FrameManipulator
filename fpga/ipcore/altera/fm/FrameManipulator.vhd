@@ -42,18 +42,18 @@ entity FrameManipulator is
 
         --Avalon Slave Task Memory
         st_address:     in std_logic_vector(gTaskAddr-1 downto 0);
-        st_writedata:   in std_logic_vector(gTaskBytesPerWord*8-1 downto 0);
+        st_writedata:   in std_logic_vector(gTaskBytesPerWord*cByteLength-1 downto 0);
         st_write:       in std_logic;
         st_read:        in std_logic;
-        st_readdata:    out std_logic_vector(gTaskBytesPerWord*8-1 downto 0);
+        st_readdata:    out std_logic_vector(gTaskBytesPerWord*cByteLength-1 downto 0);
         st_byteenable:  in std_logic_vector(gTaskBytesPerWord-1 downto 0);
 
         --Avalon Slave Contol Memory
         sc_address:     in std_logic_vector(gControlAddr-1 downto 0);
-        sc_writedata:   in std_logic_vector(gControlBytesPerWord*8-1 downto 0);
+        sc_writedata:   in std_logic_vector(gControlBytesPerWord*cByteLength-1 downto 0);
         sc_write:       in std_logic;
         sc_read:        in std_logic;
-        sc_readdata:    out std_logic_vector(gControlBytesPerWord*8-1 downto 0);
+        sc_readdata:    out std_logic_vector(gControlBytesPerWord*cByteLength-1 downto 0);
         sc_byteenable:  in std_logic_vector(gControlBytesPerWord-1 downto 0);
 
         oTXData:        out std_logic_vector(1 downto 0);
@@ -65,29 +65,14 @@ end FrameManipulator;
 
 architecture two_seg_arch of FrameManipulator is
 
-
-    --function of the logarithm to the base of 2
-    function log2c(n:natural) return natural is
-        variable m, p: natural;
-    begin
-        m:=0;
-        p:=1;
-        while p<n loop
-            m:=m+1;
-            p:=p*2;
-        end loop;
-        return m;
-    end log2c;
-
-
     --Interface to the PL-Slave with two avalon slave ---------------------------------------
     --contains the register for tasks, operations and errors
     component Memory_Interface
-        generic(gSlaveTaskWordWidth:    natural:=32;
+        generic(gSlaveTaskWordWidth:    natural:=4*cByteLength;
                 gSlaveTaskAddrWidth:    natural:=8;
-                gTaskWordWidth:         natural:=64;
+                gTaskWordWidth:         natural:=8*cByteLength;
                 gTaskAddrWidth:         natural:=5;
-                gSlaveControlWordWidth: natural:=8;
+                gSlaveControlWordWidth: natural:=cByteLength;
                 gSlaveControlAddrWidth: natural:=1
             );
         port(
@@ -139,7 +124,7 @@ architecture two_seg_arch of FrameManipulator is
             iRXDV:              in std_logic;                                   --frame data valid
             iRXD:               in std_logic_vector(1 downto 0);                --frame data (2bit)
             --write data
-            oData:              out std_logic_vector(7 downto 0);               --frame data (1byte)
+            oData:              out std_logic_vector(cByteLength-1 downto 0);   --frame data (1byte)
             oWrBuffAddr:        out std_logic_vector(gBuffAddrWidth-1 downto 0);--write address
             oWrBuffEn :         out std_logic;                                  --write data-memory enable
             iDataStartAddr:     in std_logic_vector(gBuffAddrWidth-1 downto 0); --first byte of frame data
@@ -158,12 +143,12 @@ architecture two_seg_arch of FrameManipulator is
     --internal Memory for the frame data ----------------------------------------------------
     --stores data and manipulates the header files
     component Data_Buffer
-        generic(gDataWidth:         natural:=8;
+        generic(gDataWidth:         natural:=cByteLength;
                 gDataAddrWidth:     natural:=11;
                 gNoOfHeadMani:      natural:=8;
-                gTaskWordWidth:     natural:=64;
-                gManiSettingWidth:  natural:=112
-        );
+                gTaskWordWidth:     natural:=8*cByteLength;
+                gManiSettingWidth:  natural:=14*cByteLength
+                );
         port
         (
             clk, reset:             in std_logic;
@@ -186,13 +171,14 @@ architecture two_seg_arch of FrameManipulator is
     --selects the task for the selected frame and handles the addresses of the stored data
     component Process_Unit
         generic(gDataBuffAddrWidth:     natural:=11;
-                gTaskWordWidth:         natural:=64;
+                gTaskWordWidth:         natural:=8*cByteLength;
                 gTaskAddrWidth:         natural:=5;
-                gManiSettingWidth:      natural:=112;
+                gManiSettingWidth:      natural:=14*cByteLength;
                 gSafetySetting          : natural :=5*cByteLength;  --5 Byte safety setting
-                gCycleCntWidth:         natural:=8;
-                gSize_Mani_Time:        natural:=40;
-                gNoOfDelFrames:         natural:=255);
+                gCycleCntWidth:         natural:=cByteLength;
+                gSize_Mani_Time:        natural:=5*cByteLength;
+                gNoOfDelFrames:         natural:=255
+                );
         port(
             clk, reset:             in std_logic;
 
@@ -209,7 +195,7 @@ architecture two_seg_arch of FrameManipulator is
             oError_Task_Conf:       out std_logic;  --Error: Wrong task configuration
 
             --compare Tasks from memory with the frame
-            iData:                  in std_logic_vector(7 downto 0);                    --frame-data-stream
+            iData:                  in std_logic_vector(cByteLength-1 downto 0);        --frame-data-stream
             iTaskSettingData:       in std_logic_vector(gTaskWordWidth*2-1 downto 0);   --task settings
             iTaskCompFrame:         in std_logic_vector(gTaskWordWidth-1 downto 0);     --frame-selection-data
             iTaskCompMask:          in std_logic_vector(gTaskWordWidth-1 downto 0);     --frame-selection-mask
@@ -250,7 +236,7 @@ architecture two_seg_arch of FrameManipulator is
             --Read data buffer
             iDataStartAddr: in std_logic_vector(gDataBuffAddrWidth-1 downto 0); --Position of the first frame-byte
             iDataEndAddr:   in std_logic_vector(gDataBuffAddrWidth-1 downto 0); --Position of the last
-            iData:          in std_logic_vector(7 downto 0);                    --frame-data
+            iData:          in std_logic_vector(cByteLength-1 downto 0);        --frame-data
             oRdBuffAddr:    out std_logic_vector(gDataBuffAddrWidth-1 downto 0);--read address of data-memory
             oRdBuffEn:      out std_logic;                                      --read-enable
 
@@ -299,27 +285,27 @@ architecture two_seg_arch of FrameManipulator is
     end component;
 
 
-    constant cDataBuffAddrWidth:    natural:=log2c(gBytesOfTheFrameBuffer);
+    constant cDataBuffAddrWidth:    natural:=LogDualis(gBytesOfTheFrameBuffer);
 
     constant cSlaveTaskWordWidth:   natural:=gTaskBytesPerWord*8;
     constant cSlaveTaskAddr:        natural:=gTaskAddr;
 
     constant cTaskWordWidth:        natural:=cSlaveTaskWordWidth*2;
     --doubled memory width for the internal process
-    constant cTaskAddrWidth:        natural:=log2c(gTaskCount);
+    constant cTaskAddrWidth:        natural:=LogDualis(gTaskCount);
 
-    constant cCycleCntWidth:        natural:=8;     --maximal number of POWERLINK cycles for the series of test
-    constant cSize_Mani_Time:       natural:=40;    --size of time setting of the delay task
-    constant cNoOfHeadMani:         natural:=8;     --Number of manipulated header bytes
-    constant cNoOfDelFrames:        natural:=255;   --Maximal number of delayed frame tasks
+    constant cCycleCntWidth:        natural:=cByteLength;   --maximal number of POWERLINK cycles for the series of test, 1 Byte
+    constant cSize_Mani_Time:       natural:=5*cByteLength; --size of time setting of the delay task, 5 Byte
+    constant cNoOfHeadMani:         natural:=8;             --Number of manipulated header bytes
+    constant cNoOfDelFrames:        natural:=255;           --Maximal number of delayed frame tasks
 
     constant cManiSettingWidth:     natural:=2*cTaskWordWidth-cCycleCntWidth-8;
                                             --two task objects - Cycle Word - Task Byte
 
     constant cSafetySetting         : natural:=6*cByteLength;   --6 Byte Safety Setting
     constant cSafetyPackSelCntWidth : natural:=11;              --Width of counter to select packet: 11 bit to change the whole frame
-    constant cPacketAddrWidth       : natural:=log2c(gBytesOfThePackBuffer);
-    constant cAddrMemoryWidth       : natural:=log2c(gNumberOfPackets);
+    constant cPacketAddrWidth       : natural:=LogDualis(gBytesOfThePackBuffer);
+    constant cAddrMemoryWidth       : natural:=LogDualis(gNumberOfPackets);
 
 
     --signals memory interface
@@ -337,7 +323,7 @@ architecture two_seg_arch of FrameManipulator is
     --writing data buffer
     signal WrBuffAddr:          std_logic_vector(cDataBuffAddrWidth-1 downto 0);
     signal WrBuffEn:            std_logic;
-    signal DataToBuff:          std_logic_vector(7 downto 0);
+    signal DataToBuff:          std_logic_vector(cByteLength-1 downto 0);
 
     signal DataInStartAddr:     std_logic_vector(cDataBuffAddrWidth-1 downto 0):=(others=>'0');
     signal DataInEndAddr:       std_logic_vector(cDataBuffAddrWidth-1 downto 0);
@@ -345,7 +331,7 @@ architecture two_seg_arch of FrameManipulator is
     --reading data buffer
     signal RdBuffAddr:          std_logic_vector(cDataBuffAddrWidth-1 downto 0);
     signal RdBuffEn:            std_logic;
-    signal DataFromBuff:        std_logic_vector(7 downto 0);
+    signal DataFromBuff:        std_logic_vector(cByteLength-1 downto 0);
 
     signal DataOutStartAddr:    std_logic_vector(cDataBuffAddrWidth-1 downto 0);
     signal DataOutEndAddr:      std_logic_vector(cDataBuffAddrWidth-1 downto 0);
@@ -467,7 +453,7 @@ begin
     --Overflow detection        => oError_Frame_Buff_OV
     -----------------------------------------------------------------------------------------
     D_Buffer : Data_Buffer
-    generic map(gDataWidth          =>  8,
+    generic map(gDataWidth          =>  cByteLength,
                 gDataAddrWidth      =>  cDataBuffAddrWidth,
                 gNoOfHeadMani       =>  cNoOfHeadMani,
                 gTaskWordWidth      =>  cTaskWordWidth,

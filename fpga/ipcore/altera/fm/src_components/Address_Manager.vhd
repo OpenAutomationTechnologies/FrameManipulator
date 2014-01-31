@@ -22,10 +22,16 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--! Use work library
+library work;
+--! use global library
+use work.global.all;
+
+
 entity Address_Manager is
     generic(
             gAddrDataWidth:     natural:=11;
-            gDelayDataWidth:    natural:=48;
+            gDelayDataWidth:    natural:=6*cByteLength;
             gNoOfDelFrames:     natural:=8
     );
     port(
@@ -55,24 +61,10 @@ end Address_Manager;
 architecture two_seg_arch of Address_Manager is
 
 
-    --function of the logarithm to the base of 2
-    function log2c(n:natural) return natural is
-        variable m, p: natural;
-    begin
-        m:=0;
-        p:=1;
-        while p<n loop
-            m:=m+1;
-            p:=p*2;
-        end loop;
-        return m;
-    end log2c;
-
-
     --component for handling the delay-frame task
     component Delay_Handler
         generic(
-                gDelayDataWidth:    natural:=48;
+                gDelayDataWidth:    natural:=6*cByteLength;
                 gNoOfDelFrames:     natural:=255
         );
         port(
@@ -87,8 +79,8 @@ architecture two_seg_arch of Address_Manager is
             iDelayEn:           in std_logic;                                       --task: delay enable
             iDelayData:         in std_logic_vector(gDelayDataWidth-1 downto 0);    --delay data
             iDelFrameLoaded:    in std_logic;                                       --a deleted frame was loaded from the address-fifo
-            oCurrentTime:       out std_logic_vector(gDelayDataWidth-8 downto 0);   --timeline which starts with the first delayed frame
-            oDelayTime:         out std_logic_vector(gDelayDataWidth-8 downto 0)    --start time of the stored frame
+            oCurrentTime:       out std_logic_vector(gDelayDataWidth-cByteLength downto 0);   --timeline which starts with the first delayed frame
+            oDelayTime:         out std_logic_vector(gDelayDataWidth-cByteLength downto 0)    --start time of the stored frame
         );                                         --size=gDelayDataWidth-stateByte+1 bit to prevent overflow
     end component;
 
@@ -97,7 +89,7 @@ architecture two_seg_arch of Address_Manager is
     component StoreAddress_FSM
         generic(
                 gAddrDataWidth: natural:=11;
-                gSize_Time:     natural:=40;
+                gSize_Time:     natural:=5*cByteLength;
                 gFiFoBitWidth:  natural:=52
         );
         port(
@@ -158,10 +150,10 @@ architecture two_seg_arch of Address_Manager is
     end component;
 
     --constants
-    constant cSize_Time: natural:=gDelayDataWidth-8+1;  -- +1 in case of overflow
+    constant cSize_Time: natural:=gDelayDataWidth-cByteLength+1;  -- +1 in case of overflow
 
     --Fifo address and word width
-    constant cBuffAddrWidth:natural:=log2c((2**gAddrDataWidth)/60*2);   -- => every frame uses two entries of the fifo
+    constant cBuffAddrWidth:natural:=LogDualis((2**gAddrDataWidth)/60*2);   -- => every frame uses two entries of the fifo
     constant cBuffWordWidth:natural:=gAddrDataWidth+cSize_Time;
 
 

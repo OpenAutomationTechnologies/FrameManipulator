@@ -22,9 +22,19 @@
 -- *                                                                    *
 -- **********************************************************************
 
+
+--! Use standard ieee library
 library ieee;
+--! Use logic elements
 use ieee.std_logic_1164.all;
+--! Use numeric functions
 use ieee.numeric_std.all;
+
+--! Use work library
+library work;
+--! use global library
+use work.global.all;
+
 
 entity read_logic is
     generic(
@@ -42,18 +52,6 @@ end read_logic;
 
 architecture Behave of read_logic is
 
-    function log2c(n:natural) return natural is
-        variable m, p: natural;
-    begin
-        m:=0;
-        p:=1;
-        while p<n loop
-            m:=m+1;
-            p:=p*2;
-        end loop;
-        return m;
-    end log2c;
-
     --counter for prescaler
     component Basic_Cnter
         generic(gCntWidth: natural := 2);
@@ -68,7 +66,7 @@ architecture Behave of read_logic is
         );
     end component;
 
-    signal cnt: std_logic_vector(log2c(gPrescaler)-1 downto 0);
+    signal cnt: std_logic_vector(LogDualis(gPrescaler)-1 downto 0);
     signal difpre:std_logic;
 
     signal Addr:        std_logic_vector(oAddr'range);
@@ -90,7 +88,7 @@ begin
     if gPrescaler>1 generate
 
         difpre_clk : Basic_Cnter
-        generic map (gCntWidth => log2c(gPrescaler))
+        generic map (gCntWidth => LogDualis(gPrescaler))
         port map (
                 clk         => clk,
                 reset       => reset,

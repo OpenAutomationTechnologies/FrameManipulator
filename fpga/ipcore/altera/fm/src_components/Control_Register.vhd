@@ -24,8 +24,13 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--! Use work library
+library work;
+--! use global library
+use work.global.all;
+
 entity Control_Register is
-    generic(gWordWidth:         natural :=8;
+    generic(gWordWidth:         natural :=cByteLength;
             gAddresswidth:      natural :=1);
     port(
         clk, reset:             in std_logic;
@@ -45,7 +50,7 @@ entity Control_Register is
         s_iAddr:                in std_logic_vector(gAddresswidth-1 downto 0);
         s_iWrEn:                in std_logic;
         s_iRdEn:                in std_logic;
-        s_iByteEn:              in std_logic_vector((gWordWidth/8)-1 DOWNTO 0);
+        s_iByteEn:              in std_logic_vector((gWordWidth/cByteLength)-1 DOWNTO 0);
         s_iWriteData:           in std_logic_vector(gWordWidth-1 downto 0);
         s_oReadData:            out std_logic_vector(gWordWidth-1 downto 0)
      );
@@ -63,8 +68,8 @@ architecture two_seg_arch of Control_Register is
         (
             address_a   : IN STD_LOGIC_VECTOR (gAddresswidthA-1 DOWNTO 0);
             address_b   : IN STD_LOGIC_VECTOR (gAddresswidthB-1 DOWNTO 0);
-            byteena_a   : IN STD_LOGIC_VECTOR ((gWordWidthA/8)-1 DOWNTO 0) :=  (OTHERS => '1');
-            byteena_b   : IN STD_LOGIC_VECTOR ((gWordWidthB/8)-1 DOWNTO 0) :=  (OTHERS => '1');
+            byteena_a   : IN STD_LOGIC_VECTOR ((gWordWidthA/cByteLength)-1 DOWNTO 0) :=  (OTHERS => '1');
+            byteena_b   : IN STD_LOGIC_VECTOR ((gWordWidthB/cByteLength)-1 DOWNTO 0) :=  (OTHERS => '1');
             clock_a     : IN STD_LOGIC  := '1';
             clock_b     : IN STD_LOGIC ;
             data_a      : IN STD_LOGIC_VECTOR (gWordWidthA-1 DOWNTO 0);
@@ -95,7 +100,7 @@ architecture two_seg_arch of Control_Register is
 
     --data variables
     signal DataB_out:   std_logic_vector(gWordWidth-1 downto 0);
-    signal byteena_b:   std_logic_vector(gWordWidth/8-1 downto 0);
+    signal byteena_b:   std_logic_vector(gWordWidth/cByteLength-1 downto 0);
     signal wren_b:      std_logic;
     signal rden_b:      std_logic;
     signal Addr_B:      std_logic_vector(gAddresswidth-1 downto 0);

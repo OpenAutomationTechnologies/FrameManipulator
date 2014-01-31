@@ -25,9 +25,14 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--! Use work library
+library work;
+--! use global library
+use work.global.all;
+
 entity Task_Memory is
-    generic(gSlaveWordWidth:    natural :=32;
-            gWordWidth:         natural :=64;
+    generic(gSlaveWordWidth:    natural :=4*cByteLength;
+            gWordWidth:         natural :=8*cByteLength;
             gSlaveAddrWidth:    natural :=11;
             gAddresswidth:      natural :=8);
     port(
@@ -37,7 +42,7 @@ entity Task_Memory is
         s_iAddr:        in std_logic_vector(gSlaveAddrWidth-1 downto 0);
         s_iWrEn:        in std_logic;
         s_iRdEn:        in std_logic;
-        s_iByteEn:      in std_logic_vector((gSlaveWordWidth/8)-1 downto 0);
+        s_iByteEn:      in std_logic_vector((gSlaveWordWidth/cByteLength)-1 downto 0);
         s_iWriteData:   in std_logic_vector(gSlaveWordWidth-1 downto 0);
         s_oReadData:    out std_logic_vector(gSlaveWordWidth-1 downto 0);
         --memory signals
@@ -61,8 +66,8 @@ architecture two_seg_arch of Task_Memory is
         (
             address_a   : IN STD_LOGIC_VECTOR (gAddresswidthA-1 DOWNTO 0);
             address_b   : IN STD_LOGIC_VECTOR (gAddresswidthB-1 DOWNTO 0);
-            byteena_a   : IN STD_LOGIC_VECTOR ((gWordWidthA/8)-1 DOWNTO 0) :=  (OTHERS => '1');
-            byteena_b   : IN STD_LOGIC_VECTOR ((gWordWidthB/8)-1 DOWNTO 0) :=  (OTHERS => '1');
+            byteena_a   : IN STD_LOGIC_VECTOR ((gWordWidthA/cByteLength)-1 DOWNTO 0) :=  (OTHERS => '1');
+            byteena_b   : IN STD_LOGIC_VECTOR ((gWordWidthB/cByteLength)-1 DOWNTO 0) :=  (OTHERS => '1');
             clock_a     : IN STD_LOGIC  := '1';
             clock_b     : IN STD_LOGIC ;
             data_a      : IN STD_LOGIC_VECTOR (gWordWidthA-1 DOWNTO 0);

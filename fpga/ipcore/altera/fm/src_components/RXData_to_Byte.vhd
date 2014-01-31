@@ -19,12 +19,17 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
+library work;
+--! use global library
+use work.global.all;
+
+
 entity RXData_to_Byte is
     port(
         clk, reset: in std_logic;
             iRXDV: in std_logic;
             iRXD:  in std_logic_vector(1 downto 0);
-            oData: out std_logic_vector(7 downto 0);
+            oData: out std_logic_vector(cByteLength-1 downto 0);
             oEn:   out std_logic;
             oSync: out std_logic
     );
