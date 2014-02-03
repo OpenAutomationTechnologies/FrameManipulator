@@ -109,17 +109,20 @@ architecture two_seg_arch of Manipulation_Manager is
 
     --! Typedef for registers
     type tReg is record
-        startTest   : std_logic;                                                --! Register for edge detection of iStartTest
-        testActive  : std_logic;                                                --! Test is active
-        maniSetting : std_logic_vector(2*gWordWidth-gCycleCntWidth-1 downto 0); --!settings for the task
+        startTest       : std_logic;                                                --! Register for edge detection of iStartTest
+        testActive      : std_logic;                                                --! Test is active
+        maniSetting     : std_logic_vector(2*gWordWidth-gCycleCntWidth-1 downto 0); --!settings for the task
+        cycleLastTask   : std_logic_vector(gCycleCntWidth-1 downto 0);              --! cycle number of the last task
     end record;
 
 
     --! Init for registers
+    --! - Manipulator should run for at least one PL cycle
     constant cRegInit   : tReg :=(
-                                startTest   => '0',
-                                testActive  => '0',
-                                maniSetting => (others => '0')
+                                startTest       => '0',
+                                testActive      => '0',
+                                maniSetting     => (others => '0'),
+                                cycleLastTask   => (0=>'1', others => '0')
                                 );
 
     signal reg          : tReg; --! Registers
@@ -140,8 +143,6 @@ architecture two_seg_arch of Manipulation_Manager is
 
     --cycle variables
     signal currentCycle         : std_logic_vector(gCycleCntWidth-1 downto 0);  --! current PL Cycle of the Ssries of test
-    signal cycleLastTask        : std_logic_vector(gCycleCntWidth-1 downto 0);  --! cycle number of the last task
-    signal cycleLastTask_next   : std_logic_vector(gCycleCntWidth-1 downto 0);  --! next cycle number of the last task TODO use existing typedef
 
     --task variables
     signal taskEmpty            : std_logic;                                    --! current task consists of zeroes => reached end of task
@@ -203,8 +204,9 @@ begin
     --!   Reset at end of cycle counter, last task or an abort
     --! - Set ManiSetting when the matching task of the current frame was found.
     --!   Reset when new frame arrives
+    --! - storing the last cycle of all tasks
     nextComb :
-    process(reg, iStartTest, TestSync, iStopTest, currentCycle, cycleLastTask, selectedTask, iFrameSync)
+    process(reg, iStartTest, TestSync, iStopTest, currentCycle, selectedTask, iFrameSync)
     begin
         reg_next    <= reg;
 
@@ -225,7 +227,7 @@ begin
 
 
         --last task was processed (current>lastTask)
-        if unsigned(currentCycle)>unsigned(cycleLastTask)  then
+        if unsigned(currentCycle)>unsigned(reg.cycleLastTask)  then
             reg_next.testActive <= '0';
 
         end if;
@@ -246,8 +248,20 @@ begin
 
         end if;
 
-    end process;
 
+        --Reset, when test inactive
+        if reg.TestActive = '0' then
+            reg_next.CycleLastTask  <= cRegInit.CycleLastTask;
+
+        end if;
+
+        --store the last task cycle
+        if unsigned(iTaskSettingData_Cycle) > unsigned(reg.CycleLastTask) then
+            reg_next.CycleLastTask  <= iTaskSettingData_Cycle;
+
+        end if;
+
+    end process;
 
 
     --Test reset after positive edge of start signal
@@ -334,22 +348,6 @@ begin
     headerConformance <= '1' when ((headerData xor iTaskCompFrame)
                                     and iTaskCompMask)=(headerData'range=>'0') else '0';
 
-
-    --storing the last cycle of all tasks TODO transfer code to other register
-    process(iClk)
-    begin
-        if rising_edge(iClk) then
-            if iReset = '1' then
-                cycleLastTask<=(others => '0');
-            else
-                cycleLastTask <= cycleLastTask_next;
-            end if;
-        end if;
-    end process;
-
-    cycleLastTask_next <= (0=>'1', others => '0') when reg.testActive = '0' else --at least a series of test with one PL cycle
-                          iTaskSettingData_Cycle when unsigned(iTaskSettingData_Cycle) > unsigned(cycleLastTask) and readEn = '1' else
-                          cycleLastTask;
 
     --Task Cycle=current cycle => Frame fits with selected task
     selectedTask<= '1' when (headerConformance='1' and collFinished='1' and reg.testActive='1'
