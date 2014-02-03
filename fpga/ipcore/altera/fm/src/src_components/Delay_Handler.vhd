@@ -86,16 +86,38 @@ end Delay_Handler;
 --! - It also droppes the other incoming framesdepending on the delay-operation-byte.
 architecture two_seg_arch of Delay_Handler is
 
+
     --constants
     --!width of the time-variables: DelaySettings -1Byte for operation +1Bit toprevent overflow
-    constant cSize_Time : natural:=gDelayDataWidth-8+1;
+    constant cSize_Time : natural:=gDelayDataWidth-cByteLength+1;
+
+
+    --Registers
+    --! Typedef for registers
+    type tReg is record
+        delFrameLoaded  : std_logic;                                    --! Register for edge detection of iDelFrameLoaded
+        delayFrame      : std_logic;                                    --! Register for edge detection of iDelayEn + passFrame
+        delayType       : std_logic_vector(cByteLength-1 downto 0);     --! Register of delay type
+    end record;
+
+    --! Init for registers
+    constant cRegInit   : tReg :=  (
+                                    delFrameLoaded  => '0',
+                                    delayFrame      => '0',
+                                    delayType       => (others=>'0')
+                                    );
+
+
+    signal reg          : tReg; --! Register
+    signal reg_next     : tReg; --! Next value of register
+
+    --edge detection of task enable
+    signal delFrameLoaded_negEdge   : std_logic;    --! negative edge detection of outgoing delayed-frames
+    signal delayFrame_posEdge       : std_logic;    --! Positive edge detection of oDelayEnabl, when PassFrame=1
+
 
     --signals
-    signal passFrame    : std_logic;    --!Frame is processed (not dropped)
-
-    --register of delay-operation
-    signal reg_delayType        : std_logic_vector(cByteLength-1 downto 0); --! Register of delay type
-    signal next_delayType       : std_logic_vector(cByteLength-1 downto 0); --! Next value of delay type
+    signal passFrame            : std_logic;    --!Frame is processed (not dropped)
 
     --signal for FSM
     signal active               : std_logic;    --! delay is active
@@ -107,13 +129,6 @@ architecture two_seg_arch of Delay_Handler is
     signal delCntPush   : std_logic_vector(LogDualis(gNoOfDelFrames)-1 downto 0); --! Number of "pushed" delayed frames to the buffer
     signal delCntPull   : std_logic_vector(LogDualis(gNoOfDelFrames)-1 downto 0); --! Number of "pulled" delayed frames to the buffer
 
-    --negative edge detection of outgoing delayed-frames
-    signal reg_delFrameLoaded   : std_logic;    --! Register for edge detection of iDelFrameLoaded
-    signal nEdge_delFrameLoaded : std_logic;    --! Negatice edge of iDelFrameLoaded
-
-    --edge detection of task enable
-    signal reg_delayFrame       : std_logic;    --! Register for edge detection of iDelayEn
-    signal edge_delayFrame      : std_logic;    --! Positive edge detection
 
     --current time in 50MHz ticks
     signal currentTime          : std_logic_vector(cSize_Time-1 downto 0);  --! current Timestamp in 20ns
@@ -128,23 +143,19 @@ begin
     process(iClk, iReset)
     begin
         if iReset='1' then   --TODO rebuild with register type
-            reg_delFrameLoaded  <= '0';
-            reg_delayFrame      <= '0';
-            reg_delayType       <= (others=>'0');
+            reg <= cRegInit;
 
         elsif rising_edge(iClk) then
-            reg_delFrameLoaded  <= iDelFrameLoaded;
-            reg_delayFrame      <= iDelayEn and PassFrame;
-            reg_delayType       <= next_delayType;
+            reg <= reg_next;
 
         end if;
     end process;
 
 
-    nEdge_delFrameLoaded    <= '1' when iDelFrameLoaded='0' and reg_delFrameLoaded='1' else '0';
+    delFrameLoaded_negEdge  <= '1' when reg_next.delFrameLoaded='0' and reg.delFrameLoaded='1' else '0';
             --Counting on the negativ Edge => Frame was already loaded
 
-    edge_delayFrame <= '1' when (iDelayEn='1' and passFrame='1') and reg_delayFrame='0' else '0';
+    delayFrame_posEdge      <= '1' when reg_next.delayFrame='1' and reg.delayFrame='0' else '0';
     --------------------------------------------------------------------------------------
 
 
@@ -157,7 +168,7 @@ begin
     port map(
             iClk                => iClk,
             iReset              => iReset,
-            iDelayEn            => edge_DelayFrame,
+            iDelayEn            => delayFrame_posEdge,
             iTestSync           => iTestSync,
             iTestStop           => iTestStop,
             iNoDelFrameInBuffer => noDelFrameInBuffer,
@@ -199,7 +210,7 @@ begin
             iClk    => iClk,
             iReset  => iReset,
             iClear  => delCntSync,
-            iEn     => nEdge_DelFrameLoaded,
+            iEn     => delFrameLoaded_negEdge,
             oQ      => delCntPull,
             oOv     => open
             );
@@ -241,13 +252,18 @@ begin
 
 
     --! @brief handling of undelayed frames
-    process(Reg_DelayType,iStart)     --not on change of the active-signal TODO
+    --! - Also next value logic
+    process(reg,iStart, iDelFrameLoaded, iDelayEn, passFrame, active, iDelayData, iFrameIsSoC)
     begin
 
-        passFrame<='0';
+        passFrame   <= '0';
+        reg_next    <= reg;
+
+        reg_next.delFrameLoaded <= iDelFrameLoaded;
+        reg_next.delayFrame     <= iDelayEn and passFrame;
 
         if active='1' then  --if active...
-                case reg_delayType is
+                case reg.delayType is
                     when cDelayType.pass    => passFrame    <= iStart;                   --pass
                     when cDelayType.delete  => passFrame    <= '0';                      --delete all
                     when cDelayType.passSoC => passFrame    <= iStart and iFrameIsSoC;   --pass SoCs
@@ -256,16 +272,16 @@ begin
                 end case;
 
             if (iDelayEn='1' and iStart='1') then   --update of operation at enable signal
-                next_DelayType<= iDelayData(iDelayData'left downto iDelayData'left-cByteLength+1);  --first Byte
+                reg_next.delayType<= iDelayData(iDelayData'left downto iDelayData'left-cByteLength+1);  --first Byte
 
             else
-                next_DelayType  <= reg_DelayType;
+                reg_next.delayType  <= reg.delayType;
 
             end if;
 
         else                --if inactive => pass
-            passFrame       <= iStart;
-            next_DelayType  <= (others=>'0');
+            passFrame           <= iStart;
+            reg_next.delayType  <= (others=>'0');
 
         end if;
 
