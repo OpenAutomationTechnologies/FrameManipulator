@@ -1,113 +1,143 @@
--- ****************************************************************
--- *                       RXData_to_Byte                         *
--- ****************************************************************
--- *                                                              *
--- * Converter for Ethernet Rx-Data from a PHY to 1Byte           *
--- *                                                              *
--- * in:  iRXDV       Rx-Data valid                               *
--- *      iRXD[1..0]  Rx-Data                                     *
--- * out: oData[7..0] Output Data                                 *
--- *      oEn         Enable for other Components                 *
--- *      oSync       Reset for every Frame                       *
--- *                                                              *
--- *--------------------------------------------------------------*
--- *                                                              *
--- * 27.04.12 V1.0 created RXData_to_Byte  by Sebastian Muelhausen*
--- *                                                              *
--- ****************************************************************
+-------------------------------------------------------------------------------
+--! @file RXData_to_Byte.vhd
+--! @brief Converter for Ethernet Rx-Data from a RMII-PHY to Bytes
+-------------------------------------------------------------------------------
+--
+--    (c) B&R, 2014
+--
+--    Redistribution and use in source and binary forms, with or without
+--    modification, are permitted provided that the following conditions
+--    are met:
+--
+--    1. Redistributions of source code must retain the above copyright
+--       notice, this list of conditions and the following disclaimer.
+--
+--    2. Redistributions in binary form must reproduce the above copyright
+--       notice, this list of conditions and the following disclaimer in the
+--       documentation and/or other materials provided with the distribution.
+--
+--    3. Neither the name of B&R nor the names of its
+--       contributors may be used to endorse or promote products derived
+--       from this software without prior written permission. For written
+--       permission, please contact office@br-automation.com
+--
+--    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+--    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+--    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+--    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+--    COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+--    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+--    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+--    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+--    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+--    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+--    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+--    POSSIBILITY OF SUCH DAMAGE.
+--
+-------------------------------------------------------------------------------
 
+
+--! Use standard ieee library
 library ieee;
+--! Use logic elements
 use ieee.std_logic_1164.all;
+--! Use numeric functions
+use ieee.numeric_std.all;
 
+--! Use work library
 library work;
 --! use global library
 use work.global.all;
 
 
+--! This is the entity of the Ethernet converter
 entity RXData_to_Byte is
     port(
-        clk, reset: in std_logic;
-            iRXDV: in std_logic;
-            iRXD:  in std_logic_vector(1 downto 0);
-            oData: out std_logic_vector(cByteLength-1 downto 0);
-            oEn:   out std_logic;
-            oSync: out std_logic
+        iClk        : in std_logic;                                 --! clk
+        iReset      : in std_logic;                                 --! reset
+        iRXDV       : in std_logic;                                 --! RX-data-valid
+        iRXD        : in std_logic_vector(1 downto 0);              --! RX-data
+        oData       : out std_logic_vector(cByteLength-1 downto 0); --! Byte out
+        oEn         : out std_logic;                                --! Byte is complete
+        oSync       : out std_logic                                 --! New frame arrived
     );
 end RXData_to_Byte;
 
-architecture two_seg_arch of RXData_to_Byte is
-    --adder to combine the Data from RxD 0 and 1
-    component adder_2121
-          generic(WIDTH_IN: natural := 4);
-          port(
-            clk, reset: in std_logic;
-            iD1: in std_logic_vector(WIDTH_IN-1 downto 0);
-            iD2: in std_logic_vector(WIDTH_IN-1 downto 0);
-            iEn: in std_logic;
-            oQ: out std_logic_vector((WIDTH_IN*2)-1 downto 0)
-        );
-    end component;
-    --counter to enable the data every 4th clock (Data is ready in the Shift register)
-    component Basic_Cnter
-        generic(gCntWidth: natural := 2);
-        port(
-            clk, reset:   in std_logic;
-            iClear:       in std_logic;
-            iEn   :       in std_logic;
-            iStartValue:  in std_logic_vector(gCntWidth-1 downto 0);
-            iEndValue:    in std_logic_vector(gCntWidth-1 downto 0);
-            oQ:           out std_logic_vector(gCntWidth-1 downto 0);
-            oOv:          out std_logic
-        );
-    end component;
-    --two 4Bit shift register to sum up the data
-    component shift_right_register
-        generic(gWidth: natural:=8);
-        port(
-            clk, reset: in std_logic;
-            iD: in std_logic;
-            oQ: out std_logic_vector(gWidth-1 downto 0)
-        );
-    end component;
-    --Synchronizer for a reset every frame
-    component sync_RxFrame
-        port(
-            clk, reset: in std_logic;
-            iRXDV: in std_logic;
-            iRXD1: in std_logic;
-            oSync: out std_logic
-        );
-    end component;
 
-    signal data1: std_logic_vector(3 downto 0);     --data from shift register 1
-    signal data2: std_logic_vector(3 downto 0);     --data from shift register 2
-    signal div4_clk: std_logic;                     --enable Signal every 4th clock
-    signal sync: std_logic;                         --Synchronise Reset
+
+--! @brief RXData_to_Byte architecture
+--! @details Converter for Ethernet Rx-Data from a PHY to Bytes
+architecture two_seg_arch of RXData_to_Byte is
+
+    signal data1    : std_logic_vector(3 downto 0); --! data from shift register 1
+    signal data2    : std_logic_vector(3 downto 0); --! data from shift register 2
+    signal div4_en  : std_logic;                    --! enable Signal every 4th clock
+    signal sync     : std_logic;                    --! Synchronise Reset
+
 begin
 
-    shift1_4bit : shift_right_register  --first shift register for RxD0
+    --! @brief first shift register for RxD0
+    shift1_4bit : work.shift_right_register
     generic map (gWidth => 4)
-    port map (clk=>clk, reset=>reset, iD => iRXD(0), oQ => data1);
+    port map(
+            iClk    => iClk,
+            iReset  => iReset,
+            iD      => iRXD(0),
+            oQ      => data1
+            );
 
-    shift2_4bit : shift_right_register  --second shift register for RxD1
+
+    --! @brief second shift register for RxD1
+    shift2_4bit : work.shift_right_register
     generic map (gWidth => 4)
-    port map (clk=>clk, reset=>reset, iD => iRXD(1), oQ => data2);
+    port map(
+            iClk    => iClk,
+            iReset  => iReset,
+            iD      => iRXD(1),
+            oQ      => data2
+            );
 
-    synchronizer : sync_RxFrame         --Synchronizer for the counter
-    port map (clk=>clk, reset=>reset, iRXDV => iRXDV, iRXD1 => iRXD(1), oSync => sync);
 
-    cnt_2bit : Basic_Cnter      --Counter for an enable every 4th clock(Data is ready in the Shift register)
+    --! @brief Synchronizer for the counter
+    synchronizer : work.sync_RxFrame
+    port map(
+            iClk    => iClk,
+            iReset  => iReset,
+            iRXDV   => iRXDV,
+            iRXD1   => iRXD(1),
+            oSync   => sync
+            );
+
+
+    --! @brief Prescaler for an enable every 4th clock(Data is ready in the Shift register)
+    cnt_2bit : work.Basic_Cnter
     generic map (gCntWidth => 2)
-    port map (
-            clk=>clk, reset=>reset,
-            iClear=>sync,iEn =>'1',iStartValue=>(others=>'0'),iEndValue=>(others=>'1'),
-            oQ => open, oOv => div4_clk);
+    port map(
+            iClk        => iClk,
+            iReset      => iReset,
+            iClear      => sync,
+            iEn         => '1',
+            iStartValue => (others=>'0'),
+            iEndValue   => (others=>'1'),
+            oQ          => open,
+            oOv         => div4_en
+            );
 
-    adder : adder_2121                  --Adder, which generates the Byte from the two shift registers after every enable
-    generic map (WIDTH_IN => 4)
-    port map (clk=>clk, reset=>reset, iD1 => data1, iD2 => data2, iEn => div4_clk, oQ => oData);
 
-    oSync <= sync;
-    oEn <= div4_clk;
+    --! @brief Adder, which generates the Byte from the two shift registers after every enable
+    adder : work.adder_2121
+    generic map(WIDTH_IN => 4)
+    port map(
+            iClk    => iClk,
+            iReset  => iReset,
+            iD1     => data1,
+            iD2     => data2,
+            iEn     => div4_en,
+            oQ      => oData
+            );
+
+
+    oSync   <= sync;
+    oEn     <= div4_en;
 
 end two_seg_arch;

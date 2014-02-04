@@ -1,29 +1,47 @@
+-------------------------------------------------------------------------------
+--! @file Frame_Receiver.vhd
+--! @brief Receives the incoming frame and stores it on the data-buffer
+-------------------------------------------------------------------------------
+--
+--    (c) B&R, 2014
+--
+--    Redistribution and use in source and binary forms, with or without
+--    modification, are permitted provided that the following conditions
+--    are met:
+--
+--    1. Redistributions of source code must retain the above copyright
+--       notice, this list of conditions and the following disclaimer.
+--
+--    2. Redistributions in binary form must reproduce the above copyright
+--       notice, this list of conditions and the following disclaimer in the
+--       documentation and/or other materials provided with the distribution.
+--
+--    3. Neither the name of B&R nor the names of its
+--       contributors may be used to endorse or promote products derived
+--       from this software without prior written permission. For written
+--       permission, please contact office@br-automation.com
+--
+--    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+--    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+--    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+--    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+--    COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+--    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+--    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+--    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+--    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+--    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+--    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+--    POSSIBILITY OF SUCH DAMAGE.
+--
+-------------------------------------------------------------------------------
 
--- ******************************************************************************************
--- *                                Frame-Receiver                                          *
--- ******************************************************************************************
--- *                                                                                        *
--- * Receives the incoming frame and stores it on the data-buffer.                          *
--- *                                                                                        *
--- * Only frames with a valid preamble and an Ethertype of "gEtherTypeFilter_1" or          *
--- * "gEtherTypeFilter_2" activates the start signal "oStartFrame" for the next process     *
--- * unit.                                                                                  *
--- *                                                                                        *
--- * It starts to write the data to the memory, starting with the address iDataStartAddr.   *
--- * This position is sent by the process unit and overwrites invalid or dropped frames to  *
--- * save some memory.                                                                      *
--- *                                                                                        *
--- * It also processes the truncate task for the selected frames and changes the address    *
--- * of the last byte of the data-buffer.                                                   *
--- *                                                                                        *
--- *----------------------------------------------------------------------------------------*
--- *                                                                                        *
--- * 09.08.12 V1.0      Frame-Receiver                          by Sebastian Muelhausen     *
--- *                                                                                        *
--- ******************************************************************************************
 
+--! Use standard ieee library
 library ieee;
+--! Use logic elements
 use ieee.std_logic_1164.all;
+--! Use numeric functions
 use ieee.numeric_std.all;
 
 --! Use work library
@@ -34,235 +52,192 @@ use work.global.all;
 use work.framemanipulatorPkg.all;
 
 
+--! This is the entity to receive the incoming frame and stores it on the data-buffer.
 entity Frame_Receiver is
     generic(
-            gBuffAddrWidth      : natural :=11;
-            gEtherTypeFilter    : std_logic_vector :=X"88AB_0800_0806"  --filter
+            gBuffAddrWidth      : natural :=11;                                 --! Address with of frame buffer
+            gEtherTypeFilter    : std_logic_vector :=X"88AB_0800_0806"          --! filter for allowed EtherTypes
             );
     port(
-        clk, reset:         in std_logic;
-        iRXDV:              in std_logic;                                   --frame data valid
-        iRXD:               in std_logic_vector(1 downto 0);                --frame data (2bit)
+        iClk                : in std_logic;                                     --! clk
+        iReset              : in std_logic;                                     --! reset
+        iRXDV               : in std_logic;                                     --! frame data valid
+        iRXD                : in std_logic_vector(1 downto 0);                  --! frame data (2bit)
         --write data
-        oData:              out std_logic_vector(cByteLength-1 downto 0);   --frame data (1byte)
-        oWrBuffAddr:        out std_logic_vector(gBuffAddrWidth-1 downto 0);--write address
-        oWrBuffEn :         out std_logic;                                  --write data-memory enable
-        iDataStartAddr:     in std_logic_vector(gBuffAddrWidth-1 downto 0); --first byte of frame data
-        oDataEndAddr:       out std_logic_vector(gBuffAddrWidth-1 downto 0);--last byte of frame data
+        oData               : out std_logic_vector(cByteLength-1 downto 0);     --! frame data (1byte)
+        oWrBuffAddr         : out std_logic_vector(gBuffAddrWidth-1 downto 0);  --! write address
+        oWrBuffEn           : out std_logic;                                    --! write data-memory enable
+        iDataStartAddr      : in std_logic_vector(gBuffAddrWidth-1 downto 0);   --! first byte of frame data
+        oDataEndAddr        : out std_logic_vector(gBuffAddrWidth-1 downto 0);  --! last byte of frame data
         --truncate frame
-        iTaskCutEn:         in std_logic;                                   --cut task enabled
-        iTaskCutData:       in std_logic_vector(gBuffAddrWidth-1 downto 0); --cut task setting
+        iTaskCutEn          : in std_logic;                                     --! cut task enabled
+        iTaskCutData        : in std_logic_vector(gBuffAddrWidth-1 downto 0);   --! cut task setting
         --start process-unit
-        oStartFrameProcess: out std_logic;                                  --valid frame received
-        oFrameEnded:        out std_logic;                                  --frame ended
-        oFrameSync:         out std_logic                                   --synchronization signal
+        oStartFrameProcess  : out std_logic;                                    --! valid frame received
+        oFrameEnded         : out std_logic;                                    --! frame ended
+        oFrameSync          : out std_logic                                     --! synchronization signal
     );
 end Frame_Receiver;
 
+
+--! @brief Frame_Receiver architecture
+--! @details Receives the incoming frame and stores it on the data-buffer
+--! - Only frames with a valid preamble and one of the Ethertypes of gEtherTypeFilter
+--!   activates the start signal "oStartFrame" for the next process units.
+--! - It starts to write the data to the memory, starting with the address iDataStartAddr.
+--!   This position is sent by the process unit and overwrites invalid or dropped frames to
+--!   save some memory.
+--! - It also processes the truncate task for the selected frames and changes the address
+--!   of the last byte of the data-buffer.
 architecture two_seg_arch of Frame_Receiver is
-
-    --data width converter ------------------------------------------------------------------
-    --converts the data from a width of two to one byte
-    component RXData_to_Byte
-        port(
-            clk, reset: in std_logic;
-            iRXDV: in std_logic;
-            iRXD:  in std_logic_vector(1 downto 0);
-            oData: out std_logic_vector(cByteLength-1 downto 0);
-            oEn:   out std_logic;
-            oSync: out std_logic
-        );
-    end component;
-
-
-    --preamble checker ----------------------------------------------------------------------
-    component Preamble_check
-        port(
-            clk, reset: in std_logic;
-            iRXD:  in std_logic_vector(1 downto 0);
-            iRXDV:  in std_logic;
-            iSync:  in std_logic;
-            oPreOk: out std_logic
-        );
-    end component;
-
-
-    --Ethertype collector -------------------------------------------------------------------
-    --collects data from byte number gFrom to gTo
-    component Frame_collector
-        generic(
-            gFrom:natural:=13;
-            gTo : natural:=22
-        );
-        port(
-            clk, reset:         in std_logic;
-            iData:              in std_logic_vector(cByteLength-1 downto 0);
-            iSync:              in std_logic;
-            oFrameData :        out std_logic_vector((gTo-gFrom+1)*cByteLength-1 downto 0);
-            oCollectorFinished: out std_logic
-        );
-    end component;
-
-
-    --Memory write logic --------------------------------------------------------------------
-    --stores the frame-data to the buffer
-    component write_logic
-        generic(
-            gPrescaler:natural:=4;
-            gAddrWidth: natural:=11);
-        port(
-            clk, reset: in std_logic;
-            iSync:      in std_logic;
-            iEn:        in std_logic;
-            iStartAddr: in std_logic_vector(gAddrWidth-1 downto 0);
-            oAddr:      out std_logic_vector(gAddrWidth-1 downto 0);
-            oWrEn:      out std_logic
-        );
-    end component;
-
-
-    --frame end detection -------------------------------------------------------------------
-    --detects the end of the frame and process the cut-frame-task
-    component end_of_frame_detection
-        generic(gBuffAddrWidth:natural:=11);
-        port(
-            clk, reset: in std_logic;
-            iRXDV:      in std_logic;
-            iAddr:      in std_logic_vector(gBuffAddrWidth-1 downto 0);
-            iStartAddr: in std_logic_vector(gBuffAddrWidth-1 downto 0);
-            iCutEn:     in std_logic;
-            iCutData:   in std_logic_vector(gBuffAddrWidth-1 downto 0);
-            oEndAddr:   out std_logic_vector(gBuffAddrWidth-1 downto 0);
-            oFrameEnd:  out std_logic
-         );
-    end component;
 
     --! Ethertype filter as downto-std_logic_vector
     constant cEtherTypeFilter   : std_logic_vector(gEtherTypeFilter'length-1 downto 0) := gEtherTypeFilter;
-    constant cEtherTypeSize     : natural := 2*cByteLength; --! Size of EtherType = 2 Bytes
 
     --! Number of Ethertype filter
     constant cNumbFilter        : natural := gEtherTypeFilter'length/cEth.SizeEtherType;
 
-    signal data:                std_logic_vector(cByteLength-1 downto 0);
-    signal sync:                std_logic;
+    signal data                 : std_logic_vector(cByteLength-1 downto 0);         --! Data stream of the frame in Bytes
+    signal sync                 : std_logic;                                        --! Synchronization signal at the start of a frame
 
-    signal EnWL:                std_logic;
-    signal wraddr:              std_logic_vector(gBuffAddrWidth-1 downto 0);
+    signal enWL                 : std_logic;                                        --! Enable write module to store frame
+    signal wraddr               : std_logic_vector(gBuffAddrWidth-1 downto 0);      --! Write address of frame buffer
 
-    signal EtherType:           std_logic_vector(cEtherTypeSize-1 downto 0);
-    signal preambleOk:          std_logic:='0';
-    signal CollectorFinished:   std_logic;
+    signal etherType            : std_logic_vector(cEth.SizeEtherType-1 downto 0);  --! Ethertype of current frame
+    signal preambleOk           : std_logic:='0';                                   --! Preamble of frame is valid
+    signal collectorFinished    : std_logic;                                        --! Ethertype is read from frame
 
-    signal FrameEnd:            std_logic;
+    signal frameEnd             : std_logic;                                        --! Reached end of incoming frame
 
-    signal MatchFilter  : std_logic_vector(cNumbFilter-1 downto 0); --! Filter(x) does match
+    signal matchFilter          : std_logic_vector(cNumbFilter-1 downto 0);         --! Filter(x) does match
 
-    signal StartFrameProcess_reg    : std_logic;    --! Register of oStartFrameProcess to reduce path delay
-    signal StartFrameProcess_next   : std_logic;    --! Next value of register
+    signal startFrameProcess_reg    : std_logic;    --! Register of oStartFrameProcess to reduce path delay
+    signal startFrameProcess_next   : std_logic;    --! Next value of register
 
 
 begin
 
-    --data width converter ------------------------------------------------------------------
-    --converted data output             => oData
-    --generates synchronization signal  => oSync
-    -----------------------------------------------------------------------------------------
-    Rx : RXData_to_Byte
-    port map (
-            clk=>clk, reset=>reset,
-            iRXDV => iRXDV, iRXD => iRXD,
-            oData => data, oEn => open, oSync => sync);
-
-
-    --preamble checker ----------------------------------------------------------------------
-    -- valid preamble detected  =>  oPreOk
-    -----------------------------------------------------------------------------------------
-    PreCheck:Preamble_check
+    --! @brief data width converter
+    --! - converted data output             => oData
+    --! - generates synchronization signal  => oSync
+    Rx : work.RXData_to_Byte
     port map(
-            clk=>clk, reset=>reset,
-            iRXD=>iRXD, iRXDV=>iRXDV,iSync=>sync,
-            oPreOk=>preambleOk);
+            iClk    => iClk,
+            iReset  => iReset,
+            iRXDV   => iRXDV,
+            iRXD    => iRXD,
+            oData   => data,
+            oEn     => open,
+            oSync   => sync
+            );
 
 
-    --Ethertype collector -------------------------------------------------------------------
-    --collected data            =>  oFrameData
-    --collector has finisched   =>  oCollectorFinished
-    -----------------------------------------------------------------------------------------
-    EtherType_Collector : Frame_collector
-    generic map(gFrom   => cEth.StartEtherType,
+    --! @brief preamble checker
+    --! - valid preamble detected  =>  oPreOk
+    PreCheck : work.Preamble_check
+    port map(
+            iClk    => iClk,
+            iReset  => iReset,
+            iRXD    => iRXD,
+            iRXDV   => iRXDV,
+            iSync   => sync,
+            oPreOk  => preambleOk
+            );
+
+
+    --! @brief Ethertype collector
+    --! - collected data            =>  oFrameData
+    --! - collector has finisched   =>  oCollectorFinished
+    EtherType_Collector : work.Frame_collector
+    generic map(
+                gFrom   => cEth.StartEtherType,
                 gTo     => cEth.EndEtherType
                 )
     port map(
-            clk=>clk,reset=>reset,
-            iData=>data,iSync=>sync,
-            oFrameData=>EtherType,oCollectorFinished=>CollectorFinished);
+            iClk                => iClk,
+            iReset              => iReset,
+            iData               => data,
+            iSync               => sync,
+            oFrameData          => etherType,
+            oCollectorFinished  => collectorFinished
+            );
 
 
     --! Check of the Ethertype with the predefined values
     EthertypeMatch :
     for i in MatchFilter'range generate
 
-        MatchFilter(i)  <=  '1' when EtherType = cEtherTypeFilter(cEth.SizeEtherType*(i+1)-1 downto cEth.SizeEtherType*i) else '0';
+        matchFilter(i)  <=  '1' when etherType = cEtherTypeFilter(cEth.sizeEtherType*(i+1)-1 downto cEth.sizeEtherType*i) else '0';
 
     end generate EthertypeMatch;
 
 
 
     --write logic is enabled and stores data utill the frame has ended
-    EnWL<= not FrameEnd;
+    enWL    <= not frameEnd;
 
-    --Memory write logic --------------------------------------------------------------------
-    -----------------------------------------------------------------------------------------
-    WL : write_logic
-    generic map(gPrescaler=>4,  --writes data every fourth tick
-                gAddrWidth=>gBuffAddrWidth)
+    --! @brief Memory write logic
+    --! - gPrescaler = 4
+    WL : work.write_logic
+    generic map(
+                gPrescaler  => 4,  --writes data every fourth tick
+                gAddrWidth  => gBuffAddrWidth
+                )
     port map (
-            clk=>clk, reset=>reset,
-            iSync => sync,iEn=>EnWL,iStartAddr=>iDataStartAddr,
-            oAddr => wraddr, oWrEn => oWrBuffEn);
+            iClk        => iClk,
+            iReset      => iReset,
+            iSync       => sync,
+            iEn         => enWL,
+            iStartAddr  => iDataStartAddr,
+            oAddr       => wraddr,
+            oWrEn       => oWrBuffEn);
 
 
-    --frame end detection -------------------------------------------------------------------
-    --detects the end of the frame                      =>  oFrameEnd
-    --as well as the memory-address of the last byte    =>  oEndAddr
-    --also truncates the frame in the cut-frame-task    =>  iCutEn, iCutData
-    -----------------------------------------------------------------------------------------
-    end_of_frame : end_of_frame_detection
-    generic map(gBuffAddrWidth=>gBuffAddrWidth)
+    --! @brief frame end detection
+    --! - detects the end of the frame                      =>  oFrameEnd
+    --! - as well as the memory-address of the last byte    =>  oEndAddr
+    --! - also truncates the frame in the cut-frame-task    =>  iCutEn, iCutData
+    end_of_frame : work.end_of_frame_detection
+    generic map(gBuffAddrWidth  => gBuffAddrWidth)
     port map (
-            clk=>clk, reset=>reset,
-            iRXDV => iRXDV, iAddr => wraddr,iStartAddr=>iDataStartAddr,iCutEn=>iTaskCutEn,
-            iCutData=>iTaskCutData,
-            oEndAddr=> oDataEndAddr,oFrameEnd=>FrameEnd);
+            iClk        => iClk,
+            iReset      => iReset,
+            iRXDV       => iRXDV,
+            iAddr       => wraddr,
+            iStartAddr  => iDataStartAddr,
+            iCutEn      => iTaskCutEn,
+            iCutData    => iTaskCutData,
+            oEndAddr    => oDataEndAddr,
+            oFrameEnd   => frameEnd
+            );
 
 
     --  frame process can start, when the collection has finished with Preamble and one of the valid Ethertypes
-    StartFrameProcess_next  <= '1' when CollectorFinished='1' and preambleOk='1' and reduceOr(MatchFilter)='1' else '0';
+    startFrameProcess_next  <= '1' when collectorFinished='1' and preambleOk='1' and reduceOr(matchFilter)='1' else '0';
 
 
     --! @brief Registers
     --! - Storing with asynchronous reset
     registers :
-    process(clk, reset)
+    process(iClk, iReset)
     begin
-        if reset='1' then
-            StartFrameProcess_reg   <= '0';
+        if iReset='1' then
+            startFrameProcess_reg   <= '0';
 
-        elsif rising_edge(clk) then
-            StartFrameProcess_reg   <= StartFrameProcess_next;
+        elsif rising_edge(iClk) then
+            startFrameProcess_reg   <= startFrameProcess_next;
 
         end if;
     end process;
 
-    oStartFrameProcess  <= StartFrameProcess_reg;
+    oStartFrameProcess  <= startFrameProcess_reg;
 
 
     --signal output
-    oFrameEnded<=FrameEnd;
-    oData <= data;
-    oWrBuffAddr<=wraddr;
-    oFrameSync<=sync;
+    oFrameEnded <= frameEnd;
+    oData       <= data;
+    oWrBuffAddr <= wraddr;
+    oFrameSync  <= sync;
 
 end two_seg_arch;
 

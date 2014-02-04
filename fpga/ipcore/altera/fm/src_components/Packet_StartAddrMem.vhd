@@ -56,7 +56,8 @@ entity Packet_StartAddrMem is
             gAddrMemoryWidth    : natural := 9      --!Width of address memory, should store at least 500 addresses
             );
     port(
-        clk, reset          : in std_logic;                                     --! clk, reset
+        iClk                : in std_logic;                                     --! clk
+        iReset              : in std_logic;                                     --! reset
         iResetPaketBuff     : in std_logic;                                     --! Resets the packet FIFO
         iTwistPacketEx      : in std_logic;                                     --! exchange packets in opposite order
         oErrorAddrBuff      : out std_logic;                                    --! Error: Address-buffer is overwritten while an incorrect-sequence task
@@ -75,69 +76,18 @@ end Packet_StartAddrMem;
 --! - Error output at overlapping packets
 architecture two_seg_arch of Packet_StartAddrMem is
 
-    --! @brief RAM for address memory
-    component FiFo_File
-        generic(
-                B   : natural:=8;       --! number of Bits
-                W   : natural:=8        --! number of address bits
-                );
-        port(
-            clk     : in std_logic;                         --! clk
-            iWrEn   : in std_logic;                         --! Write enable
-            iWrAddr : in std_logic_vector(W-1 downto 0);    --! Write address
-            iRdAddr : in std_logic_vector(W-1 downto 0);    --! Read address
-            iWrData : in std_logic_vector(B-1 downto 0);    --! Write data
-            oRdData : out std_logic_vector(B-1 downto 0)    --! Read data
-        );
-    end component;
-
-
-    --! @brief Counter for the address-memory address
-    component Basic_Cnter
-        generic(
-                gCntWidth   : natural := 2  --! Width of the coutner
-                );
-        port(
-            clk, reset  : in std_logic;                                 --! clk, reset
-            iClear      : in std_logic;                                 --! Synchronous reset
-            iEn         : in std_logic;                                 --! Cnt Enable
-            iStartValue : in std_logic_vector(gCntWidth-1 downto 0);    --! Init value
-            iEndValue   : in std_logic_vector(gCntWidth-1 downto 0);    --! End value
-            oQ          : out std_logic_vector(gCntWidth-1 downto 0);   --! Current value
-            oOv         : out std_logic                                 --! Overflow
-        );
-    end component;
-
-
-    --! @brief Down counter for the Incorrect-Sequece task
-    component Basic_DownCnter
-        generic(
-                gCntWidth   : natural := 2  --! Width of the coutner
-                );
-        port(
-            clk, reset  : in std_logic;                                 --! clk, reset
-            iClear      : in std_logic;                                 --! Synchronous reset
-            iEn         : in std_logic;                                 --! Cnt Enable
-            iStartValue : in std_logic_vector(gCntWidth-1 downto 0);    --! Init value
-            iEndValue   : in std_logic_vector(gCntWidth-1 downto 0);    --! End value
-            oQ          : out std_logic_vector(gCntWidth-1 downto 0);   --! Current value
-            oOv         : out std_logic                                 --! Overflow
-        );
-    end component;
-
-
     --Last write address
-    signal LastWrAddr_reg   : std_logic_vector(gAddrMemoryWidth-1 downto 0);    --! Register of last write address
-    signal LastWrAddr_next  : std_logic_vector(gAddrMemoryWidth-1 downto 0);    --! Next value of write address register
+    signal lastWrAddr_reg   : std_logic_vector(gAddrMemoryWidth-1 downto 0);    --! Register of last write address
+    signal lastWrAddr_next  : std_logic_vector(gAddrMemoryWidth-1 downto 0);    --! Next value of write address register
 
     --incorrect sequence override signals
-    signal RdAddr           : std_logic_vector(gAddrMemoryWidth-1 downto 0);    --! FIFO read address
-    signal RdAddrBack       : std_logic_vector(gAddrMemoryWidth-1 downto 0);    --! LIFO override address
+    signal rdAddr           : std_logic_vector(gAddrMemoryWidth-1 downto 0);    --! FIFO read address
+    signal rdAddrBack       : std_logic_vector(gAddrMemoryWidth-1 downto 0);    --! LIFO override address
     signal clearTwistCnter  : std_logic;                                        --! clear LIFO
 
     --Address FIFO
-    signal FifoWrAddr   : std_logic_vector(gAddrMemoryWidth-1 downto 0);        --! Write address of address-memory
-    signal FifoRdAddr   : std_logic_vector(gAddrMemoryWidth-1 downto 0);        --! Read address of address-memory
+    signal fifoWrAddr   : std_logic_vector(gAddrMemoryWidth-1 downto 0);        --! Write address of address-memory
+    signal fifoRdAddr   : std_logic_vector(gAddrMemoryWidth-1 downto 0);        --! Read address of address-memory
 
 begin
 
@@ -147,31 +97,31 @@ begin
 
     --! @brief Counter for address-memory write address
     --! - Select address for next memory entry
-    WrAddrCnter : Basic_Cnter
+    WrAddrCnter : work.Basic_Cnter
     generic map(gCntWidth   => gAddrMemoryWidth)
     port map(
-            clk         => clk,
-            reset       => reset,
+            iClk        => iClk,
+            iReset      => iReset,
             iClear      => iResetPaketBuff,
             iEn         => iWrAddrEn,
             iStartValue => (1 => '1', others => '0'),  --starts with value 2. It has to be a step ahead, that the read address value is correct
-             iEndValue  => (others => '1'),
-            oQ          => FifoWrAddr,
+            iEndValue   => (others => '1'),
+            oQ          => fifoWrAddr,
             oOv         => open);
 
 
     --! @brief Counter for address-memory read address
     --! - Select address for the output of the next start-address from memory
-    RdAddrCnter : Basic_Cnter
+    RdAddrCnter : work.Basic_Cnter
     generic map(gCntWidth   => gAddrMemoryWidth)
     port map(
-            clk         => clk,
-            reset       => reset,
+            iClk        => iClk,
+            iReset      => iReset,
             iClear      => iResetPaketBuff,
             iEn         => iRdAddrEn,
             iStartValue => (others => '0'),
             iEndValue   => (others => '1'),
-            oQ          => RdAddr,
+            oQ          => rdAddr,
             oOv         => open
             );
 
@@ -185,13 +135,13 @@ begin
     --! @brief Register for the last write address of the FIFO
     --! - Storing with asynchronous reset
     regs:
-    process(clk,reset)
+    process(iClk,iReset)
     begin
-        if reset='1' then
-            LastWrAddr_reg  <= (others => '0');
+        if iReset='1' then
+            lastWrAddr_reg  <= (others => '0');
 
-        elsif rising_edge(clk) then
-            LastWrAddr_reg  <= LastWrAddr_next;
+        elsif rising_edge(iClk) then
+            lastWrAddr_reg  <= lastWrAddr_next;
 
         end if;
     end process;
@@ -200,13 +150,13 @@ begin
     --! @brief Logic for the last write address of the FIFO
     --! - Store current address at write enable signal
     combLastWrAddr:
-    process(iWrAddrEn, LastWrAddr_reg, FifoWrAddr)
+    process(iWrAddrEn, lastWrAddr_reg, fifoWrAddr)
     begin
 
-        LastWrAddr_next     <= LastWrAddr_reg;
+        lastWrAddr_next     <= lastWrAddr_reg;
 
         if iWrAddrEn='1' then
-            LastWrAddr_next <= FifoWrAddr;
+            lastWrAddr_next <= fifoWrAddr;
 
         end if;
     end process;
@@ -221,25 +171,25 @@ begin
     --! @brief Counter for the output of packet start addresses in the reverse sequence
     --! - Start with current write address and counts down
     --! - Reset, when task is over
-    TwistCnter : Basic_DownCnter
+    TwistCnter : work.Basic_DownCnter
     generic map(gCntWidth   => gAddrMemoryWidth)
     port map(
-            clk         => clk,
-            reset       => reset,
+            iClk        => iClk,
+            iReset      => iReset,
             iClear      => clearTwistCnter,
             iEn         => iRdAddrEn,
-            iStartValue => LastWrAddr_reg,
+            iStartValue => lastWrAddr_reg,
             iEndValue   => (others => '0'),
-            oQ          => RdAddrBack,
+            oQ          => rdAddrBack,
             oOv         => open
             );
 
 
     --!selection of Readaddr
-    FifoRdAddr  <= RdAddrBack when iTwistPacketEx='1' else RdAddr;
+    fifoRdAddr  <= rdAddrBack when iTwistPacketEx='1' else rdAddr;
 
     --!Address-buffer is overwritten while an incorrect-sequence task
-    oErrorAddrBuff  <= '1' when RdAddrBack      = FifoWrAddr and
+    oErrorAddrBuff  <= '1' when rdAddrBack      = fifoWrAddr and
                                 iTwistPacketEx  = '1'       else '0';
 
     -----------------------------------------------------------------------------------------
@@ -251,17 +201,17 @@ begin
     --! @brief Memory for packet start address
     --! - Normally like a FiFo
     --! - Temporary a LiFo at Incorrect-Sequence task
-    RdAddressMem : FiFo_File
+    RdAddressMem : work.FiFo_File
     generic map(
-                W => gAddrMemoryWidth,
-                B => gPacketAddrWidth
+                gAddrWidth  => gAddrMemoryWidth,
+                gDataWidth  => gPacketAddrWidth
                 )
     port map(
-            clk     => clk,
+            iClk    => iClk,
             iWrEn   => iWrAddrEn,
-            iWrAddr => FifoWrAddr,
+            iWrAddr => fifoWrAddr,
             iWrData => iAddrData,
-            iRdAddr => FifoRdAddr,
+            iRdAddr => fifoRdAddr,
             oRdData => oAddrData
             );
 

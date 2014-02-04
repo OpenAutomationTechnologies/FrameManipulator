@@ -53,7 +53,8 @@ use work.global.all;
 entity Packet_MemCnter is
     generic(gPacketAddrWidth    : natural := 14);   --! enough for 500 Packets with the size of 28 Bytes
     port(
-        clk, reset          : in std_logic;                                         --! clk, reset
+        iClk                : in std_logic;                                         --! clk
+        iReset              : in std_logic;                                         --! reset
         iWrEn               : in std_logic;                                         --! Write memory enable
         iRdEn               : in std_logic;                                         --! Read memory enable
         iWrStartAddr        : in std_logic_vector(gPacketAddrWidth-1 downto 0);     --! Start address of stored packet
@@ -70,64 +71,48 @@ end Packet_MemCnter;
 --! - Prescales the counting to fit to the stream
 architecture two_seg_arch of Packet_MemCnter is
 
-    --! @brief Counter for prescaler and address selection
-    component Basic_Cnter
-        generic(
-                gCntWidth   : natural := 2  --! Width of the coutner
-                );
-        port(
-            clk, reset  : in std_logic;                                 --! clk, reset
-            iClear      : in std_logic;                                 --! Synchronous reset
-            iEn         : in std_logic;                                 --! Cnt Enable
-            iStartValue : in std_logic_vector(gCntWidth-1 downto 0);    --! Init value
-            iEndValue   : in std_logic_vector(gCntWidth-1 downto 0);    --! End value
-            oQ          : out std_logic_vector(gCntWidth-1 downto 0);   --! Current value
-            oOv         : out std_logic                                 --! Overflow
-        );
-    end component;
-
     --clear signal of counters
-    signal WrCntClear   : std_logic;    --! Clear write address counter
-    signal RdCntClear   : std_logic;    --! Clear read address counter
+    signal wrCntClear   : std_logic;    --! Clear write address counter
+    signal rdCntClear   : std_logic;    --! Clear read address counter
 
     --Prescaler of address counters
-    signal WrPreCnt     : std_logic;    --! Prescaler of write address
-    signal RdPreCnt     : std_logic;    --! Prescaler of read address
+    signal wrPreCnt     : std_logic;    --! Prescaler of write address
+    signal rdPreCnt     : std_logic;    --! Prescaler of read address
 
 
 begin
 
 
     --Clear Counter, when memory is unused
-    WrCntClear  <= not iWrEn;
-    RdCntClear  <= not iRdEn;
+    wrCntClear  <= not iWrEn;
+    rdCntClear  <= not iRdEn;
 
 
     --! @brief Prescaler for write address
     --! - Factor four to match stream
-    WrPre : Basic_Cnter
+    WrPre : work.Basic_Cnter
     generic map(gCntWidth   => 2)
     port map(
-            clk         => clk,
-            reset       => reset,
-            iClear      => WrCntClear,
+            iClk        => iClk,
+            iReset      => iReset,
+            iClear      => wrCntClear,
             iEn         => '1',
             iStartValue => "00",
             iEndValue   => (others => '1'),
             oQ          => open,
-            oOv         => WrPreCnt
+            oOv         => wrPreCnt
             );
 
 
     --! @brief Counter for write address
     --! - Select address for packet memory to store packets
-    WrCnter : Basic_Cnter
+    WrCnter : work.Basic_Cnter
     generic map(gCntWidth   => gPacketAddrWidth)
     port map(
-            clk         => clk,
-            reset       => reset,
-            iClear      => WrCntClear,
-            iEn         => WrPreCnt,
+            iClk        => iClk,
+            iReset      => iReset,
+            iClear      => wrCntClear,
+            iEn         => wrPreCnt,
             iStartValue => iWrStartAddr,
             iEndValue   => (others => '1'),
             oQ          => oWrAddr,
@@ -139,29 +124,29 @@ begin
     --! @brief Prescaler for read address
     --! - Factor four to match stream
     --! - Start with the value of one to compensate the delay of the memory
-    RdPre : Basic_Cnter
+    RdPre : work.Basic_Cnter
     generic map(gCntWidth   => 2)
     port map(
-            clk         => clk,
-            reset       => reset,
-            iClear      => RdCntClear,
+            iClk        => iClk,
+            iReset      => iReset,
+            iClear      => rdCntClear,
             iEn         => '1',
             iStartValue => "01",
             iEndValue   => (others => '1'),
             oQ          => open,
-            oOv         => RdPreCnt
+            oOv         => rdPreCnt
             );
 
 
     --! @brief Counter for read address
     --! - Select address for packet memory to exchange packets
-    RdCnter : Basic_Cnter
+    RdCnter : work.Basic_Cnter
     generic map(gCntWidth   => gPacketAddrWidth)
     port map(
-            clk         => clk,
-            reset       => reset,
-            iClear      => RdCntClear,
-            iEn         => RdPreCnt,
+            iClk        => iClk,
+            iReset      => iReset,
+            iClear      => rdCntClear,
+            iEn         => rdPreCnt,
             iStartValue => iRdStartAddr,
             iEndValue   => (others => '1'),
             oQ          => oRdAddr,

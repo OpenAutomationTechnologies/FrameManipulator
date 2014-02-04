@@ -1,27 +1,47 @@
 
--- ******************************************************************************************
--- *                                Control_Register                                        *
--- ******************************************************************************************
--- *                                                                                        *
--- * Shared interface between the Framemanipulator and its POWERLINK Slave                  *
--- *                                                                                        *
--- * Address 0: operations from the MN for the FM                                           *
--- *            starts a new test, stops the current one, clear task memory and clear erros *
--- *                                                                                        *
--- * Address 1: collected status informaions and error messages for the MN                  *
--- *                                                                                        *
--- * s_clk: clock domain of the avalon slaves                                               *
--- * s_...  avalon slave for the control registers (operations and error)                   *
--- *                                                                                        *
--- *----------------------------------------------------------------------------------------*
--- *                                                                                        *
--- * 09.08.12 V1.0      Control_Register                        by Sebastian Muelhausen     *
--- * 20.11.13 V1.1      Added Safety Registers                  by Sebastian Muelhausen     *
--- *                                                                                        *
--- ******************************************************************************************
+-------------------------------------------------------------------------------
+--! @file Control_Register.vhd
+--! @brief Shared interface between the Framemanipulator and its POWERLINK Slave
+-------------------------------------------------------------------------------
+--
+--    (c) B&R, 2014
+--
+--    Redistribution and use in source and binary forms, with or without
+--    modification, are permitted provided that the following conditions
+--    are met:
+--
+--    1. Redistributions of source code must retain the above copyright
+--       notice, this list of conditions and the following disclaimer.
+--
+--    2. Redistributions in binary form must reproduce the above copyright
+--       notice, this list of conditions and the following disclaimer in the
+--       documentation and/or other materials provided with the distribution.
+--
+--    3. Neither the name of B&R nor the names of its
+--       contributors may be used to endorse or promote products derived
+--       from this software without prior written permission. For written
+--       permission, please contact office@br-automation.com
+--
+--    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+--    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+--    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+--    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+--    COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+--    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+--    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+--    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+--    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+--    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+--    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+--    POSSIBILITY OF SUCH DAMAGE.
+--
+-------------------------------------------------------------------------------
 
+--! Use standard ieee library
 library ieee;
+--! Use logic elements
 use ieee.std_logic_1164.all;
+--! Use numeric functions
 use ieee.numeric_std.all;
 
 --! Use work library
@@ -32,79 +52,61 @@ use work.global.all;
 use work.framemanipulatorPkg.all;
 
 
+--! This is the entity for the interface between the Framemanipulator and its POWERLINK Slave
 entity Control_Register is
-    generic(gWordWidth:         natural :=cByteLength;
-            gAddresswidth:      natural :=1);
+    generic(
+            gWordWidth      : natural :=cByteLength;    --! Word width of avalon bus for FM control
+            gAddresswidth   : natural :=1               --! Address width of avalon bus for FM control
+            );
     port(
-        clk, reset:             in std_logic;
-        s_clk:                  in std_logic;   --Clock of the slave
+        iClk                    : in std_logic;                                     --! clk
+        iReset                  : in std_logic;                                     --! reset
+        iS_clk                  : in std_logic;                                     --! Clock of the slave
         --Controls
-        oStartTest:             out std_logic;  --Opertaion: Start new series of test
-        oStopTest:              out std_logic;  --Opertaion: Stop current sereis of test
-        oClearMem:              out std_logic;  --Opertaion: clear all tasks
-        oResetPaketBuff:        out std_logic;  --Opertaion:aborts the current test
-        iTestActive:            in std_logic;   --Status: Test is active
+        oStartTest              : out std_logic;                                    --! Start new series of test
+        oStopTest               : out std_logic;                                    --! Stop current sereis of test
+        oClearMem               : out std_logic;                                    --! clear all tasks
+        oResetPaketBuff         : out std_logic;                                    --! Opertaion:aborts the current test
+        iTestActive             : in std_logic;                                     --! Status: Test is active
         --Error messages
-        iError_Addr_Buff_OV:    in std_logic;   --Error: Address-buffer overflow
-        iError_Frame_Buff_OV:   in std_logic;   --Error: Data-buffer overflow
-        iError_Packet_Buff_OV:  in std_logic;   --Error: Overflow packet-buffer
-        iError_Task_Conf:       in std_logic;   --Error: Wrong task configuration
+        iError_addrBuffOv       : in std_logic;                                     --! Error: Address-buffer overflow
+        iError_frameBuffOv      : in std_logic;                                     --! Error: Data-buffer overflow
+        iError_packetBuffOv     : in std_logic;                                     --! Error: Overflow packet-buffer
+        iError_taskConf         : in std_logic;                                     --! Error: Wrong task configuration
         --avalon bus (s_clk-domain)
-        s_iAddr:                in std_logic_vector(gAddresswidth-1 downto 0);
-        s_iWrEn:                in std_logic;
-        s_iRdEn:                in std_logic;
-        s_iByteEn:              in std_logic_vector((gWordWidth/cByteLength)-1 DOWNTO 0);
-        s_iWriteData:           in std_logic_vector(gWordWidth-1 downto 0);
-        s_oReadData:            out std_logic_vector(gWordWidth-1 downto 0)
-     );
+        iSt_addr                : in std_logic_vector(gAddresswidth-1 downto 0);              --! FM-control avalon slave address
+        iSt_wrEn                : in std_logic;                                               --! FM-control avalon slave write enable
+        iSt_rdEn                : in std_logic;                                               --! FM-control avalon slave read enable
+        iSt_byteEn              : in std_logic_vector((gWordWidth/cByteLength)-1 DOWNTO 0);   --! FM-control avalon slave byte enable
+        iSt_writeData           : in std_logic_vector(gWordWidth-1 downto 0);                 --! FM-control avalon slave data write
+        oSt_ReadData            : out std_logic_vector(gWordWidth-1 downto 0)                 --! FM-control avalon slave read data
+    );
 end Control_Register;
 
+
+--! @brief Control_Register architecture
+--! @details Control register
+--! - Transfer of operations from PL-Slave to FM
+--! - Transfer of status- and error-flags to PL-Slave
 architecture two_seg_arch of Control_Register is
 
-    --DPRam Port A= PL-Slave, B=Hardware Manipulator
-    component DPRAM_Plus IS
-        generic(gAddresswidthA:     natural :=7;
-            gAddresswidthB:     natural :=6;
-            gWordWidthA:        natural :=32;
-            gWordWidthB:        natural :=64);
-        port
-        (
-            address_a   : IN STD_LOGIC_VECTOR (gAddresswidthA-1 DOWNTO 0);
-            address_b   : IN STD_LOGIC_VECTOR (gAddresswidthB-1 DOWNTO 0);
-            byteena_a   : IN STD_LOGIC_VECTOR ((gWordWidthA/cByteLength)-1 DOWNTO 0) :=  (OTHERS => '1');
-            byteena_b   : IN STD_LOGIC_VECTOR ((gWordWidthB/cByteLength)-1 DOWNTO 0) :=  (OTHERS => '1');
-            clock_a     : IN STD_LOGIC  := '1';
-            clock_b     : IN STD_LOGIC ;
-            data_a      : IN STD_LOGIC_VECTOR (gWordWidthA-1 DOWNTO 0);
-            data_b      : IN STD_LOGIC_VECTOR (gWordWidthB-1 DOWNTO 0);
-            rden_a      : IN STD_LOGIC  := '1';
-            rden_b      : IN STD_LOGIC  := '1';
-            wren_a      : IN STD_LOGIC  := '0';
-            wren_b      : IN STD_LOGIC  := '0';
-            q_a         : OUT STD_LOGIC_VECTOR (gWordWidthA-1 DOWNTO 0);
-            q_b         : OUT STD_LOGIC_VECTOR (gWordWidthB-1 DOWNTO 0)
-        );
-    end component;
-
-
     --data variables
-    signal DataB_out:   std_logic_vector(gWordWidth-1 downto 0);
-    signal byteena_b:   std_logic_vector(gWordWidth/cByteLength-1 downto 0);
-    signal wren_b:      std_logic;
-    signal rden_b:      std_logic;
-    signal Addr_B:      std_logic_vector(gAddresswidth-1 downto 0);
+    signal dataB_out    : std_logic_vector(gWordWidth-1 downto 0);              --! Output Operations from Avalon bus
+    signal wren_b       : std_logic;                                            --! Write status endable
+    signal rden_b       : std_logic;                                            --! Read operations enable
+    signal addr_b       : std_logic_vector(gAddresswidth-1 downto 0);           --! Interface address
 
     --operation register
-    signal OperationByte_reg:   std_logic_vector(gWordWidth-1 downto 0):=(others=>'0');
-    signal OperationByte_next:  std_logic_vector(gWordWidth-1 downto 0):=(others=>'0');
+    signal operationByte_reg    : std_logic_vector(gWordWidth-1 downto 0):=(others=>'0');   --! Operation register
+    signal operationByte_next   : std_logic_vector(gWordWidth-1 downto 0):=(others=>'0');   --! Next operation value
 
     --status and error register
-    signal StatusByte_reg:  std_logic_vector(gWordWidth-1 downto 0):=(others=>'0');
-    signal StatusByte_next: std_logic_vector(gWordWidth-1 downto 0):=(others=>'0');
+    signal statusByte_reg   : std_logic_vector(gWordWidth-1 downto 0):=(others=>'0');       --! Status register
+    signal statusByte_next  : std_logic_vector(gWordWidth-1 downto 0):=(others=>'0');       --! Next status
 
 
-    signal Write_Status:    std_logic;  --writes status, when changes occurres
-    signal ClearErrors:     std_logic;  --Opertaion: Clear all errors
+    signal writeStatus : std_logic;    --! writes status, when changes occurres
+    signal clearErrors  : std_logic;    --! Opertaion: Clear all errors
 
 begin
 
@@ -113,75 +115,92 @@ begin
     --! @brief Registers
     --! - Storing with asynchronous reset
     registers :
-    process(clk, reset)
+    process(iClk, iReset)
     begin
-        if reset='1' then
-            StatusByte_reg      <= (others=>'0');
-            OperationByte_reg   <= (others=>'0');
+        if iReset='1' then
+            statusByte_reg      <= (others=>'0');
+            operationByte_reg   <= (others=>'0');
 
-        elsif rising_edge(clk) then
-            StatusByte_reg      <= StatusByte_next;
-            OperationByte_reg   <= OperationByte_next;
+        elsif rising_edge(iClk) then
+            statusByte_reg      <= statusByte_next;
+            operationByte_reg   <= operationByte_next;
 
         end if;
     end process;
 
 
     --store test staus (first nibble) D-FF:
-    StatusByte_next(cSt.TestActive)<=iTestActive;
+    statusByte_next(cSt.TestActive)<=iTestActive;
 
     --store errors (second nibble) RS-FF:
         --set of bits with error-signal, reset of bits with clear-operation
-    StatusByte_next(cSt.ErDataOv)   <=(StatusByte_reg(cSt.ErDataOv)     or iError_Addr_Buff_OV)
-                                                                and not ClearErrors;
+    statusByte_next(cSt.ErDataOv)   <= (statusByte_reg(cSt.ErDataOv)     or iError_addrBuffOv)
+                                                                and not clearErrors;
 
-    StatusByte_next(cSt.ErFrameOv)  <=(StatusByte_reg(cSt.ErFrameOv)    or iError_Frame_Buff_OV)
-                                                                and not ClearErrors;
+    statusByte_next(cSt.ErFrameOv)  <= (statusByte_reg(cSt.ErFrameOv)    or iError_frameBuffOv)
+                                                                and not clearErrors;
 
-    StatusByte_next(cSt.ErPacketOv)  <=(StatusByte_reg(cSt.ErPacketOv)    or iError_Packet_Buff_OV)
-                                                                and not ClearErrors;
+    statusByte_next(cSt.ErPacketOv) <= (statusByte_reg(cSt.ErPacketOv)    or iError_packetBuffOv)
+                                                                and not clearErrors;
 
-    StatusByte_next(cSt.ErTaskConf)  <=(StatusByte_reg(cSt.ErTaskConf)    or iError_Task_Conf)
-                                                                and not ClearErrors;
+    statusByte_next(cSt.ErTaskConf) <= (statusByte_reg(cSt.ErTaskConf)    or iError_taskConf)
+                                                                and not clearErrors;
 
 
     --writes new status, when changes occure
-    Write_Status<='0' when StatusByte_next=StatusByte_reg else '1';
+    writeStatus<='0' when statusByte_next=statusByte_reg else '1';
 
-    wren_b<='1' when Write_Status='1' else '0'; --enable write at changes
-    rden_b<='1' when Write_Status='0' else '0'; --disable read at changes
+    wren_b<='1' when writeStatus='1' else '0'; --enable write at changes
+    rden_b<='1' when writeStatus='0' else '0'; --disable read at changes
 
-    Addr_B(0)<='1' when Write_Status='1' else '0';  --Addr 1 = Write Errors, else Read Addr 0 = Operations
+    addr_b(0)<='1' when writeStatus='1' else '0';  --Addr 1 = Write Errors, else Read Addr 0 = Operations
 
     --Memory----------------------------------------------------------
-    ControlMem:DPRAM_Plus
-    generic map(gAddresswidthA=>gAddresswidth,gAddresswidthB=>gAddresswidth,gWordWidthA=>gWordWidth,gWordWidthB=>gWordWidth)
+
+    --! @brief Control memory
+    --! - Storing of operations and status/error flags
+    ControlMem : work.DpramAdjustable
+    generic map(
+                gAddresswidthA  => gAddresswidth,
+                gAddresswidthB  => gAddresswidth,
+                gWordWidthA     => gWordWidth,
+                gWordWidthB     => gWordWidth)
     port map(
-    clock_a=>s_clk,clock_b=>clk,
+            iClock_a     => iS_clk,
+            iClock_b     => iClk,
             --Port A: PL-Slave
-            address_a=>s_iAddr,     data_a=>s_iWriteData,           wren_a=>s_iWrEn,
-            rden_a=>s_iRdEn,        byteena_a=>s_iByteEn,           q_a=>s_oReadData,
+            iAddress_a   => iSt_addr,
+            iData_a      => iSt_writeData,
+            iWren_a      => iSt_wrEn,
+            iRden_a      => iSt_rdEn,
+            iByteena_a   => iSt_byteEn,
+            oQ_a         => oSt_ReadData,
             --Port B: FM
-            address_b=>Addr_B,      data_b=>StatusByte_next,        wren_b=>wren_b,
-            rden_b=>rden_b,         byteena_b=>(others=>'1'),       q_b=>DataB_out);
+            iAddress_b   => addr_b,
+            iData_b      => statusByte_next,
+            iWren_b      => wren_b,
+            iRden_b      => rden_b,
+            iByteena_b   => (others=>'1'),
+            oQ_b         => dataB_out
+            );
 
 
     --Operation Output------------------------------------------------
     --update register, when data is read
-    OperationByte_next<=DataB_out(OperationByte_next'range) when rden_b='1' else OperationByte_reg;
+    operationByte_next  <= dataB_out(operationByte_next'range) when rden_b='1' else operationByte_reg;
 
-    oStartTest  <='1' when OperationByte_reg(cOp.Start)='1'   and OperationByte_reg(cOp.Stop)='0'
-                                                            and OperationByte_reg(cOp.ClearMem)='0'
+    oStartTest  <='1' when operationByte_reg(cOp.Start)='1'   and operationByte_reg(cOp.Stop)='0'
+                                                            and operationByte_reg(cOp.ClearMem)='0'
                         else '0';
 
-    oStopTest   <='1' when OperationByte_reg(cOp.Stop)='1'    or OperationByte_reg(cOp.ClearMem)='1'
-                                                            or StatusByte_reg(7 downto 4)/="0000"
+    oStopTest   <='1' when operationByte_reg(cOp.Stop)='1'    or operationByte_reg(cOp.ClearMem)='1'
+                                                            or statusByte_reg(7 downto 4)/="0000"
                         else '0';
 
-    oClearMem   <='1' when OperationByte_reg(cOp.ClearMem)='1' else '0';
+    oClearMem   <='1' when operationByte_reg(cOp.ClearMem)='1' else '0';
 
-    ClearErrors <='1' when OperationByte_reg(cOp.ClearErrors)='1' else '0';
+    clearErrors <='1' when operationByte_reg(cOp.clearErrors)='1' else '0';
 
-    oResetPaketBuff <='1' when OperationByte_reg(cOp.ClearPaket)='1' else '0';
+    oResetPaketBuff <='1' when operationByte_reg(cOp.ClearPaket)='1' else '0';
 
 end two_seg_arch;

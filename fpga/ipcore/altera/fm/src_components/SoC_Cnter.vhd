@@ -1,30 +1,47 @@
--- ****************************************************************
--- *                       SoC_Cnter V1.2                         *
--- ****************************************************************
--- *                                                              *
--- * A Counter for Ethernet POWERLINK Cycles with recoginizing the*
--- * SoC Frames                                                   *
--- *                                                              *
--- *   Generics:                                                  *
--- *   gCnterWidth: Width of output dataline of the counter       *
--- *                                                              *
--- * in:  iTestSync   sync. Reset Signal => oSocCnt=>0            *
--- *      iFrameSync  sync. signal for the Start of the Stream    *
--- *      iEn         Enable signal                               *
--- *      iData       Framedata (Size=1Byte)                      *
--- * out: oSocCnt     Output Cyclenumber                          *
--- *      oFrameIsSoc =1 when Frame is SoC                        *
--- *                                                              *
--- *--------------------------------------------------------------*
--- *                                                              *
--- * 22.05.12 V1.0 created SoC_Cnter    by Sebastian Muelhausen   *
--- * 29.05.12 V1.1 added iEn            by Sebastian Muelhausen   *
--- * 01.06.12 V1.2 added oFrameIsSoc    by Sebastian Muelhausen   *
--- *                                                              *
--- ****************************************************************
+-------------------------------------------------------------------------------
+--! @file SoC_Cnter.vhd
+--! @brief Counter of POWERLINK cycles via SoC frames
+-------------------------------------------------------------------------------
+--
+--    (c) B&R, 2014
+--
+--    Redistribution and use in source and binary forms, with or without
+--    modification, are permitted provided that the following conditions
+--    are met:
+--
+--    1. Redistributions of source code must retain the above copyright
+--       notice, this list of conditions and the following disclaimer.
+--
+--    2. Redistributions in binary form must reproduce the above copyright
+--       notice, this list of conditions and the following disclaimer in the
+--       documentation and/or other materials provided with the distribution.
+--
+--    3. Neither the name of B&R nor the names of its
+--       contributors may be used to endorse or promote products derived
+--       from this software without prior written permission. For written
+--       permission, please contact office@br-automation.com
+--
+--    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+--    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+--    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+--    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+--    COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+--    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+--    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+--    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+--    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+--    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+--    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+--    POSSIBILITY OF SUCH DAMAGE.
+--
+-------------------------------------------------------------------------------
 
+
+--! Use standard ieee library
 library ieee;
+--! Use logic elements
 use ieee.std_logic_1164.all;
+--! Use numeric functions
 use ieee.numeric_std.all;
 
 --! Use work library
@@ -35,103 +52,91 @@ use work.global.all;
 use work.framemanipulatorPkg.all;
 
 
+--! This is the entity of the module for counting POWERLINK cycles via SoC frames
 entity SoC_Cnter is
-    generic(gCnterWidth:natural:=8);
+    generic(gCnterWidth : natural := 8);                            --! Width of Counter
     port(
-        clk, reset:     in std_logic;
-        iTestSync:      in std_logic;                                   --sync for counter reset
-        iFrameSync:     in std_logic;                                   --sync for new incoming frame
-        iEn:            in std_logic;                                   --counter enable
-        iData:          in std_logic_vector(cByteLength-1 downto 0);    --frame-data
-        oFrameIsSoc:    out std_logic;                                  --current frame is a SoC
-        oSocCnt  :      out std_logic_vector(cByteLength-1 downto 0)    --number of received SoCs
+        iClk        : in std_logic;                                 --! clk
+        iReset      : in std_logic;                                 --! reset
+        iTestSync   : in std_logic;                                 --! sync for counter reset
+        iFrameSync  : in std_logic;                                 --! sync for new incoming frame
+        iEn         : in std_logic;                                 --! counter enable
+        iData       : in std_logic_vector(gCnterWidth-1 downto 0);  --! frame-data
+        oFrameIsSoc : out std_logic;                                --! current frame is a SoC
+        oSocCnt     : out std_logic_vector(gCnterWidth-1 downto 0)  --! number of received SoCs
     );
 end SoC_Cnter;
 
 
-
+--! @brief SoC_Cnter architecture
+--! @details A Counter for Ethernet POWERLINK Cycles with recoginizing the SoC Frames
 architecture two_seg_arch of SoC_Cnter is
 
-    --counter for the received SoCs => current POWERLINK-cycle number
-    component Basic_Cnter
-        generic(gCntWidth: natural := 2);
-        port(
-            clk, reset:   in std_logic;
-            iClear:       in std_logic;
-            iEn   :       in std_logic;
-            iStartValue:  in std_logic_vector(gCntWidth-1 downto 0);
-            iEndValue:    in std_logic_vector(gCntWidth-1 downto 0);
-            oQ:           out std_logic_vector(gCntWidth-1 downto 0);
-            oOv:          out std_logic
-        );
-    end component;
-
-    --Collector for the Messagetype value
-    component Frame_collector
-        generic(
-            gFrom:natural:=13;
-            gTo : natural:=22
-        );
-        port(
-            clk, reset:         in std_logic;
-            iData:              in std_logic_vector(cByteLength-1 downto 0);
-            iSync:              in std_logic;
-            oFrameData :        out std_logic_vector((gTo-gFrom+1)*cByteLength-1 downto 0);
-            oCollectorFinished: out std_logic
-        );
-    end component;
-
-    signal cntEn:               std_logic;                      --Counter Enable
-    signal CollectorFinished:   std_logic;                      --Messagetype has received
-    signal MessageType:         std_logic_vector(cByteLength-1 downto 0);   --value of Messagetype
+    signal cntEn                : std_logic;                                --! Counter Enable
+    signal collectorFinished    : std_logic;                                --! messageType has received
+    signal messageType          : std_logic_vector(cByteLength-1 downto 0); --! value of messageType
 
     --Edge Detection
-    signal Next_FrameFit:       std_logic;  --Messagetype fit / frame is Soc
-    signal Reg_FrameFit:        std_logic;
+    signal next_frameFit    : std_logic;    --! Next value for register
+    signal reg_frameFit     : std_logic;    --! Register of fitting frame (SoC)
+
 begin
 
 
     --! @brief Registers
     --! - Storing with asynchronous reset
     registers :
-    process(clk, reset)
+    process(iClk, iReset)
     begin
-        if reset='1' then
-            Reg_FrameFit    <= '0';
+        if iReset='1' then
+            reg_frameFit    <= '0';
 
-        elsif rising_edge(clk) then
-            Reg_FrameFit    <= Next_FrameFit;
+        elsif rising_edge(iClk) then
+            reg_frameFit    <= next_frameFit;
 
         end if;
     end process;
 
 
-    --Collector for POWERLINK SoC
-    MessageType_Collector : Frame_collector
-    generic map(gFrom   => cEth.StartMessageType,
-                gTo     => cEth.StartMessageType
+    --! @brief Collector for POWERLINK SoC
+    messageType_Collector : work.Frame_collector
+    generic map(
+                gFrom   => cEth.StartmessageType,
+                gTo     => cEth.StartmessageType
                 )
     port map(
-            clk=>clk,reset=>reset,
-            iData=>iData,iSync=>iFrameSync,
-            oFrameData=>MessageType,oCollectorFinished=>CollectorFinished);
+            iClk                => iClk,
+            iReset              => iReset,
+            iData               => iData,
+            iSync               => iFrameSync,
+            oFrameData          => messageType,
+            ocollectorFinished  => collectorFinished
+            );
 
-    --Frame is SoC, when Messagetype=SoC and data is valid
-    Next_FrameFit<=CollectorFinished when MessageType=cEth.MessageTypeSoC else '0';
+
+    --Frame is SoC, when messageType=SoC and data is valid
+    next_frameFit   <= collectorFinished when messageType = cEth.messageTypeSoC else '0';
 
     --Edge Detection for Counter
-    cntEn<='1' when iEn='1' and Next_FrameFit='1' and Reg_FrameFit='0' else '0';
+    cntEn   <= '1' when iEn='1' and next_frameFit='1' and reg_frameFit='0' else '0';
 
 
-    --Cycle Counter
-    Cnter:Basic_Cnter
+    --! @brief Cycle Counter
+    Cnter : work.Basic_Cnter
     generic map(gCntWidth=>gCnterWidth)
     port map(
-            clk=>clk, reset=>reset,
-            iClear=>iTestSync,iEn=>cntEn,iStartValue=>(others=>'0'),iEndValue=>(others=>'1'),
-            oQ=>oSocCnt,oOv=>open);
+            iClk        => iClk,
+            iReset      => iReset,
+            iClear      => iTestSync,
+            iEn         => cntEn,
+            iStartValue => (others=>'0'),
+            iEndValue   => (others=>'1'),
+            oQ          => oSocCnt,
+            oOv         => open
+            );
+
 
     --current frame is Soc output
-    oFrameIsSoc<=Reg_FrameFit;
+    oFrameIsSoc <= reg_frameFit;
 
 end two_seg_arch;

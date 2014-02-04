@@ -79,8 +79,8 @@ add_file lib_Ethernet/Preamble_check.vhd {SYNTHESIS SIMULATION}
 add_file lib_Ethernet/Preamble_Generator.vhd {SYNTHESIS SIMULATION}
 add_file lib_Ethernet/sync_newData.vhd {SYNTHESIS SIMULATION}
 add_file lib_Ethernet/sync_RxFrame.vhd {SYNTHESIS SIMULATION}
-add_file lib_Memory/DPRAM_Simple.vhd {SYNTHESIS SIMULATION}
-add_file lib_Memory/DPRAM_Plus.vhd {SYNTHESIS SIMULATION}
+add_file lib_Memory/DpramAdjustable.vhd {SYNTHESIS SIMULATION}
+add_file lib_Memory/DpramFix.vhd {SYNTHESIS SIMULATION}
 add_file lib_Memory/FiFo_File.vhd {SYNTHESIS SIMULATION}
 add_file lib_Memory/FiFo_Sync_Ctrl.vhd {SYNTHESIS SIMULATION}
 add_file lib_Memory/FiFo_top.vhd {SYNTHESIS SIMULATION}
@@ -207,7 +207,7 @@ set_interface_property reset synchronousEdges DEASSERT
 
 set_interface_property reset ENABLED true
 
-add_interface_port reset reset reset Input 1
+add_interface_port reset iReset reset Input 1
 # |
 # +-----------------------------------
 
@@ -243,7 +243,7 @@ set_interface_property clock_mem_slave clockRate 0
 
 set_interface_property clock_mem_slave ENABLED true
 
-add_interface_port clock_mem_slave s_clk clk Input 1
+add_interface_port clock_mem_slave iS_Clk clk Input 1
 # |
 # +-----------------------------------
 
@@ -255,7 +255,7 @@ set_interface_property clock_50 clockRate 50000000
 
 set_interface_property clock_50 ENABLED true
 
-add_interface_port clock_50 clk_50 clk Input 1
+add_interface_port clock_50 iClk50 clk Input 1
 # |
 # +-----------------------------------
 
@@ -281,12 +281,12 @@ set_interface_property st_slave_tasks writeWaitTime 0
 
 set_interface_property st_slave_tasks ENABLED true
 
-add_interface_port st_slave_tasks st_read read Input 1
-add_interface_port st_slave_tasks st_readdata readdata Output gtaskbytesperword*8
-add_interface_port st_slave_tasks st_byteenable byteenable Input gtaskbytesperword
-add_interface_port st_slave_tasks st_address address Input gtaskaddr
-add_interface_port st_slave_tasks st_writedata writedata Input gtaskbytesperword*8
-add_interface_port st_slave_tasks st_write write Input 1
+add_interface_port st_slave_tasks iSt_read read Input 1
+add_interface_port st_slave_tasks oSt_readdata readdata Output gtaskbytesperword*8
+add_interface_port st_slave_tasks iSt_byteenable byteenable Input gtaskbytesperword
+add_interface_port st_slave_tasks iSt_address address Input gtaskaddr
+add_interface_port st_slave_tasks iSt_writedata writedata Input gtaskbytesperword*8
+add_interface_port st_slave_tasks iSt_write write Input 1
 # |
 # +-----------------------------------
 
@@ -312,11 +312,11 @@ set_interface_property sc_slave_control writeWaitTime 0
 
 set_interface_property sc_slave_control ENABLED true
 
-add_interface_port sc_slave_control sc_read read Input 1
-add_interface_port sc_slave_control sc_address address Input gcontroladdr
-add_interface_port sc_slave_control sc_writedata writedata Input gcontrolbytesperword*8
-add_interface_port sc_slave_control sc_readdata readdata Output gcontrolbytesperword*8
-add_interface_port sc_slave_control sc_write write Input 1
-add_interface_port sc_slave_control sc_byteenable byteenable Input gcontrolbytesperword
+add_interface_port sc_slave_control iSc_read read Input 1
+add_interface_port sc_slave_control iSc_address address Input gcontroladdr
+add_interface_port sc_slave_control iSc_writedata writedata Input gcontrolbytesperword*8
+add_interface_port sc_slave_control oSc_readdata readdata Output gcontrolbytesperword*8
+add_interface_port sc_slave_control iSc_write write Input 1
+add_interface_port sc_slave_control iSc_byteenable byteenable Input gcontrolbytesperword
 # |
 # +-----------------------------------

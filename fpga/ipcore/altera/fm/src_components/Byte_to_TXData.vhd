@@ -1,17 +1,41 @@
--- ****************************************************************
--- *                       Byte_to_TXData                         *
--- ****************************************************************
--- *                                                              *
--- * Convertes an 1Byte Stream to the Ethernet TXData             *
--- *                                                              *
--- * in:  iData[7..0] 1Byte input Data                            *
--- * out: oTxD[1..0]  Output Data                                 *
--- *                                                              *
--- *--------------------------------------------------------------*
--- *                                                              *
--- * 27.04.12 V1.0 created Byte_to_TXData  by Sebastian Muelhausen*
--- *                                                              *
--- ****************************************************************
+-------------------------------------------------------------------------------
+--! @file Byte_to_TXData.vhd
+--! @brief Convertes an 1Byte Stream to the Ethernet TXData of a RMII-PHY
+-------------------------------------------------------------------------------
+--
+--    (c) B&R, 2014
+--
+--    Redistribution and use in source and binary forms, with or without
+--    modification, are permitted provided that the following conditions
+--    are met:
+--
+--    1. Redistributions of source code must retain the above copyright
+--       notice, this list of conditions and the following disclaimer.
+--
+--    2. Redistributions in binary form must reproduce the above copyright
+--       notice, this list of conditions and the following disclaimer in the
+--       documentation and/or other materials provided with the distribution.
+--
+--    3. Neither the name of B&R nor the names of its
+--       contributors may be used to endorse or promote products derived
+--       from this software without prior written permission. For written
+--       permission, please contact office@br-automation.com
+--
+--    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+--    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+--    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+--    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+--    COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+--    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+--    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+--    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+--    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+--    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+--    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+--    POSSIBILITY OF SUCH DAMAGE.
+--
+-------------------------------------------------------------------------------
+
 
 --! Use standard ieee library
 library ieee;
@@ -25,91 +49,83 @@ library work;
 --! use global library
 use work.global.all;
 
+
+--! This is the entity of the Byte to RMII converter
 entity Byte_to_TXData is
     port(
-        clk, reset: in std_logic;
-        iData: in std_logic_vector(cByteLength-1 downto 0);
-        oTXD:  out std_logic_vector(1 downto 0)
+        iClk        : in std_logic;                                 --! clk
+        iReset      : in std_logic;                                 --! reset
+        iData       : in std_logic_vector(cByteLength-1 downto 0);  --! Byte in
+        oTXD        : out std_logic_vector(1 downto 0)              --! TXD RMII out
     );
 end Byte_to_TXData;
 
+
+--! @brief Byte_to_TXData architecture
+--! @details Convertes an 1Byte Stream to the Ethernet TXData
 architecture two_seg_arch of Byte_to_TXData is
 
-    --Counter, which controlls the DMux
-    component Basic_Cnter
-        generic(gCntWidth: natural := 2);
-        port(
-          clk, reset:   in std_logic;
-          iClear:       in std_logic;
-          iEn   :       in std_logic;
-          iStartValue:  in std_logic_vector(gCntWidth-1 downto 0);
-          iEndValue:    in std_logic_vector(gCntWidth-1 downto 0);
-          oQ:           out std_logic_vector(gCntWidth-1 downto 0);
-          oOv:          out std_logic
-        );
-    end component;
+    signal sync     : std_logic;                                --! Synchronise Reset
+    signal cnt      : std_logic_vector(1 downto 0);             --! Select signal of Mux
+    signal data     : std_logic_vector(cByteLength-1 downto 0); --! Delayed data
+    signal txD_reg  : std_logic_vector(1 downto 0);             --! TX-data with register
 
-    --Demultiplexer for selecting
-    component Mux2D
-    generic(gWordsWidth: natural:=8;
-            gWordsNo:   natural:=8;
-            gWidthSel:  natural:=3);
-    port(
-        iData:  in std_logic_vector(gWordsWidth*gWordsNo-1 downto 0);
-        iSel:   in std_logic_vector(gWidthSel-1 downto 0);
-        oWord:  out std_logic_vector(gWordsWidth-1 downto 0)
-        );
-    end component;
-
-
-    component sync_newData
-        generic(WIDTH: natural:=8);
-        port(
-            clk, reset: in std_logic;
-            iData: in std_logic_vector(WIDTH-1 downto 0);
-            oData: out std_logic_vector(WIDTH-1 downto 0);
-            oSync: out std_logic
-        );
-    end component;
-
-    signal sync:    std_logic;                          --Synchronise Reset
-    signal cnt:     std_logic_vector(1 downto 0);
-    signal data:    std_logic_vector(cByteLength-1 downto 0);
-    signal TXD_Reg: std_logic_vector(1 downto 0);
 begin
 
     --! @brief Registers
     --! - Storing with asynchronous reset
     registers :
-    process(clk, reset)
+    process(iClk, iReset)
     begin
-        if reset='1' then
-            oTXD <= (others => '0');
+        if iReset='1' then
+            oTXD    <= (others => '0');
 
-        elsif rising_edge(clk) then
-            oTXD<=TXD_Reg;
+        elsif rising_edge(iClk) then
+            oTXD    <= txD_reg;
 
         end if;
     end process;
 
 
-    syncronizer : sync_newData
-    generic map (WIDTH => cByteLength)
-    port map (clk=>clk, reset=>reset, iData => iData, oData => data, oSync => sync);
-
-    cnt_2bit : Basic_Cnter      --Counter, which controlls the DMux
-    generic map (gCntWidth => 2)
+    --! @brief Synchronize the module to the data stream
+    syncronizer : work.sync_newData
+    generic map (gWidth  => cByteLength)
     port map (
-            clk=>clk, reset=>reset,
-            iClear=>sync,iEn => '1', iStartValue=>(others=>'0'),iEndValue=>(others=>'1'),
-            oQ => cnt, oOv => open);
+            iClk    => iClk,
+            iReset  => iReset,
+            iData   => iData,
+            oData   => data,
+            oSync   => sync
+            );
 
 
-    DMux8to2:Mux2D
-    generic map(gWordsWidth=>2,gWordsNo=>4,gWidthSel=>2)
-    port map(iData=>data,iSel=>cnt,
-            oWord=>TXD_Reg);
+    --! @brief Multiplexer selection
+    cnt_2bit : work.Basic_Cnter      --Counter, which controlls the DMux
+    generic map (gCntWidth  => 2)
+    port map (
+            iClk        => iClk,
+            iReset      => iReset,
+            iClear      => sync,
+            iEn         => '1',
+            iStartValue => (others=>'0'),
+            iEndValue   => (others=>'1'),
+            oQ          => cnt,
+            oOv         => open
+            );
 
+
+    --! @brief Multiplexer
+    DMux8to2 : work.Mux2D
+    generic map(
+                gWordsWidth => 2,
+                gWordsNo    => 4,
+                gWidthSel   => 2
+                )
+    port map(
+            iData   => data,
+            iSel    => cnt,
+            oWord   => txD_reg
+            );
 
 
 end two_seg_arch;

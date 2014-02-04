@@ -1,24 +1,47 @@
+-------------------------------------------------------------------------------
+--! @file FrameManipulator.vhd
+--! @brief Ethernet-Framemanipulator toplevel for Altera
+--! @details IP-core, which achieves different tasks of manipulations from a POWERLINK Slave
+-------------------------------------------------------------------------------
+--
+--    (c) B&R, 2014
+--
+--    Redistribution and use in source and binary forms, with or without
+--    modification, are permitted provided that the following conditions
+--    are met:
+--
+--    1. Redistributions of source code must retain the above copyright
+--       notice, this list of conditions and the following disclaimer.
+--
+--    2. Redistributions in binary form must reproduce the above copyright
+--       notice, this list of conditions and the following disclaimer in the
+--       documentation and/or other materials provided with the distribution.
+--
+--    3. Neither the name of B&R nor the names of its
+--       contributors may be used to endorse or promote products derived
+--       from this software without prior written permission. For written
+--       permission, please contact office@br-automation.com
+--
+--    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+--    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+--    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+--    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+--    COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+--    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+--    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+--    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+--    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+--    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+--    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+--    POSSIBILITY OF SUCH DAMAGE.
+--
+-------------------------------------------------------------------------------
 
--- ******************************************************************************************
--- *                            Ethernet-Framemanipulator                                   *
--- ******************************************************************************************
--- *                                                                                        *
--- * IP-core, which achieves different tasks of manipulations from a POWERLINK Slave        *
--- *                                                                                        *
--- * All further information are available in the corresponding documentations:             *
--- *  - FM_Userdoku                                                                         *
--- *  - FM_Developementdoku                                                                 *
--- *                                                                                        *
--- *----------------------------------------------------------------------------------------*
--- *                                                                                        *
--- * 09.08.12 V1.0      Ethernet-Framemanipulator               by Sebastian Muelhausen     *
--- * 25.11.13 V1.1      Updated for safety manipulations        by Sebastian Muelhausen     *
--- *                                                                                        *
--- ******************************************************************************************
-
-
+--! Use standard ieee library
 library ieee;
+--! Use logic elements
 use ieee.std_logic_1164.all;
+--! Use numeric functions
 use ieee.numeric_std.all;
 
 --! Use work library
@@ -28,452 +51,270 @@ use work.global.all;
 --! use fm library
 use work.framemanipulatorPkg.all;
 
+
+--! This is the entity is the top-module of the Framemanipulator
 entity FrameManipulator is
-    generic(gBytesOfTheFrameBuffer: natural:=1600;
-            gTaskBytesPerWord:      natural:=4;
-            gTaskAddr:              natural:=8;
-            gTaskCount:             natural:=32;
-            gControlBytesPerWord:   natural:=1;
-            gControlAddr:           natural:=1;
-            gBytesOfThePackBuffer   : natural := 16000;
-            gNumberOfPackets        : natural := 500
+    generic(gBytesOfTheFrameBuffer  : natural := 1600;  --! Frame buffer size
+            gTaskBytesPerWord       : natural := 4;     --! Word width of Avalon slave for transfer of tasks
+            gTaskAddr               : natural := 8;     --! Address width of Avalon slave for transfer of tasks
+            gTaskCount              : natural := 32;    --! Number of configurable tasks
+            gControlBytesPerWord    : natural := 1;     --! Word width of Avalon slave for transfer of operations
+            gControlAddr            : natural := 1;     --! Address width of Avalon slave for transfer of operations
+            gBytesOfThePackBuffer   : natural := 16000; --! Packet buffer size
+            gNumberOfPackets        : natural := 500    --! Maximal number of safety packets
             );
     port(
-        clk_50, reset:  in std_logic;
-        s_clk:          in std_logic;
-        iRXDV:          in std_logic;
-        iRXD:           in std_logic_vector(1 downto 0);
+        iClk50          : in std_logic;                     --! clock
+        iReset          : in std_logic;                     --! reset
+        iS_clk          : in std_logic;                     --! clock of avalon slaves
+        iRXDV           : in std_logic;                     --! Data valid RMII
+        iRXD            : in std_logic_vector(1 downto 0);  --! Data RMII
 
         --Avalon Slave Task Memory
-        st_address:     in std_logic_vector(gTaskAddr-1 downto 0);
-        st_writedata:   in std_logic_vector(gTaskBytesPerWord*cByteLength-1 downto 0);
-        st_write:       in std_logic;
-        st_read:        in std_logic;
-        st_readdata:    out std_logic_vector(gTaskBytesPerWord*cByteLength-1 downto 0);
-        st_byteenable:  in std_logic_vector(gTaskBytesPerWord-1 downto 0);
+        iSt_address     : in std_logic_vector(gTaskAddr-1 downto 0);                            --! Task avalon slave address
+        iSt_writedata   : in std_logic_vector(gTaskBytesPerWord*cByteLength-1 downto 0);        --! Task avalon slave data write
+        iSt_write       : in std_logic;                                                         --! Task avalon slave write enable
+        iSt_read        : in std_logic;                                                         --! Task avalon slave read enable
+        oSt_readdata    : out std_logic_vector(gTaskBytesPerWord*cByteLength-1 downto 0);       --! Task avalon slave read data
+        iSt_byteenable  : in std_logic_vector(gTaskBytesPerWord-1 downto 0);                    --! Task avalon slave byte enable
 
         --Avalon Slave Contol Memory
-        sc_address:     in std_logic_vector(gControlAddr-1 downto 0);
-        sc_writedata:   in std_logic_vector(gControlBytesPerWord*cByteLength-1 downto 0);
-        sc_write:       in std_logic;
-        sc_read:        in std_logic;
-        sc_readdata:    out std_logic_vector(gControlBytesPerWord*cByteLength-1 downto 0);
-        sc_byteenable:  in std_logic_vector(gControlBytesPerWord-1 downto 0);
+        iSc_address     : in std_logic_vector(gControlAddr-1 downto 0);                         --! FM-control avalon slave address
+        iSc_writedata   : in std_logic_vector(gControlBytesPerWord*cByteLength-1 downto 0);     --! FM-control avalon slave data write
+        iSc_write       : in std_logic;                                                         --! FM-control avalon slave write enable
+        iSc_read        : in std_logic;                                                         --! FM-control avalon slave read enable
+        oSc_readdata    : out std_logic_vector(gControlBytesPerWord*cByteLength-1 downto 0);    --! FM-control avalon slave read data
+        iSc_byteenable  : in std_logic_vector(gControlBytesPerWord-1 downto 0);                 --! FM-control avalon slave byte enable
 
-        oTXData:        out std_logic_vector(1 downto 0);
-        oTXDV:          out std_logic;
+        oTXData         : out std_logic_vector(1 downto 0); --! RMII data out
+        oTXDV           : out std_logic;                    --! RMII data valid
 
-        oLED:           out std_logic_vector(1 downto 0)
+        oLED            : out std_logic_vector(1 downto 0)  --! LED out
      );
 end FrameManipulator;
 
+
+--! @brief FrameManipulator architecture
+--! @details IP-core, which achieves different tasks of manipulations from a POWERLINK Slave
+--! All further information are available in the corresponding documentations:
+--!   - FM_Userdoku
+--!   - FM_Developementdoku
 architecture two_seg_arch of FrameManipulator is
 
-    --Interface to the PL-Slave with two avalon slave ---------------------------------------
-    --contains the register for tasks, operations and errors
-    component Memory_Interface
-        generic(gSlaveTaskWordWidth:    natural:=4*cByteLength;
-                gSlaveTaskAddrWidth:    natural:=8;
-                gTaskWordWidth:         natural:=8*cByteLength;
-                gTaskAddrWidth:         natural:=5;
-                gSlaveControlWordWidth: natural:=cByteLength;
-                gSlaveControlAddrWidth: natural:=1
-            );
-        port(
-            clk, reset:             in std_logic;
-            s_clk:                  in std_logic;   --avalon bus clock domain
-            --Avalon Slave Task Memory
-            st_address:             in std_logic_vector(gSlaveTaskAddrWidth-1 downto 0);
-            st_writedata:           in std_logic_vector(gSlaveTaskWordWidth-1 downto 0);
-            st_write:               in std_logic;
-            st_read:                in std_logic;
-            st_readdata:            out std_logic_vector(gSlaveTaskWordWidth-1 downto 0);
-            st_byteenable:          in std_logic_vector((gSlaveTaskWordWidth/8)-1 downto 0);
-            --Avalon Slave Contol Memory
-            sc_address:             in std_logic_vector(gSlaveControlAddrWidth-1 downto 0);
-            sc_writedata:           in std_logic_vector(gSlaveControlWordWidth-1 downto 0);
-            sc_write:               in std_logic;
-            sc_read:                in std_logic;
-            sc_readdata:            out std_logic_vector(gSlaveControlWordWidth-1 downto 0);
-            sc_byteenable:          in std_logic_vector(gSlaveControlWordWidth/8-1 downto 0);
-            --status signals
-            iError_Addr_Buff_OV:    in std_logic;   --Error: Overflow address-buffer
-            iError_Frame_Buff_OV:   in std_logic;   --Error: Overflow data-buffer
-            iError_Packet_Buff_OV:  in std_logic;   --Error: Overflow packet-buffer
-            iError_Task_Conf:       in std_logic;   --Error: Wrong task configuration
-            oStartTest:             out std_logic;  --start a new series of test
-            oStopTest:              out std_logic;  --aborts the current test
-            oClearMem               : out std_logic;  --clear all tasks
-            oResetPaketBuff:        out std_logic;  --Resets the packet FIFO and removes the packet lag
-            iTestActive:            in std_logic;   --Series of test is active
-            --task signals
-            iRdTaskAddr:            in std_logic_vector(gTaskAddrWidth-1 downto 0);     --task selection
-            oTaskSettingData:       out std_logic_vector(2*gTaskWordWidth-1 downto 0);  --settings of the task
-            oTaskCompFrame:         out std_logic_vector(gTaskWordWidth-1 downto 0);    --header-data of the manipulated frame
-            oTaskCompMask:          out std_logic_vector(gTaskWordWidth-1 downto 0)     --mask-data of the manipulated frame
-        );
-    end component;
+    constant cDataBuffAddrWidth     : natural := LogDualis(gBytesOfTheFrameBuffer);             --! Address width of the frame buffer
+
+    constant cSlaveTaskWordWidth    : natural := gTaskBytesPerWord*cByteLength;                 --! Word width of the avalon bus of the task transfer
+    constant cSlaveTaskAddr         : natural := gTaskAddr;                                     --! Address width of the avalon slave for the task transfer
+
+    constant cTaskWordWidth         : natural := cSlaveTaskWordWidth*2;                         --! doubled memory width for the internal process
+
+    constant cTaskAddrWidth         : natural := LogDualis(gTaskCount);                         --! Address width of the task memory
+
+    constant cCycleCntWidth         : natural := cByteLength;                                   --! maximal number of POWERLINK cycles for the series of test, 1 Byte
+    constant cManiSettingWidth      : natural := 2*cTaskWordWidth-cCycleCntWidth-cByteLength;   --! Width of the task parameters
 
 
-    --component for receiving the PL-Frame --------------------------------------------------
-    --Checking the Preamble and Ethertype, generating sync signal and storing the Frames in
-    -- the Data-Buffer
-    component Frame_Receiver
-        generic(
-                gBuffAddrWidth      : natural :=11;
-                gEtherTypeFilter    : std_logic_vector :=X"88AB_0800_0806"  --filter
-                );
-        port(
-            clk, reset:         in std_logic;
-            iRXDV:              in std_logic;                                   --frame data valid
-            iRXD:               in std_logic_vector(1 downto 0);                --frame data (2bit)
-            --write data
-            oData:              out std_logic_vector(cByteLength-1 downto 0);   --frame data (1byte)
-            oWrBuffAddr:        out std_logic_vector(gBuffAddrWidth-1 downto 0);--write address
-            oWrBuffEn :         out std_logic;                                  --write data-memory enable
-            iDataStartAddr:     in std_logic_vector(gBuffAddrWidth-1 downto 0); --first byte of frame data
-            oDataEndAddr:       out std_logic_vector(gBuffAddrWidth-1 downto 0);--last byte of frame data
-            --truncate frame
-            iTaskCutEn:         in std_logic;                                   --cut task enabled
-            iTaskCutData:       in std_logic_vector(gBuffAddrWidth-1 downto 0); --cut task setting
-            --start process-unit
-            oStartFrameProcess: out std_logic;                                  --valid frame received
-            oFrameEnded:        out std_logic;                                  --frame ended
-            oFrameSync:         out std_logic                                   --synchronization signal
-        );
-    end component;
-
-
-    --internal Memory for the frame data ----------------------------------------------------
-    --stores data and manipulates the header files
-    component Data_Buffer
-        generic(gDataWidth:         natural:=cByteLength;
-                gDataAddrWidth:     natural:=11;
-                gNoOfHeadMani:      natural:=8;
-                gTaskWordWidth:     natural:=8*cByteLength;
-                gManiSettingWidth:  natural:=14*cByteLength
-                );
-        port
-        (
-            clk, reset:             in std_logic;
-            iData:                  in std_logic_vector(gDataWidth-1 downto 0);         --write data    Port A
-            iRdAddress:             in std_logic_vector(gDataAddrWidth-1 downto 0);     --read address  Port B
-            iRdEn:                  in std_logic;                                       --read enable   Port B
-            iWrAddress:             in std_logic_vector(gDataAddrWidth-1 downto 0);     --write address Port A
-            iWrEn:                  in std_logic  := '0';                               --write enable  Port A
-            oData:                  out std_logic_vector(gDataWidth-1 downto 0);        --read data     Port B
-            oError_Frame_Buff_OV:   out std_logic;                                      --Error flag, when overflow occurs
-
-            iManiSetting:           in std_logic_vector(gManiSettingWidth-1 downto 0);  --header manipulation setting
-            iTaskManiEn:            in std_logic;                                       --header manipulation enable
-            iDataStartAddr:         in std_logic_vector(gDataAddrWidth-1 downto 0)      --start byte of manipulated header
-        );
-    end component;
-
-
-    --component for processing the frame ----------------------------------------------------
-    --selects the task for the selected frame and handles the addresses of the stored data
-    component Process_Unit
-        generic(gDataBuffAddrWidth:     natural:=11;
-                gTaskWordWidth:         natural:=8*cByteLength;
-                gTaskAddrWidth:         natural:=5;
-                gManiSettingWidth:      natural:=14*cByteLength;
-                gSafetySetting          : natural :=5*cByteLength;  --5 Byte safety setting
-                gCycleCntWidth:         natural:=cByteLength;
-                gSize_Mani_Time:        natural:=5*cByteLength;
-                gNoOfDelFrames:         natural:=255
-                );
-        port(
-            clk, reset:             in std_logic;
-
-            iStartFrameProcess:     in std_logic;   --valid frame received
-            iFrameEnded:            in std_logic;   --frame has reached its end
-            iFrameSync:             in std_logic;   --synchronization of the frame-data-stream
-            iStartTest:             in std_logic;   --start of a series of test
-            iStopTest:              in std_logic;   --abort of a series of test
-            iClearMem               : in std_logic; --clear all tasks
-            iNextFrame:             in std_logic;   --a new frame could be created
-            iSafetyActive:          in std_logic;   --safety manipulations are active
-            oTestActive:            out std_logic;  --Series of Test is active => Flag for PRes
-            oStartNewFrame:         out std_logic;  --data of a new frame is available
-            oError_Task_Conf:       out std_logic;  --Error: Wrong task configuration
-
-            --compare Tasks from memory with the frame
-            iData:                  in std_logic_vector(cByteLength-1 downto 0);        --frame-data-stream
-            iTaskSettingData:       in std_logic_vector(gTaskWordWidth*2-1 downto 0);   --task settings
-            iTaskCompFrame:         in std_logic_vector(gTaskWordWidth-1 downto 0);     --frame-selection-data
-            iTaskCompMask:          in std_logic_vector(gTaskWordWidth-1 downto 0);     --frame-selection-mask
-            oRdTaskAddr:            out std_logic_vector(gTaskAddrWidth-1 downto 0);    --task selection
-
-            --Start/End address of the frame-data
-            oDataInStartAddr:       out std_logic_vector(gDataBuffAddrWidth-1 downto 0);--position of the first written byte of the next frame
-            iDataInEndAddr:         in std_logic_vector(gDataBuffAddrWidth-1 downto 0); --position of the last written byte of the current frame
-            oDataOutStartAddr:      out std_logic_vector(gDataBuffAddrWidth-1 downto 0);--position of the first written byte of the created frame
-            oDataOutEndAddr:        out std_logic_vector(gDataBuffAddrWidth-1 downto 0);--position of the last written byte of the created frame
-            oError_Addr_Buff_OV:    out std_logic;                                      --Error: Overflow of the address-buffer
-
-            --Manipulations in other components
-            oTaskManiEn:            out std_logic;                                      --task: header manipulation
-            oTaskCutEn:             out std_logic;                                      --task: cut frame
-            oDistCrcEn:             out std_logic;
-            oTaskSafetyEn:          out std_logic;                                      --task: safety packet manipulation
-            oSafetyFrame:           out std_logic;                                      --current frame matches to the current or last safety task
-            oFrameIsSoc:            out std_logic;                                      --current frame is a SoC
-            oManiSetting:           out std_logic_vector(gManiSettingWidth-1 downto 0); --settings of the manipulations
-            oSafetySetting          : out std_logic_vector(gSafetySetting-1 downto 0)   --Setting of the current or last safety task
-         );
-    end component;
-
-
-    --component for generating a new frame --------------------------------------------------
-    --creates a new frame with new generated Preamble and CRC
-    component Frame_Creator
-        generic(gDataBuffAddrWidth      : natural:=11;
-                gSafetyPackSelCntWidth  : natural :=8);
-        port(
-            clk, reset:     in std_logic;
-
-            iStartNewFrame: in std_logic;   --data for a new frame is available
-            oNextFrame:     out std_logic;  --frame-creator is ready for new data
-            iDistCrcEn:     in std_logic;   --task: distortion of frame-CRC
-
-            --Read data buffer
-            iDataStartAddr: in std_logic_vector(gDataBuffAddrWidth-1 downto 0); --Position of the first frame-byte
-            iDataEndAddr:   in std_logic_vector(gDataBuffAddrWidth-1 downto 0); --Position of the last
-            iData:          in std_logic_vector(cByteLength-1 downto 0);        --frame-data
-            oRdBuffAddr:    out std_logic_vector(gDataBuffAddrWidth-1 downto 0);--read address of data-memory
-            oRdBuffEn:      out std_logic;                                      --read-enable
-
-            --Safety packet exchange
-            iPacketExchangeEn   : in std_logic;                                    --Start of the exchange of the safety packet
-            iPacketStart        : in std_logic_vector(cByteLength-1 downto 0);     --Start of safety packet
-            iPacketSize         : in std_logic_vector(cByteLength-1 downto 0);     --Size of safety packet
-            iPacketData         : in std_logic_vector(cByteLength-1 downto 0);     --Data of the new safety packet
-            iPacketExtension    : in std_logic;                                    --Exchange will be extended for several tacts
-            oExchangeData       : out std_logic;                                   --Exchanging safety data
-
-            --Output
-            oTXData :       out std_logic_vector(1 downto 0);   --frame-output-data
-            oTXDV:          out std_logic                       --frame-output-data-valid
-        );
-    end component;
-
-
-    --component for safety packet manipulations ---------------------------------------------
-    --! @brief Stores and exchanges safety packets
-    component Packet_Buffer
-        generic(gSafetySetting      : natural:=5*cByteLength;
-                gPacketAddrWidth    : natural := 14;    --enough for 500 Packets with the size of 28 Bytes
-                gAddrMemoryWidth    : natural := 9);    --Width of address memory, should store at least 500 addresses
-        port(
-            clk, reset              : in std_logic;
-
-            iResetPaketBuff         : in std_logic;     --Resets the packet FIFO and removes the packet lag
-            iStopTest               : in std_logic;     --abort of a series of test
-            oSafetyActive           : out std_logic;    --safety manipulations are active
-            oError_Packet_Buff_OV   : out std_logic;    --Error: Overflow packet-buffer
-
-            iTaskSafetyEn           : in std_logic;                                     --task: safety packet manipulation
-            iExchangeData           : in std_logic;                                     --exchange packet data
-            iSafetyFrame            : in std_logic;                                     --current frame matches to the current or last safety task
-            iFrameIsSoc             : in std_logic;                                     --current frame is a SoC
-            iManiSetting            : in std_logic_vector(gSafetySetting-1 downto 0);   --settings of the manipulations
-            oPacketExchangeEn       : out std_logic;                                    --Start of the exchange of the safety packet
-            oPacketExtension        : out std_logic;                                    --Exchange will be extended for several tacts
-            oPacketStart            : out std_logic_vector(cByteLength-1 downto 0);     --Start of safety packet
-            oPacketSize             : out std_logic_vector(cByteLength-1 downto 0);     --Size of safety packet
-
-            iFrameData              : in std_logic_vector(cByteLength-1 downto 0);      --Data of the current frame
-            oPacketData             : out std_logic_vector(cByteLength-1 downto 0)      --Data of the safety packet
-         );
-    end component;
-
-
-    constant cDataBuffAddrWidth:    natural:=LogDualis(gBytesOfTheFrameBuffer);
-
-    constant cSlaveTaskWordWidth:   natural:=gTaskBytesPerWord*8;
-    constant cSlaveTaskAddr:        natural:=gTaskAddr;
-
-    constant cTaskWordWidth:        natural:=cSlaveTaskWordWidth*2;
-    --doubled memory width for the internal process
-    constant cTaskAddrWidth:        natural:=LogDualis(gTaskCount);
-
-    constant cCycleCntWidth:        natural:=cByteLength;   --maximal number of POWERLINK cycles for the series of test, 1 Byte
-    constant cManiSettingWidth:     natural:=2*cTaskWordWidth-cCycleCntWidth-8;
-
-
-    constant cPacketAddrWidth       : natural:=LogDualis(gBytesOfThePackBuffer);
-    constant cAddrMemoryWidth       : natural:=LogDualis(gNumberOfPackets);
+    constant cPacketAddrWidth       : natural := LogDualis(gBytesOfThePackBuffer);              --! Address width of the packet buffer
+    constant cAddrMemoryWidth       : natural := LogDualis(gNumberOfPackets);                   --! Address width of the packet address-Fifo
 
 
     --signals memory interface
-    signal Error_Addr_Buff_OV   : std_logic;
-    signal Error_Frame_Buff_OV  : std_logic;
-    signal Error_Packet_Buff_OV : std_logic;
-    signal Error_Task_Conf      : std_logic;
+    signal error_addrBuffOv     : std_logic;                                        --! Error: Address buffer overflow
+    signal error_frameBuffOv    : std_logic;                                        --! Error: Frame buffer overflow
+    signal error_packetBuffOv   : std_logic;                                        --! Error: Packet buffer overflow
+    signal error_taskConf       : std_logic;                                        --! Error: Wrong configuration
 
-    signal RdTaskAddr:          std_logic_vector(cTaskAddrWidth-1 downto 0);
+    signal rdTaskAddr           : std_logic_vector(cTaskAddrWidth-1 downto 0);      --! Read address of task memory
 
-    signal TaskSettingData:     std_logic_vector(2*cTaskWordWidth-1 downto 0);
-    signal TaskCompFrame:       std_logic_vector(cTaskWordWidth-1 downto 0);
-    signal TaskCompMask:        std_logic_vector(cTaskWordWidth-1 downto 0);
+    signal taskSettingData      : std_logic_vector(2*cTaskWordWidth-1 downto 0);    --! Paramters of the task
+    signal taskCompFrame        : std_logic_vector(cTaskWordWidth-1 downto 0);      --! Frame data of the task
+    signal taskCompMask         : std_logic_vector(cTaskWordWidth-1 downto 0);      --! Frame mask of the task
 
     --writing data buffer
-    signal WrBuffAddr:          std_logic_vector(cDataBuffAddrWidth-1 downto 0);
-    signal WrBuffEn:            std_logic;
-    signal DataToBuff:          std_logic_vector(cByteLength-1 downto 0);
+    signal wrBuffAddr           : std_logic_vector(cDataBuffAddrWidth-1 downto 0);  --! Write address of frame buffer
+    signal wrBuffEn             : std_logic;                                        --! Write enable of frame buffer
+    signal dataToBuff           : std_logic_vector(cByteLength-1 downto 0);         --! Write data of frame buffer
 
-    signal DataInStartAddr:     std_logic_vector(cDataBuffAddrWidth-1 downto 0):=(others=>'0');
-    signal DataInEndAddr:       std_logic_vector(cDataBuffAddrWidth-1 downto 0);
+    signal dataInStartAddr      : std_logic_vector(cDataBuffAddrWidth-1 downto 0);  --! Write start address of frame buffer
+    signal dataInEndAddr        : std_logic_vector(cDataBuffAddrWidth-1 downto 0);  --! Write end address of frame buffer
 
     --reading data buffer
-    signal RdBuffAddr:          std_logic_vector(cDataBuffAddrWidth-1 downto 0);
-    signal RdBuffEn:            std_logic;
-    signal DataFromBuff:        std_logic_vector(cByteLength-1 downto 0);
+    signal rdBuffAddr           : std_logic_vector(cDataBuffAddrWidth-1 downto 0);  --! Read address of frame buffer
+    signal rdBuffEn             : std_logic;                                        --! Read enable of frame buffer
+    signal dataFromBuff         : std_logic_vector(cByteLength-1 downto 0);         --! Read data of frame buffer
 
-    signal DataOutStartAddr:    std_logic_vector(cDataBuffAddrWidth-1 downto 0);
-    signal DataOutEndAddr:      std_logic_vector(cDataBuffAddrWidth-1 downto 0);
+    signal dataOutStartAddr     : std_logic_vector(cDataBuffAddrWidth-1 downto 0);  --! Read start address of frame buffer
+    signal dataOutEndAddr       : std_logic_vector(cDataBuffAddrWidth-1 downto 0);  --! Read ed address of frame buffer
 
     --Incoming frames
-    signal StartFrameProc:      std_logic;
-    signal FrameEnded:          std_logic;
-    signal FrameSync:           std_logic;
+    signal startFrameProc       : std_logic;    --! Start processing the current frame
+    signal frameEnded           : std_logic;    --! Incomming frame ended
+    signal frameSync            : std_logic;    --! New frame started => Synchronous reset of modules
 
     --Test control
-    signal StartTest:           std_logic;
-    signal StopTest:            std_logic;
-    signal ClearMem             : std_logic;
-    signal TestActive:          std_logic;
+    signal startTest            : std_logic;    --! Start series of test
+    signal stopTest             : std_logic;    --! Stop series of test
+    signal clearMem             : std_logic;    --! Clear Memory
+    signal testActive           : std_logic;    --! Series of test is active
 
     --Outgoing frames
-    signal NextFrame:           std_logic;
-    signal StartNewFrame:       std_logic;
-    signal FrameIsSoc           : std_logic;                                    --current frame is a SoC
+    signal nextFrame            : std_logic;    --! New frame can be put out
+    signal startNewFrame        : std_logic;    --! data for a new frame is available
+    signal frameIsSoc           : std_logic;    --! current frame is a SoC
 
     --Manipulations
-    signal ManiSetting:         std_logic_vector(cManiSettingWidth-1 downto 0);
-    signal TaskManiEn:          std_logic;
-    signal TaskCutEn:           std_logic;
-    signal DistCrcEn:           std_logic;
+    signal maniSetting          : std_logic_vector(cManiSettingWidth-1 downto 0);   --! Setting of current manipulation
+    signal taskManiEn           : std_logic;                                        --! Enable frame header manipulation
+    signal taskCutEn            : std_logic;                                        --! Enable frame truncation
+    signal distCrcEn            : std_logic;                                        --! Enable CRC distortion
 
 
-    --Reducing ManiSetting via alias
-    alias ManiSetting_Cut      : std_logic_vector(cDataBuffAddrWidth-1 downto 0)
-                                    is ManiSetting(cDataBuffAddrWidth+cTaskWordWidth-1 downto cTaskWordWidth);
+    --! Reducing ManiSetting of cut-manipulation via alias
+    alias maniSetting_cut      : std_logic_vector(cDataBuffAddrWidth-1 downto 0)
+                                    is maniSetting(cDataBuffAddrWidth+cTaskWordWidth-1 downto cTaskWordWidth);
 
 
     --Safety
-    signal TaskSafetyEn         : std_logic;                                        --task: safety packet manipulation
-    signal SafetyFrame          : std_logic;                                        --Current Frame is a selected safety frame
-    signal PacketExchangeEn     : std_logic;                                        --Start of the exchange of the safety packet
-    signal PacketStart          : std_logic_vector(cByteLength-1 downto 0);         --Start of safety packet
-    signal PacketSize           : std_logic_vector(cByteLength-1 downto 0);         --Size of safety packet
-    signal PacketData           : std_logic_vector(cByteLength-1 downto 0);         --Data of the safety packet
-    signal SafetyActive         : std_logic;                                        --safety manipulations are active
-    signal ExchangeData         : std_logic;                                        --exchange packet data
-    signal PacketExtension      : std_logic;                                        --Exchange will be extended for several tacts
-    signal SafetySetting        : std_logic_vector(cSettingSize.Safety-1 downto 0); --Setting of the current or last safety task
-    signal ResetPaketBuff       : std_logic;                                        --Resets the packet FIFO and removes the packet lag
+    signal taskSafetyEn         : std_logic;                                        --! task: safety packet manipulation
+    signal safetyFrame          : std_logic;                                        --! Current Frame is a selected safety frame
+    signal packetExchangeEn     : std_logic;                                        --! Start of the exchange of the safety packet
+    signal packetStart          : std_logic_vector(cByteLength-1 downto 0);         --! Start of safety packet
+    signal packetSize           : std_logic_vector(cByteLength-1 downto 0);         --! Size of safety packet
+    signal packetData           : std_logic_vector(cByteLength-1 downto 0);         --! Data of the safety packet
+    signal safetyActive         : std_logic;                                        --! safety manipulations are active
+    signal exchangeData         : std_logic;                                        --! exchange packet data
+    signal packetExtension      : std_logic;                                        --! Exchange will be extended for several tacts
+    signal safetySetting        : std_logic_vector(cSettingSize.Safety-1 downto 0); --! Setting of the current or last safety task
+    signal resetPaketBuff       : std_logic;                                        --! Resets the packet FIFO and removes the packet lag
 
     --Output
-    signal TXData:              std_logic_vector(1 downto 0);
-    signal TXDV:                std_logic;
-
+    signal txData               : std_logic_vector(1 downto 0); --! RMII TX-data
+    signal txDv                 : std_logic;                    --! RMII TX-data-valid
 
 
 begin
 
 
-    --Interface to the PL-Slave with two avalon slave ---------------------------------------
-    --s_clk for the clock domain of the avSalon slaves
-    --st_...    avalon slave for the different tasks
-    --sc_...    avalon slave for the control registers
-    --FM Error collection   => iError_Addr_Buff_OV, iError_Frame_Buff_OV
-    --output of test status => oStartTest, oStopTest
-    --reading tasks         => iRdTaskAddr
-    --output tasks          => oTaskSettingData, oTaskCompFrame, oTaskCompMask
-    -----------------------------------------------------------------------------------------
-    M_Interface:Memory_Interface
-    generic map(gSlaveTaskWordWidth=>cSlaveTaskWordWidth,       gSlaveTaskAddrWidth=>cSlaveTaskAddr,
-                gTaskWordWidth=>cTaskWordWidth,                 gTaskAddrWidth=>cTaskAddrWidth,
-                gSlaveControlWordWidth=>gControlBytesPerWord*8, gSlaveControlAddrWidth=>gControlAddr)
+    --! @brief Interface to the PL-Slave with two avalon slave
+    --! s_clk for the clock domain of the avSalon slaves
+    --! st_...    avalon slave for the different tasks
+    --! sc_...    avalon slave for the control registers
+    --! FM Error collection   => iError_Addr_Buff_OV, iError_Frame_Buff_OV
+    --! output of test status => oStartTest, oStopTest
+    --! reading tasks         => iRdTaskAddr
+    --! output tasks          => oTaskSettingData, oTaskCompFrame, oTaskCompMask
+    M_Interface : work.Memory_Interface
+    generic map(
+                gSlaveTaskWordWidth     => cSlaveTaskWordWidth,
+                gSlaveTaskAddrWidth     => cSlaveTaskAddr,
+                gTaskWordWidth          => cTaskWordWidth,
+                gTaskAddrWidth          => cTaskAddrWidth,
+                gSlaveControlWordWidth  => gControlBytesPerWord*cByteLength,
+                gSlaveControlAddrWidth  => gControlAddr
+                )
     port map(
-            clk=>clk_50,s_clk=>s_clk,       reset=>reset,
+            iClk                    => iClk50,
+            iS_clk                  => iS_clk,
+            iReset                  => iReset,
 
-            st_address=>st_address,     st_writedata=>st_writedata,     st_write=>st_write,
-            st_read=>st_read,           st_readdata=>st_readdata,       st_byteenable=>st_byteenable,
+            iSt_address             => iSt_address,
+            iSt_writedata           => iSt_writedata,
+            iSt_write               => iSt_write,
+            iSt_read                => iSt_read,
+            oSt_readdata            => oSt_readdata,
+            iSt_byteenable          => iSt_byteenable,
 
-            sc_address=>sc_address,     sc_writedata=>sc_writedata,     sc_write=>sc_write,
-            sc_read=>sc_read,           sc_readdata=>sc_readdata,       sc_byteenable=>sc_byteenable,
+            iSc_address             => iSc_address,
+            iSc_writedata           => iSc_writedata,
+            iSc_write               => iSc_write,
+            iSc_read                => iSc_read,
+            oSc_readdata            => oSc_readdata,
+            iSc_byteenable          => iSc_byteenable,
 
-            iError_Addr_Buff_OV     => Error_Addr_Buff_OV,
-            iError_Frame_Buff_OV    => Error_Frame_Buff_OV,
-            iError_Packet_Buff_OV   => Error_Packet_Buff_OV,
-            iError_Task_Conf        => Error_Task_Conf,
-            oStartTest              => StartTest,
-            oStopTest               => StopTest,
-            oClearMem               => ClearMem,
-            oResetPaketBuff         => ResetPaketBuff,
-            iTestActive             => TestActive,
+            iError_addrBuffOv       => error_addrBuffOv,
+            iError_frameBuffOv      => error_frameBuffOv,
+            iError_packetBuffOv     => error_packetBuffOv,
+            iError_taskConf         => error_taskConf,
+            oStartTest              => startTest,
+            oStopTest               => stopTest,
+            oClearMem               => clearMem,
+            oResetPaketBuff         => resetPaketBuff,
+            iTestActive             => testActive,
 
-            iRdTaskAddr             => RdTaskAddr,
-            oTaskSettingData=>TaskSettingData,  oTaskCompFrame=>TaskCompFrame,  oTaskCompMask=>TaskCompMask
+            iRdTaskAddr             => rdTaskAddr,
+            oTaskSettingData        => taskSettingData,
+            oTaskCompFrame          => taskCompFrame,
+            oTaskCompMask           => taskCompMask
             );
 
 
 
-    --component for receiving the PL-Frame --------------------------------------------------
-    --convert the 2bit data stream to 1 byte    => oData
-    --storing the Frames in the Data-Buffer     => oWrBuffAddr, oWrBuffEn
-    --Checking the Preamble                     => oFrameStart
-    --generating sync signal for Process-Unit   => oFrameSync
-    -----------------------------------------------------------------------------------------
-    F_Receiver : Frame_Receiver
+    --! @brief component for receiving the PL-Frame
+    --! convert the 2bit data stream to 1 byte    => oData
+    --! storing the Frames in the Data-Buffer     => oWrBuffAddr, oWrBuffEn
+    --! Checking the Preamble                     => oFrameStart
+    --! generating sync signal for Process-Unit   => oFrameSync
+    F_Receiver : work.Frame_Receiver
     generic map(
                 gBuffAddrWidth      => cDataBuffAddrWidth,
                 gEtherTypeFilter    => cEth.FilterEtherType
                 )
     port map (
-            clk=>clk_50, reset=>reset,
-            iRXDV => iRXDV,     iRXD =>  iRXD,              iDataStartAddr=>DataInStartAddr,
-            iTaskCutEn=>TaskCutEn,  iTaskCutData=>ManiSetting_Cut,
+            iClk                => iClk50,
+            iReset              => iReset,
+            iRXDV               => iRXDV,
+            iRXD                => iRXD,
+            iDataStartAddr      => dataInStartAddr,
+            iTaskCutEn          => taskCutEn,
+            iTaskCutData        => maniSetting_cut,
 
-            oData => DataToBuff,                oWrBuffAddr => WrBuffAddr,  oWrBuffEn => WrBuffEn,
-            oDataEndAddr => DataInEndAddr,
-            oStartFrameProcess =>StartFrameProc,oFrameEnded=>FrameEnded,    oFrameSync=>FrameSync);
+            oData               => dataToBuff,
+            oWrBuffAddr         => wrBuffAddr,
+            oWrBuffEn           => wrBuffEn,
+            oDataEndAddr        => dataInEndAddr,
+            oStartFrameProcess  => startFrameProc,
+            oFrameEnded         => frameEnded,
+            oFrameSync          => frameSync
+            );
 
 
 
-    --internal Memory for the frame data ----------------------------------------------------
-    --storing frame data        => iData, iWrAddress, iWrEn
-    --reading frame data        => oData, iRdAddress, iRdEn
-    --manipuating header files  => iTaskManiEn, iManiSetting, iDataStartAddr(for offset)
-    --Overflow detection        => oError_Frame_Buff_OV
-    -----------------------------------------------------------------------------------------
-    D_Buffer : Data_Buffer
-    generic map(gDataWidth          =>  cByteLength,
-                gDataAddrWidth      =>  cDataBuffAddrWidth,
-                gNoOfHeadMani       =>  cParam.NoOfHeadMani,
-                gTaskWordWidth      =>  cTaskWordWidth,
-                gManiSettingWidth   =>  cManiSettingWidth)
+    --! @brief internal Memory for the frame data
+    --! storing frame data        => iData, iWrAddress, iWrEn
+    --! reading frame data        => oData, iRdAddress, iRdEn
+    --! manipuating header files  => iTaskManiEn, iManiSetting, iDataStartAddr(for offset)
+    --! Overflow detection        => oerror_frameBuffOv
+    D_Buffer : work.Data_Buffer
+    generic map(gDataWidth          => cByteLength,
+                gDataAddrWidth      => cDataBuffAddrWidth,
+                gNoOfHeadMani       => cParam.NoOfHeadMani,
+                gTaskWordWidth      => cTaskWordWidth,
+                gManiSettingWidth   => cManiSettingWidth)
     port map (
-            clk=>clk_50,reset=>reset,
-            iData => DataToBuff,        iWrAddress => WrBuffAddr, iWrEn => WrBuffEn,
-            oData => DataFromBuff,      iRdAddress => RdBuffAddr, iRdEn=>RdBuffEn,
+            iClk                    => iClk50,
+            iReset                  => iReset,
+            iData                   => dataToBuff,
+            iWrAddress              => wrBuffAddr,
+            iWrEn                   => wrBuffEn,
+            oData                   => dataFromBuff,
+            iRdAddress              => rdBuffAddr,
+            iRdEn                   => rdBuffEn,
 
-            iTaskManiEn=>TaskManiEn,    iManiSetting=>ManiSetting,iDataStartAddr=>DataInStartAddr,
-            oError_Frame_Buff_OV=>Error_Frame_Buff_OV);
+            iTaskManiEn             => taskManiEn,
+            iManiSetting            => maniSetting,
+            iDataStartAddr          => dataInStartAddr,
+            oError_frameBuffOv      => error_frameBuffOv
+            );
 
 
 
-    --component for processing the frame ----------------------------------------------------
-    --handles the whole series of test      =>  iStartTest, iStopTest
-    --compares the frame with the tasks-mem =>  iData, iTaskSettingData,
-    --                                          iTaskCompFrame, iTaskCompMask
-    --manages the space of the data memory  =>  oDataInStartAddr, iDataInEndAddr,
-    --                                          oDataOutStartAddr,oDataOutEndAddr
-    -----------------------------------------------------------------------------------------
-    P_Unit:Process_Unit
+    --! @brief component for processing the frame
+    --! handles the whole series of test      =>  iStartTest, iStopTest
+    --! compares the frame with the tasks-mem =>  iData, iTaskSettingData,
+    --!                                           iTaskCompFrame, iTaskCompMask
+    --! manages the space of the data memory  =>  oDataInStartAddr, iDataInEndAddr,
+    --!                                           oDataOutStartAddr,oDataOutEndAddr
+    P_Unit : work.Process_Unit
     generic map(gDataBuffAddrWidth  =>  cDataBuffAddrWidth,
                 gTaskWordWidth      =>  cTaskWordWidth,
                 gTaskAddrWidth      =>  cTaskAddrWidth,
@@ -483,101 +324,127 @@ begin
                 gSize_Mani_Time     =>  cSettingSize.Delay,
                 gNoOfDelFrames      =>  cParam.NoDelFrames)
     port map(
-            clk                 => clk_50,              reset           => reset,
+            iClk                => iClk50,
+            iReset              => iReset,
 
-            iStartFrameProcess  => StartFrameProc,
-            iFrameEnded         => FrameEnded,
-            iFrameSync          => FrameSync,
-            iNextFrame          => NextFrame,
-            iStartTest          => StartTest,
-            iStopTest           => StopTest,
-            iClearMem           => ClearMem,
-            iSafetyActive       => SafetyActive,
-            oTestActive         => TestActive,
-            oStartNewFrame      => StartNewFrame,
-            oError_Task_Conf    => Error_Task_Conf,
+            iStartFrameProcess  => startFrameProc,
+            iFrameEnded         => frameEnded,
+            iFrameSync          => frameSync,
+            iNextFrame          => nextFrame,
+            iStartTest          => startTest,
+            iStopTest           => stopTest,
+            iClearMem           => clearMem,
+            iSafetyActive       => safetyActive,
+            oTestActive         => testActive,
+            oStartNewFrame      => startNewFrame,
+            oError_taskConf     => error_taskConf,
 
-            iData               => DataToBuff,
-            iTaskSettingData    => TaskSettingData,     iTaskCompFrame  => TaskCompFrame,
-            iTaskCompMask       => TaskCompMask,        oRdTaskAddr     => RdTaskAddr,
+            iData               => dataToBuff,
+            iTaskSettingData    => taskSettingData,
+            iTaskCompFrame      => taskCompFrame,
+            iTaskCompMask       => taskCompMask,
+            oRdTaskAddr         => rdTaskAddr,
 
-            oDataInStartAddr    => DataInStartAddr,     iDataInEndAddr  => DataInEndAddr,
-            oDataOutStartAddr   => DataOutStartAddr,    oDataOutEndAddr => DataOutEndAddr,
-            oError_Addr_Buff_OV => Error_Addr_Buff_OV,
+            oDataInStartAddr    => dataInStartAddr,
+            iDataInEndAddr      => dataInEndAddr,
+            oDataOutStartAddr   => dataOutStartAddr,
+            oDataOutEndAddr     => dataOutEndAddr,
+            oError_addrBuffOv   => error_addrBuffOv,
 
-            oTaskManiEn         => TaskManiEn,          oTaskCutEn      => TaskCutEn,
-            oDistCrcEn          => DistCrcEn,           oTaskSafetyEn   => TaskSafetyEn,
-            oSafetyFrame        => SafetyFrame,         oFrameIsSoc     => FrameIsSoc,
-            oManiSetting        => ManiSetting,         oSafetySetting  => SafetySetting);
+            oTaskManiEn         => taskManiEn,
+            oTaskCutEn          => taskCutEn,
+            oDistCrcEn          => distCrcEn,
+            oTaskSafetyEn       => taskSafetyEn,
+            oSafetyFrame        => safetyFrame,
+            oFrameIsSoc         => frameIsSoc,
+            oManiSetting        => maniSetting,
+            oSafetySetting      => safetySetting
+            );
 
 
 
-
-
-
-    --component for generating a new frame --------------------------------------------------
-    --readout the data-buffer and generates a new frame
-    -----------------------------------------------------------------------------------------
-    F_Creator : Frame_Creator
+    --! @brief component for generating a new frame
+    --! readout the data-buffer and generates a new frame
+    F_Creator : work.Frame_Creator
     generic map(gDataBuffAddrWidth      => cDataBuffAddrWidth,
                 gSafetyPackSelCntWidth  => cParam.SafetyPackSelCntWidth)
     port map (
-            clk=>clk_50,                                reset               => reset,
+            iClk                => iClk50,
+            iReset              => iReset,
 
-            iStartNewFrame      => StartNewFrame,       oNextFrame          => NextFrame,
-            iDistCrcEn          => DistCrcEn,
+            iStartNewFrame      => startNewFrame,
+            oNextFrame          => nextFrame,
+            iDistCrcEn          => distCrcEn,
 
-            iDataEndAddr        => DataOutEndAddr,      iDataStartAddr      => DataOutStartAddr,
-            iData               => DataFromBuff,        oRdBuffEn           => RdBuffEn,
-            oRdBuffAddr         => RdBuffAddr,
+            iDataEndAddr        => dataOutEndAddr,
+            iDataStartAddr      => dataOutStartAddr,
+            iData               => dataFromBuff,
+            oRdBuffEn           => rdBuffEn,
+            oRdBuffAddr         => rdBuffAddr,
 
-            iPacketExchangeEn   => PacketExchangeEn,
-            iPacketStart        => PacketStart,         iPacketSize         => PacketSize,
-            iPacketData         => PacketData,          iPacketExtension    => PacketExtension,
-            oExchangeData       => ExchangeData,
+            iPacketExchangeEn   => packetExchangeEn,
+            iPacketStart        => packetStart,
+            iPacketSize         => packetSize,
+            iPacketData         => packetData,
+            iPacketExtension    => packetExtension,
+            oExchangeData       => exchangeData,
 
-            oTXData             => TXData,              oTXDV               => TXDV);
+            oTXData             => txData,
+            oTXDV               => txDv
+            );
 
 
-    --component for safety packet manipulations ---------------------------------------------
-    --stores and exchanges safety packets
-    -----------------------------------------------------------------------------------------
-    P_Buff : Packet_Buffer
+    --! @brief component for safety packet manipulations
+    --! stores and exchanges safety packets
+    P_Buff : work.Packet_Buffer
     generic map(gSafetySetting      => cSettingSize.Safety,
                 gPacketAddrWidth    => cPacketAddrWidth,
                 gAddrMemoryWidth    => cAddrMemoryWidth)
     port map(
-            clk                 => clk_50,              reset                   => reset,
+            iClk                    => iClk50,
+            iReset                  => iReset,
 
-            iResetPaketBuff         => ResetPaketBuff,
-            iStopTest               => StopTest,
-            oSafetyActive           => SafetyActive,
-            oError_Packet_Buff_OV   => Error_Packet_Buff_OV,
+            iResetPaketBuff         => resetPaketBuff,
+            iStopTest               => stopTest,
+            oSafetyActive           => safetyActive,
+            oError_packetBuffOv     => error_packetBuffOv,
 
-            iTaskSafetyEn       => TaskSafetyEn,        iExchangeData           => ExchangeData,
-            iSafetyFrame        => SafetyFrame,         iFrameIsSoc             => FrameIsSoc,
-            iManiSetting        => SafetySetting,
-            oPacketExchangeEn   => PacketExchangeEn,    oPacketExtension        => PacketExtension,
-            oPacketStart        => PacketStart,         oPacketSize             => PacketSize,
+            iTaskSafetyEn           => taskSafetyEn,
+            iExchangeData           => exchangeData,
+            iSafetyFrame            => safetyFrame,
+            iFrameIsSoc             => frameIsSoc,
+            iManiSetting            => safetySetting,
+            oPacketExchangeEn       => packetExchangeEn,
+            oPacketExtension        => packetExtension,
+            oPacketStart            => packetStart,
+            oPacketSize             => packetSize,
 
-            iFrameData          => DataFromBuff,        oPacketData             => PacketData);
+            iFrameData              => dataFromBuff,
+            oPacketData             => packetData
+            );
 
 
 
 
-    -- register to decrease timing problems of the PHY --------------------------------
-    -- better alternative: 100MHz clock with synchronization on the falling edge
-    process(clk_50)
+    --! @brief register to decrease timing problems of the PHY
+    --! better alternative: 100MHz clock with synchronization on the falling edge
+    --! - Storing with asynchronous reset
+    registers :
+    process(iClk50, iReset)
     begin
-        if clk_50'event and clk_50='1' then
-            oTXData<=TXData;
-            oTXDV<=TXDV;
+        if iReset='1' then
+            oTXData <= "00";
+            oTXDV   <= '0';
+
+        elsif rising_edge(iClk50) then
+            oTXData <= txData;
+            oTXDV   <= txDv;
+
         end if;
     end process;
 
-
     --output of active and abort LED:
-    oLED    <= TestActive & StopTest;
+    oLED    <= testActive & stopTest;
 
 
 end two_seg_arch;

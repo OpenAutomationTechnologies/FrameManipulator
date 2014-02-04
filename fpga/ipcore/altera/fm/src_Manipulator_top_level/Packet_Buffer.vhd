@@ -57,12 +57,13 @@ entity Packet_Buffer is
             gAddrMemoryWidth    : natural := 9              --!Width of address memory, should store at least 500 addresses
             );
     port(
-        clk, reset              : in std_logic;     --! clk, reset
+        iClk                     : in std_logic;     --! clk
+        iReset                   : in std_logic;     --! reset
         -- Operation signals
         iResetPaketBuff         : in std_logic;     --!Resets the packet FIFO and removes the packet lag
         iStopTest               : in std_logic;     --!abort of a series of test
         oSafetyActive           : out std_logic;    --!safety manipulations are active
-        oError_Packet_Buff_OV   : out std_logic;    --!Error: Overflow packet-buffer
+        oError_packetBuffOv     : out std_logic;    --!Error: Overflow packet-buffer
         -- Manipulation signals
         iTaskSafetyEn           : in std_logic;                                     --!task: safety packet manipulation
         iExchangeData           : in std_logic;                                     --!exchange packet data
@@ -83,87 +84,6 @@ end Packet_Buffer;
 --! @brief Packet_Buffer architecture
 --! @details This is the top-module for exchanging and manipulating safety packets.
 architecture two_seg_arch of Packet_Buffer is
-
-    --! @brief Control of the safety packet manipulation
-    component PacketControl_FSM
-        port(
-            clk, reset          : in std_logic;
-            iSafetyTask         : in std_logic_vector(cByteLength-1 downto 0);  --!current safety task
-            iTaskSafetyEn       : in std_logic;                                 --!task: safety packet manipulation
-            iStopTest           : in std_logic;                                 --!abort of a series of test
-            iResetPaketBuff     : in std_logic;                                 --!Resets the packet FIFO and removes the packet lag
-            oPacketExchangeEn   : out std_logic;                                --!Start of the exchange of the safety packet
-            oPacketExtension    : out std_logic;                                --!Exchange will be extended for several tacts
-            oSafetyActive       : out std_logic;                                --!safety manipulations are active
-
-            iNewTask            : in std_logic;     --!current manipulation task changed
-            iSn2Pre             : in std_logic;     --!SN2 packet arrives before DUT packet
-            iDutNoPaGap         : in std_logic;     --!there is no gap after DUT packet
-            iSnNoPaGap          : in std_logic;     --!there is no gap after SN2 packet
-            iExchangeData       : in std_logic;     --!exchange packet data
-            iLagReached         : in std_logic;     --!reached required number of delayed packets
-
-            iSafetyFrame        : in std_logic;     --!current frame matches to the current or last safety task
-            iFrameIsSoc         : in std_logic;     --!current frame is a SoC
-
-            iCntEnd             : in std_logic;     --!all packets were manipulated
-            oCntEn              : out std_logic;    --!enable packet counter
-            oCntClear           : out std_logic;    --!reset packet counter
-
-            oStore              : out std_logic;    --!store current frame data into memory
-            oRead               : out std_logic;    --!load data from current memory
-            oClonePacketEx      : out std_logic;    --!exchange current packet with clone
-            oZeroPacketEx       : out std_logic;    --!exchange current packet with zero pattern
-            oTwistPacketEx      : out std_logic;    --!exchange packets in opposite order
-
-            oPacketStartSoc     : out std_logic;    --!change manipulation start to SoC Timestamp
-            oPacketStartPayload : out std_logic;    --!change manipulation start to safety packet payload
-            oPacketStartSN2     : out std_logic     --!change manipulation start to SN2
-            );
-    end component;
-
-
-    --! @brief Packet Memory.
-    component Packet_Memory
-        generic(gPacketAddrWidth    : natural := 14;    --!enough for 500 Packets with the size of 28 Bytes
-                gAddrMemoryWidth    : natural := 9);    --!Width of address memory, should store at least 500 addresses
-        port(
-            clk, reset              : in std_logic;
-            iSafetyFrame            : in std_logic;                                         --!current frame matches to the current or last safety task
-            iTaskSafety             : in std_logic_vector(cByteLength-1 downto 0);          --!current safety task
-            iResetPaketBuff         : in std_logic;                                         --!Resets the packet FIFO and removes the packet lag
-            oNumDelPackets          : out std_logic_vector(gAddrMemoryWidth-1 downto 0);    --!Number of delayed packets
-            oError_Packet_Buff_OV   : out std_logic;                                        --!Error: Overflow packet-buffer
-
-            iClonePacketEx          : in std_logic;    --!exchange current packet with clone
-            iZeroPacketEx           : in std_logic;    --!exchange current packet with zero pattern
-            iTwistPacketEx          : in std_logic;    --!exchange packets in opposite order
-
-            iWrEn                   : in std_logic;
-            iRdEn                   : in std_logic;
-            iData                   : in std_logic_vector(cByteLength-1 downto 0);
-            oData                   : out std_logic_vector(cByteLength-1 downto 0)
-            );
-    end component;
-
-
-    --! @brief Counter for the safety frames
-    component Basic_Cnter
-        generic(
-                gCntWidth   : natural := 2  --! Width of the coutner
-                );
-        port(
-            clk, reset  : in std_logic;                                 --! clk, reset
-            iClear      : in std_logic;                                 --! Synchronous reset
-            iEn         : in std_logic;                                 --! Cnt Enable
-            iStartValue : in std_logic_vector(gCntWidth-1 downto 0);    --! Init value
-            iEndValue   : in std_logic_vector(gCntWidth-1 downto 0);    --! End value
-            oQ          : out std_logic_vector(gCntWidth-1 downto 0);   --! Current value
-            oOv         : out std_logic                                 --! Overflow
-        );
-    end component;
-
-
 
     -- Definitions
     --!First byte of the safety Payload (+4 = Byte Number 5). If Payload doesn't exist, it's the first subframe CRC
@@ -200,59 +120,59 @@ architecture two_seg_arch of Packet_Buffer is
 
     --! Typedef for registers
     type tReg is record
-        SocReg          : std_logic;                                    --!Register for edge detection of iFrameIsSoc
-        TaskSafety      : std_logic_vector(cByteLength-1 downto 0);     --!Current safety task
-        PacketStart     : std_logic_vector(cByteLength-1 downto 0);     --!Start position of safety packet
-        PacketSize      : std_logic_vector(cByteLength-1 downto 0);     --!Size of safety packet
-        NoOfPackets     : std_logic_vector(2*cByteLength-1 downto 0);   --!Number of manipulated Packets
-        Packet2Start    : std_logic_vector(cByteLength-1 downto 0);     --!Start position of SL2 packet
+        socReg          : std_logic;                                    --!Register for edge detection of iFrameIsSoc
+        taskSafety      : std_logic_vector(cByteLength-1 downto 0);     --!Current safety task
+        packetStart     : std_logic_vector(cByteLength-1 downto 0);     --!Start position of safety packet
+        packetSize      : std_logic_vector(cByteLength-1 downto 0);     --!Size of safety packet
+        noOfPackets     : std_logic_vector(2*cByteLength-1 downto 0);   --!Number of manipulated Packets
+        packet2Start    : std_logic_vector(cByteLength-1 downto 0);     --!Start position of SL2 packet
     end record;
 
 
     --! Init for registers
     constant cRegInit   : tReg :=(
-                                SocReg          => '0',
-                                TaskSafety      => (others=>'0'),
-                                PacketStart     => (others=>'0'),
-                                PacketSize      => (others=>'0'),
-                                NoOfPackets     => (others=>'0'),
-                                Packet2Start    => (others=>'0')
+                                socReg          => '0',
+                                taskSafety      => (others=>'0'),
+                                packetStart     => (others=>'0'),
+                                packetSize      => (others=>'0'),
+                                noOfPackets     => (others=>'0'),
+                                packet2Start    => (others=>'0')
                                 );
 
     signal reg          : tReg; --! Registers
     signal reg_next     : tReg; --! Next value of registers
 
     -- Flags
-    signal DutNoPaGap       : std_logic;    --!there is no gap after DUT packet
-    signal SnNoPaGap        : std_logic;    --!there is no gap after the SN packet
-    signal Sn2Pre           : std_logic;    --!SN2 packet arrives bevore DUT packet
-    signal NewTask          : std_logic;    --!task has changed
-    signal LagReached       : std_logic;    --!reached required number of delayed packets
+    signal dutNoPaGap       : std_logic;    --!there is no gap after DUT packet
+    signal snNoPaGap        : std_logic;    --!there is no gap after the SN packet
+    signal sn2Pre           : std_logic;    --!SN2 packet arrives bevore DUT packet
+    signal newTask          : std_logic;    --!task has changed
+    signal lagReached       : std_logic;    --!reached required number of delayed packets
 
-    signal NumDelPackets    : std_logic_vector(gAddrMemoryWidth-1 downto 0);    --!Number of delayed packets
+    signal numDelPackets    : std_logic_vector(gAddrMemoryWidth-1 downto 0);    --!Number of delayed packets
 
 
     -- signals for counting the safety frames
-    signal FrameCntEnd      : std_logic;                                --!all packets were manipulated
-    signal FrameCntClear    : std_logic;                                --!reset of cnter, when no task is active
-    signal FrameCntEn       : std_logic;                                --!cnter enabled, when safety frame is incoming
-    signal FrameCnt         : std_logic_vector(reg.NoOfPackets'range);  --!number of incomming frames
+    signal frameCntEnd      : std_logic;                                --!all packets were manipulated
+    signal frameCntClear    : std_logic;                                --!reset of cnter, when no task is active
+    signal frameCntEn       : std_logic;                                --!cnter enabled, when safety frame is incoming
+    signal frameCnt         : std_logic_vector(reg.NoOfPackets'range);  --!number of incomming frames
 
     -- temporary signals
-    signal PacketData_temp  : std_logic_vector(oPacketData'range);      --! Temporary signal of oPacketData
+    signal packetData_temp  : std_logic_vector(oPacketData'range);      --! Temporary signal of oPacketData
 
     -- Data signals
     signal storeData            : std_logic;                                --! Store data stream
     signal readData             : std_logic;                                --! Send data from packet memory
     signal memoryData           : std_logic_vector(cByteLength-1 downto 0); --! Data from packet memory
-    signal ClonePacketEx        : std_logic;                                --! Clone incoming safety packet
-    signal ZeroPacketEx         : std_logic;                                --! Remove incomng safety packet
-    signal TwistPacketEx        : std_logic;                                --! Put out safety packets in reverse order
+    signal clonePacketEx        : std_logic;                                --! Clone incoming safety packet
+    signal zeroPacketEx         : std_logic;                                --! Remove incomng safety packet
+    signal twistPacketEx        : std_logic;                                --! Put out safety packets in reverse order
 
     -- Packet manipulation Flags
-    signal PacketStartSoc       : std_logic;    --! Manipulation starts at SoC Timestamp
-    signal PacketStartPayload   : std_logic;    --! Manipulation starts at safety packet payload
-    signal PacketStartSN2       : std_logic;    --! Manipulation starts at packet of the second SN
+    signal packetStartSoc       : std_logic;    --! Manipulation starts at SoC Timestamp
+    signal packetStartPayload   : std_logic;    --! Manipulation starts at safety packet payload
+    signal packetStartSN2       : std_logic;    --! Manipulation starts at packet of the second SN
 
 begin
 
@@ -264,12 +184,12 @@ begin
     --! @brief Registers
     --! - Storing with asynchronous reset
     registers :
-    process(clk, reset)
+    process(iClk, iReset)
     begin
-        if reset='1' then
+        if iReset='1' then
             reg <= cRegInit;
 
-        elsif rising_edge(clk) then
+        elsif rising_edge(iClk) then
             reg <= reg_next;
 
         end if;
@@ -286,19 +206,19 @@ begin
         NewTask     <= '0';
 
         reg_next            <= reg;
-        reg_next.SocReg     <= iFrameIsSoc;
+        reg_next.socReg     <= iFrameIsSoc;
 
         --if safty task starts (positive edge of iFrameIsSoc)
-        if (reg.SocReg   = '0' and iFrameIsSoc   = '1') then
+        if (reg.socReg   = '0' and iFrameIsSoc   = '1') then
             --store Settings:
-            reg_next.TaskSafety     <= iManiSetting_TaskSafety;
-            reg_next.PacketStart    <= iManiSetting_PacketStart;
-            reg_next.PacketSize     <= iManiSetting_PacketSize;
-            reg_next.NoOfPackets    <= iManiSetting_NoOfPackets;
-            reg_next.Packet2Start   <= iManiSetting_Packet2Start;
+            reg_next.taskSafety     <= iManiSetting_TaskSafety;
+            reg_next.packetStart    <= iManiSetting_PacketStart;
+            reg_next.packetSize     <= iManiSetting_PacketSize;
+            reg_next.noOfPackets    <= iManiSetting_NoOfPackets;
+            reg_next.packet2Start   <= iManiSetting_Packet2Start;
 
             --update task, when changed
-            if  reg.TaskSafety /= iManiSetting_TaskSafety then
+            if  reg.taskSafety /= iManiSetting_TaskSafety then
                 NewTask <= '1';
 
             end if;
@@ -308,32 +228,32 @@ begin
     end process;
 
     --!there is no gap after the DUT packet
-    DutNoPaGap  <= '1' when (unsigned(reg.PacketStart) =
-                            unsigned(reg.Packet2Start)  +   unsigned(reg.PacketSize))
+    dutNoPaGap  <= '1' when (unsigned(reg.packetStart) =
+                            unsigned(reg.packet2Start)  +   unsigned(reg.packetSize))
                         else '0';
 
     --!there is no gap after the SN packet
-    SnNoPaGap   <= '1' when (unsigned(reg.Packet2Start) =
-                            unsigned(reg.PacketStart)   +   unsigned(reg.PacketSize))
+    snNoPaGap   <= '1' when (unsigned(reg.packet2Start) =
+                            unsigned(reg.packetStart)   +   unsigned(reg.packetSize))
                         else '0';
 
     --!SN2 packet arrives bevore DUT packet
-    Sn2Pre      <= '1' when unsigned(reg.PacketStart)   >   unsigned(reg.Packet2Start)
+    sn2Pre      <= '1' when unsigned(reg.packetStart)   >   unsigned(reg.packet2Start)
                         else '0';
 
     --!There should be at least as many packets delayed
-    LagReached  <= '1' when unsigned(NumDelPackets)     >=  unsigned(reg.NoOfPackets)
+    lagReached  <= '1' when unsigned(numDelPackets)     >=  unsigned(reg.noOfPackets)
                         else '0';
 
 
     --! @brief Control of the safety packet manipulation
     --! - Handles the different tasks
     --! - Controls data stream and storage of data
-    Control : PacketControl_FSM
+    Control : work.PacketControl_FSM
     port map(
-            clk                => clk,
-            reset               => reset,
-            iSafetyTask         => reg.TaskSafety,
+            iClk                => iClk,
+            iReset              => iReset,
+            iSafetyTask         => reg.taskSafety,
             iTaskSafetyEn       => iTaskSafetyEn,
             iStopTest           => iStopTest,
             iResetPaketBuff     => iResetPaketBuff,
@@ -341,29 +261,29 @@ begin
             oPacketExtension    => oPacketExtension,
             oSafetyActive       => oSafetyActive,
 
-            iNewTask            => NewTask,
-            iDutNoPaGap         => DutNoPaGap,
-            iSnNoPaGap          => SnNoPaGap,
-            iSn2Pre             => Sn2Pre,
+            iNewTask            => newTask,
+            iDutNoPaGap         => dutNoPaGap,
+            iSnNoPaGap          => snNoPaGap,
+            iSn2Pre             => sn2Pre,
             iExchangeData       => iExchangeData,
-            iLagReached         => LagReached,
+            iLagReached         => lagReached,
 
             iSafetyFrame        => iSafetyFrame,
             iFrameIsSoc         => iFrameIsSoc,
 
-            iCntEnd             => FrameCntEnd,
-            oCntEn              => FrameCntEn,
-            oCntClear           => FrameCntClear,
+            iCntEnd             => frameCntEnd,
+            oCntEn              => frameCntEn,
+            oCntClear           => frameCntClear,
 
             oStore              => storeData,
             oRead               => readData,
-            oClonePacketEx      => ClonePacketEx,
-            oZeroPacketEx       => ZeroPacketEx,
-            oTwistPacketEx      => TwistPacketEx,
+            oClonePacketEx      => clonePacketEx,
+            oZeroPacketEx       => zeroPacketEx,
+            oTwistPacketEx      => twistPacketEx,
 
-            oPacketStartSoc     => PacketStartSoc,
-            oPacketStartPayload => PacketStartPayload,
-            oPacketStartSN2     => PacketStartSN2
+            oPacketStartSoc     => packetStartSoc,
+            oPacketStartPayload => packetStartPayload,
+            oPacketStartSN2     => packetStartSN2
             );
 
 
@@ -378,30 +298,30 @@ begin
     --! - Collects data from SoC at Masquerade task
     --! - Collects safety packet from other SN at Insertion task
     combManiEn :
-    process(reg, PacketStartPayload, PacketStartSoc, PacketStartSN2)
+    process(reg, packetStartPayload, packetStartSoc, packetStartSN2)
     begin
 
-        oPacketStart        <= reg.PacketStart;
-        oPacketSize         <= reg.PacketSize;
+        oPacketStart        <= reg.packetStart;
+        oPacketSize         <= reg.packetSize;
 
 
-        if PacketStartPayload = '1' then    --manipulation of packet payload
+        if packetStartPayload = '1' then    --manipulation of packet payload
 
             oPacketStart    <= std_logic_vector(cFirstPayloadByte +
-                                            unsigned(reg.PacketStart));     --manipulation of the payload
+                                            unsigned(reg.packetStart));     --manipulation of the payload
             oPacketSize     <= (0=>'1',others=>'0');                        --with the first byte
 
         end if;
 
 
-        if PacketStartSoc='1' then          --collecting of SoC time
+        if packetStartSoc='1' then          --collecting of SoC time
             oPacketStart        <= cSocTimeStart;
 
         end if;
 
 
-        if PacketStartSN2='1' then          --collecting data of SN2
-            oPacketStart        <= reg.Packet2Start;
+        if packetStartSN2='1' then          --collecting data of SN2
+            oPacketStart        <= reg.packet2Start;
 
         end if;
     end process;
@@ -415,22 +335,22 @@ begin
     --! @brief Safety frame counter
     --! - Counts every safety frame, when active
     --! - Reset at inactive manipulation
-    frameCnter:Basic_Cnter
+    frameCnter : work.Basic_Cnter
     generic map(gCntWidth   => reg.NoOfPackets'length)
     port map(
-            clk         => clk,
-            reset       => reset,
-            iClear      => FrameCntClear,
-            iEn         => FrameCntEn,
+            iClk        => iClk,
+            iReset      => iReset,
+            iClear      => frameCntClear,
+            iEn         => frameCntEn,
             iStartValue => (others=>'0'),
             iEndValue   => (others=>'1'),
-            oQ          => FrameCnt,
+            oQ          => frameCnt,
             oOv         => open
             );
 
 
     --oOv can't be used. NoOfPackets can change anytime
-    FrameCntEnd <= '1' when unsigned(FrameCnt)>=unsigned(reg.NoOfPackets) else '0';
+    frameCntEnd <= '1' when unsigned(frameCnt)>=unsigned(reg.noOfPackets) else '0';
 
     -----------------------------------------------------------------------------------------
 
@@ -444,28 +364,28 @@ begin
     comb_data:
     process(iFrameData, storeData, readData, memoryData, PacketStartPayload)
     begin
-        PacketData_temp     <= (others=>'0');       --Also output at manipulation Loss
+        packetData_temp     <= (others=>'0');       --Also output at manipulation Loss
 
-        if PacketStartPayload='1' then
-            PacketData_temp <= not iFrameData;      --Incorrect Data with toggeling the first payload byte
+        if packetStartPayload='1' then
+            packetData_temp <= not iFrameData;      --Incorrect Data with toggeling the first payload byte
 
         end if;
 
 
         if (storeData='1' and readData='0') then    --Pass frame data at data collection
-            PacketData_temp <= iFrameData;
+            packetData_temp <= iFrameData;
 
         end if;
 
 
         if readData='1' then
-            PacketData_temp <= memoryData;
+            packetData_temp <= memoryData;
 
         end if;
 
     end process;
 
-    oPacketData <= PacketData_temp;
+    oPacketData <= packetData_temp;
 
 
     --! @brief Packet Memory
@@ -473,21 +393,21 @@ begin
     --! - Output of safety packets in correct or reverse order
     --! - Delete packets at Loss or Delay task
     --! - Error output at overflow of the packet buffer
-    PacketRAM : Packet_Memory
+    PacketRAM : work.Packet_Memory
     generic map(gPacketAddrWidth    => gPacketAddrWidth,
                 gAddrMemoryWidth    => gAddrMemoryWidth)
     port map(
-            clk                     => clk,
-            reset                   => reset,
+            iClk                    => iClk,
+            iReset                  => iReset,
             iSafetyFrame            => iSafetyFrame,
             iTaskSafety             => reg.TaskSafety,
             iResetPaketBuff         => iResetPaketBuff,
-            oNumDelPackets          => NumDelPackets,
-            oError_Packet_Buff_OV   => oError_Packet_Buff_OV,
+            oNumDelPackets          => numDelPackets,
+            oError_packetBuffOv     => oError_packetBuffOv,
 
-            iClonePacketEx          => ClonePacketEx,
-            iZeroPacketEx           => ZeroPacketEx,
-            iTwistPacketEx          => TwistPacketEx,
+            iClonePacketEx          => clonePacketEx,
+            iZeroPacketEx           => zeroPacketEx,
+            iTwistPacketEx          => twistPacketEx,
 
             iWrEn                   => storeData,
             iRdEn                   => readData,

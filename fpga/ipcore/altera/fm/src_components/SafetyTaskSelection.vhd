@@ -58,7 +58,8 @@ entity SafetyTaskSelection is
             gSafetySetting  : natural :=5*cByteLength   --!5 Byte safety setting
             );
     port(
-        clk, reset          : in std_logic;                                     --! clk, reset
+        iClk                : in std_logic;                                     --! clk
+        iReset              : in std_logic;                                     --! reset
         iClearMem           : in std_logic;                                     --! clear all tasks
         iTestActive         : in std_logic;                                     --! Testcycle is active
         iSafetyActive       : in std_logic;                                     --! safety manipulations are active
@@ -69,7 +70,7 @@ entity SafetyTaskSelection is
         iSettingMem         : in std_logic_vector(gSafetySetting-1 downto 0);   --! Setting of the task
         iFrameMem           : in std_logic_vector(gWordWidth-1 downto 0);       --! Frame of the task
         iMaskMem            : in std_logic_vector(gWordWidth-1 downto 0);       --! Frame mask of the task
-        oError_Task_Conf    : out std_logic;                                    --! Error: Wrong task configuration
+        oError_taskConf    : out std_logic;                                    --! Error: Wrong task configuration
         oNextSafetySetting  : out std_logic_vector(gSafetySetting-1 downto 0);  --! Setting of the current or last safety task
         oNextSafetyFrame    : out std_logic_vector(gWordWidth-1 downto 0);      --! Frame of the current or last safety task
         oNextSafetyMask     : out std_logic_vector(gWordWidth-1 downto 0);      --! Mask of the current or last safety task
@@ -88,34 +89,34 @@ architecture two_seg_arch of SafetyTaskSelection is
     --Registers
     --! Typedef for registers
     type tReg is record
-        ReadEn              : std_logic;                                    --!ReadEn for edge detection
+        readEn              : std_logic;                                    --!ReadEn for edge detection
         safetyTask          : std_logic_vector(cByteLength-1 downto 0);     --!used safety task
         TaskOut             : std_logic_vector(cByteLength-1 downto 0);     --!task output
-        NextCycle           : std_logic_vector(cByteLength-1 downto 0);     --!Cycle number of next safety manipulation
-        NextSetting         : std_logic_vector(iSettingMem'range);          --!Setting of next safety manipulation
-        NextFrame           : std_logic_vector(iFrameMem'range);            --!Frame of next safety manipulation
-        NextMask            : std_logic_vector(iMaskMem'range);             --!Frame mask of next safety manipulation
-        LastPackSize        : std_logic_vector(cByteLength-1 downto 0);     --!Packet size of last manipulation
-        LastNoOfPackets     : std_logic_vector(2*cByteLength-1 downto 0);   --!Number of manipulated Packets of last manipulation
-        DelayTaskEn         : std_logic;                                    --!Delay task is mixed with safety tasks
-        SafetyActive_reg    : std_logic;                                    --!iSafetyActive delayed for edge detection
-        CurrCycle           : std_logic_vector(cByteLength-1 downto 0);     --!Start cycle of the currently active safety task
+        nextCycle           : std_logic_vector(cByteLength-1 downto 0);     --!Cycle number of next safety manipulation
+        nextSetting         : std_logic_vector(iSettingMem'range);          --!Setting of next safety manipulation
+        nextFrame           : std_logic_vector(iFrameMem'range);            --!Frame of next safety manipulation
+        nextMask            : std_logic_vector(iMaskMem'range);             --!Frame mask of next safety manipulation
+        lastPackSize        : std_logic_vector(cByteLength-1 downto 0);     --!Packet size of last manipulation
+        lastNoOfPackets     : std_logic_vector(2*cByteLength-1 downto 0);   --!Number of manipulated Packets of last manipulation
+        delayTaskEn         : std_logic;                                    --!Delay task is mixed with safety tasks
+        safetyActive_reg    : std_logic;                                    --!iSafetyActive delayed for edge detection
+        currCycle           : std_logic_vector(cByteLength-1 downto 0);     --!Start cycle of the currently active safety task
     end record;
 
 
     --! Init for registers
-    constant cRegInit   : tReg :=  (ReadEn              => '0',
+    constant cRegInit   : tReg :=  (readEn              => '0',
                                     safetyTask          => (others=>'0'),
-                                    Taskout             => (others=>'0'),
-                                    NextCycle           => (others=>'1'),--! NextCycle starts with its hightes value and will be overwritten with smaler ones
-                                    NextSetting         => (others=>'0'),
-                                    NextFrame           => (others=>'0'),
-                                    NextMask            => (others=>'1'),--! Mask starts with ones to prevent the comparison to select a wrong frame
-                                    LastPackSize        => (others=>'0'),
-                                    LastNoOfPackets     => (others=>'0'),
-                                    DelayTaskEn         => '0',
-                                    SafetyActive_reg    => '0',
-                                    CurrCycle           => (others=>'0')
+                                    taskout             => (others=>'0'),
+                                    nextCycle           => (others=>'1'),--! NextCycle starts with its hightes value and will be overwritten with smaler ones
+                                    nextSetting         => (others=>'0'),
+                                    nextFrame           => (others=>'0'),
+                                    nextMask            => (others=>'1'),--! Mask starts with ones to prevent the comparison to select a wrong frame
+                                    lastPackSize        => (others=>'0'),
+                                    lastNoOfPackets     => (others=>'0'),
+                                    delayTaskEn         => '0',
+                                    safetyActive_reg    => '0',
+                                    currCycle           => (others=>'0')
                                     );
 
 
@@ -124,8 +125,8 @@ architecture two_seg_arch of SafetyTaskSelection is
 
 
     --Signals
-    signal SafetyActive_posEdge : std_logic;                                --!positive edge of iSafetyActive
-    signal SafetyTask           : std_logic_vector(cByteLength-1 downto 0); --!safety task from memory
+    signal safetyActive_posEdge : std_logic;                                --!positive edge of iSafetyActive
+    signal safetyTask           : std_logic_vector(cByteLength-1 downto 0); --!safety task from memory
 
 
         --! Byte 2: Start position of safety packet
@@ -152,30 +153,30 @@ begin
     --CHECKING SAFETY TASK ----------------------------------------------------------------------
 
     --saving task, when task is a safety task
-    SafetyTask      <= iTaskMem when iTaskMem=cTask.Repetition  or iTaskMem=cTask.PaLoss  or
-                                     iTaskMem=cTask.Insertion   or iTaskMem=cTask.IncSeq  or
-                                     iTaskMem=cTask.IncData     or iTaskMem=cTask.PaDelay or
-                                     iTaskMem=cTask.Masquerade  else (iTaskMem'range => '0');
+    safetyTask      <= iTaskMem when iTaskMem=cTask.repetition  or iTaskMem=cTask.paLoss  or
+                                     iTaskMem=cTask.insertion   or iTaskMem=cTask.incSeq  or
+                                     iTaskMem=cTask.incData     or iTaskMem=cTask.paDelay or
+                                     iTaskMem=cTask.masquerade  else (iTaskMem'range => '0');
 
     --! @brief Registers
     --! - Storing with asynchronous reset
     --! - Reset of parameters and next-task-detection at positive edge of iReadEn
     registers :
-    process(clk, reset, iClearMem)
+    process(iClk, iReset, iClearMem)
     begin
-        if reset='1' or iClearMem = '1' then
+        if iReset='1' or iClearMem = '1' then
                 reg <=cRegInit;
 
-        elsif rising_edge(clk) then
+        elsif rising_edge(iClk) then
             reg<=reg_next;
 
             --reset of safetyTask, LastPackSize, LastNoOfPackets and NextCycle at rising edge of iReadEn
             if reg.ReadEn='0' and iReadEn='1' then          --reset register at positive edge
                 reg.safetyTask      <= cRegInit.safetyTask;
-                reg.NextCycle       <= cRegInit.NextCycle;
-                reg.LastPackSize    <= cRegInit.LastPackSize;
-                reg.LastNoOfPackets <= cRegInit.LastNoOfPackets;
-                reg.DelayTaskEn     <= cRegInit.DelayTaskEn;
+                reg.nextCycle       <= cRegInit.nextCycle;
+                reg.lastPackSize    <= cRegInit.lastPackSize;
+                reg.lastNoOfPackets <= cRegInit.lastNoOfPackets;
+                reg.delayTaskEn     <= cRegInit.delayTaskEn;
 
             end if;
         end if;
@@ -188,62 +189,62 @@ begin
     --! - Safe parameters of the next task
     --! - Output of safety task, when reading of the memory finished
     next_logic :
-    process(reg, SafetyTask, iTestActive, iSafetyActive, iReadEn, iCycleMem, iSettingMem,
-            iFrameMem, iMaskMem, iCycleNr, iTaskMem, SafetyActive_posEdge)
+    process(reg, safetyTask, iTestActive, iSafetyActive, iReadEn, iCycleMem, iSettingMem,
+            iFrameMem, iMaskMem, iCycleNr, iTaskMem, safetyActive_posEdge)
     begin
         reg_next        <= reg;
 
         --Storing for edge detection
-        reg_next.SafetyActive_reg   <= iSafetyActive;
+        reg_next.safetyActive_reg   <= iSafetyActive;
 
 
         --storing iReadEn for edge detection
-        reg_next.ReadEn <= iReadEn;
+        reg_next.readEn <= iReadEn;
 
 
         --saving safety task, when register is empty
         if reg.safetyTask       = (cByteLength-1 downto 0=>'0') then
-            reg_next.safetyTask <= SafetyTask;
+            reg_next.safetyTask <= safetyTask;
 
         end if;
 
 
         --saving last safety task parameters for configuration-error detection
-        if SafetyTask           /= (cByteLength-1 downto 0=>'0') then
-            reg_next.LastPackSize       <= iSetting_PacketSize;
-            reg_next.LastNoOfPackets    <= iSetting_NoOfPackets;
+        if safetyTask           /= (cByteLength-1 downto 0=>'0') then
+            reg_next.lastPackSize       <= iSetting_packetSize;
+            reg_next.lastNoOfPackets    <= iSetting_noOfPackets;
 
         end if;
 
 
         --store task when check is done
         if iReadEn  = '0' then
-            reg_next.TaskOut    <= reg.safetyTask;
+            reg_next.taskOut    <= reg.safetyTask;
 
         end if;
 
 
         --store start-cycle when test is active
-        if SafetyActive_posEdge = '1' then
-            reg_next.CurrCycle  <= reg.NextCycle;
+        if safetyActive_posEdge = '1' then
+            reg_next.currCycle  <= reg.nextCycle;
 
         elsif iSafetyActive    = '0' then  --except task is inactive
-            reg_next.CurrCycle  <= cRegInit.CurrCycle;
+            reg_next.currCycle  <= cRegInit.currCycle;
 
         end if;
 
 
         --detect number of the next safety task
-        if          SafetyTask              /=  (cByteLength-1 downto 0=>'0')   then    --is the task a safety one
+        if          safetyTask              /=  (cByteLength-1 downto 0=>'0')   then    --is the task a safety one
             if      unsigned(iCycleNr)      <=  unsigned(iCycleMem)     or              --does the task start now or in the future...
                     (iTestActive = '0'      and iSafetyActive = '0' )   then            --... or hasn't the test even started
-                if  unsigned(reg.NextCycle) >   unsigned(iCycleMem)     then            --is it the next safety task
+                if  unsigned(reg.nextCycle) >   unsigned(iCycleMem)     then            --is it the next safety task
                     if iSafetyActive        =   '0'                     then            --is currently no safety manipulation active
 
-                        reg_next.NextCycle          <= iCycleMem;
-                        reg_next.NextSetting        <= iSettingMem;
-                        reg_next.NextFrame          <= iFrameMem;
-                        reg_next.NextMask           <= iMaskMem;
+                        reg_next.nextCycle          <= iCycleMem;
+                        reg_next.nextSetting        <= iSettingMem;
+                        reg_next.nextFrame          <= iFrameMem;
+                        reg_next.nextMask           <= iMaskMem;
 
                     end if;
                 end if;
@@ -252,8 +253,8 @@ begin
 
 
         --set delay flag
-        if iTaskMem = cTask.Delay then
-            reg_next.DelayTaskEn    <= '1';
+        if iTaskMem = cTask.delay then
+            reg_next.delayTaskEn    <= '1';
 
         end if;
 
@@ -261,13 +262,13 @@ begin
 
 
     --Edge detection
-    SafetyActive_posEdge    <= '1' when iSafetyActive = '1' and reg.SafetyActive_reg = '0' else '0';
+    safetyActive_posEdge    <= '1' when iSafetyActive = '1' and reg.safetyActive_reg = '0' else '0';
 
     --output
-    oSafetyTask         <= reg.TaskOut;
-    oNextSafetySetting  <= reg.NextSetting;
-    oNextSafetyFrame    <= reg.NextFrame;
-    oNextSafetyMask     <= reg.NextMask;
+    oSafetyTask         <= reg.taskOut;
+    oNextSafetySetting  <= reg.nextSetting;
+    oNextSafetyFrame    <= reg.nextFrame;
+    oNextSafetyMask     <= reg.nextMask;
 
     ---------------------------------------------------------------------------------------------
 
@@ -284,72 +285,72 @@ begin
     --! - Error, when packets at Insertion task are overlapping
     --! - Error, when new safety task should start, but current one is still active
     comb_errortask:
-    process(SafetyTask, reg, iCycleNr, iCycleMem, iSafetyActive)
+    process(safetyTask, reg, iCycleNr, iCycleMem, iSafetyActive)
     begin
-        oError_Task_Conf    <= '0';
+        oError_taskConf    <= '0';
 
         --error when different safety tasks are used
-        if SafetyTask /= reg.safetyTask then    -- if safety task is different one than the one stored
-            oError_Task_Conf    <= '1';         --error
+        if safetyTask /= reg.safetyTask then    -- if safety task is different one than the one stored
+            oError_taskConf    <= '1';         --error
 
-            if  (SafetyTask     /= (cByteLength-1 downto 0=>'0') or
+            if  (safetyTask     /= (cByteLength-1 downto 0=>'0') or
                 reg.safetyTask  /= (cByteLength-1 downto 0=>'0'))  then    --exept one of them is zero
 
-                oError_Task_Conf    <= '0';
+                oError_taskConf    <= '0';
 
             end if;
         end if;
 
 
         --error when safety manipulations are mixed with delay manipualtion
-        if      reg.safetyTask  /=(SafetyTask'range => '0') --safety task
+        if      reg.safetyTask  /=(safetyTask'range => '0') --safety task
             and reg.DelayTaskEn = '1' then                  --and delay task
 
-            oError_Task_Conf    <= '1';         --error
+            oError_taskConf    <= '1';         --error
 
         end if;
 
 
 
         --error, when packet size differs
-        if      SafetyTask           = reg.safetyTask               --at least two safety tasks
-            and SafetyTask          /= (SafetyTask'range => '0')    --not empty
-            and reg.LastPackSize    /= iSetting_PacketSize then     --with different size
+        if      safetyTask           = reg.safetyTask               --at least two safety tasks
+            and safetyTask          /= (safetyTask'range => '0')    --not empty
+            and reg.lastPackSize    /= iSetting_packetSize then     --with different size
 
-            oError_Task_Conf    <= '1';         --error
+            oError_taskConf    <= '1';         --error
 
         end if;
 
 
         --error, when number of packets differs in Incorrect Sequence manipulation
-        if      SafetyTask           = reg.safetyTask               --at least two safety tasks
-            and SafetyTask           = cTask.IncSeq                 --at Incorrect Sequence
-            and reg.LastNoOfPackets /= iSetting_NoOfPackets then    --with different number
+        if      safetyTask           = reg.safetyTask               --at least two safety tasks
+            and safetyTask           = cTask.incSeq                 --at Incorrect Sequence
+            and reg.lastNoOfPackets /= iSetting_noOfPackets then    --with different number
 
-            oError_Task_Conf    <= '1';         --error
+            oError_taskConf    <= '1';         --error
 
         end if;
 
 
         --error at overlapping packts at Insertion...
-        if SafetyTask = cTask.Insertion then
+        if safetyTask = cTask.insertion then
 
-            if iSettingMem_PacketStart=iSettingMem_Packet2Start then    --...when both packets start at the same position
-                oError_Task_Conf    <= '1';         --error
+            if iSettingMem_packetStart=iSettingMem_packet2Start then    --...when both packets start at the same position
+                oError_taskConf    <= '1';         --error
             end if;
 
             --Packet 2 comes first, but packet 1 starts within its range
-            if unsigned(iSettingMem_PacketStart)>unsigned(iSettingMem_Packet2Start) then
-                if unsigned(iSettingMem_PacketStart)<unsigned(iSettingMem_Packet2Start)+unsigned(iSetting_PacketSize) then
+            if unsigned(iSettingMem_packetStart)>unsigned(iSettingMem_packet2Start) then
+                if unsigned(iSettingMem_packetStart)<unsigned(iSettingMem_packet2Start)+unsigned(iSetting_packetSize) then
 
-                    oError_Task_Conf    <= '1';         --error
+                    oError_taskConf    <= '1';         --error
 
                 end if;
 
             else    --Packet 1 comes first, but packet 2 starts within its range
-                if unsigned(iSettingMem_Packet2Start)<unsigned(iSettingMem_PacketStart)+unsigned(iSetting_PacketSize) then
+                if unsigned(iSettingMem_packet2Start)<unsigned(iSettingMem_packetStart)+unsigned(iSetting_packetSize) then
 
-                    oError_Task_Conf    <= '1';         --error
+                    oError_taskConf    <= '1';         --error
 
                 end if;
             end if;
@@ -359,12 +360,12 @@ begin
 
         --check of task overlap: a new safety task has to start, but the last one is still active:
         if              iSafetyActive   =   '1'                             then    --if a safety task is active
-            if          SafetyTask      /=  (cByteLength-1 downto 0=>'0')   then    --the incomming task a safety one...
+            if          safetyTask      /=  (cByteLength-1 downto 0=>'0')   then    --the incomming task a safety one...
                 if      iCycleNr        =   iCycleMem                       then    --...of this PL-cycle
-                    if  reg.CurrCycle   /=  iCycleMem                       and     --...which isn't to active one
-                        reg.CurrCycle   /=  cRegInit.CurrCycle              then    --...while the active register isn't empty
+                    if  reg.currCycle   /=  iCycleMem                       and     --...which isn't to active one
+                        reg.currCycle   /=  cRegInit.currCycle              then    --...while the active register isn't empty
 
-                        oError_Task_Conf    <= '1';         --error
+                        oError_taskConf    <= '1';         --error
 
                     end if;
                 end if;

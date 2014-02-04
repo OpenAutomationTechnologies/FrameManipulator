@@ -1,28 +1,46 @@
+-------------------------------------------------------------------------------
+--! @file Task_Memory.vhd
+--! @brief Memory for the different manipulation tasks
+-------------------------------------------------------------------------------
+--
+--    (c) B&R, 2014
+--
+--    Redistribution and use in source and binary forms, with or without
+--    modification, are permitted provided that the following conditions
+--    are met:
+--
+--    1. Redistributions of source code must retain the above copyright
+--       notice, this list of conditions and the following disclaimer.
+--
+--    2. Redistributions in binary form must reproduce the above copyright
+--       notice, this list of conditions and the following disclaimer in the
+--       documentation and/or other materials provided with the distribution.
+--
+--    3. Neither the name of B&R nor the names of its
+--       contributors may be used to endorse or promote products derived
+--       from this software without prior written permission. For written
+--       permission, please contact office@br-automation.com
+--
+--    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+--    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+--    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+--    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+--    COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+--    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+--    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+--    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+--    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+--    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+--    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+--    POSSIBILITY OF SUCH DAMAGE.
+--
+-------------------------------------------------------------------------------
 
--- ******************************************************************************************
--- *                                    Task_Memory                                         *
--- ******************************************************************************************
--- *                                                                                        *
--- * Shared memory interface between the Framemanipulator and its POWERLINK Slave for the   *
--- * configuration of the tasks.                                                            *
--- *                                                                                        *
--- * It consists of 4 DPRams, which act like one big memory for the avalon slave. The four  *
--- * DPRams are selected by the first two bits of the avalon slave address with a data size *
--- * of 32 bit.                                                                             *
--- * The Framemanipulator receives the data of all 4 DPRams at once with a word size of 64  *
--- * bit.                                                                                   *
--- *                                                                                        *
--- * s_clk: clock domain of the avalon slaves                                               *
--- * s_...  avalon slave for the task-memory                                                *
--- *                                                                                        *
--- *----------------------------------------------------------------------------------------*
--- *                                                                                        *
--- * 09.08.12 V1.0      Task_Memory                             by Sebastian Muelhausen     *
--- *                                                                                        *
--- ******************************************************************************************
-
+--! Use standard ieee library
 library ieee;
+--! Use logic elements
 use ieee.std_logic_1164.all;
+--! Use numeric functions
 use ieee.numeric_std.all;
 
 --! Use work library
@@ -30,156 +48,205 @@ library work;
 --! use global library
 use work.global.all;
 
+--! This is the entity of the task memory
 entity Task_Memory is
-    generic(gSlaveWordWidth:    natural :=4*cByteLength;
-            gWordWidth:         natural :=8*cByteLength;
-            gSlaveAddrWidth:    natural :=11;
-            gAddresswidth:      natural :=8);
+    generic(gSlaveWordWidth : natural := 4*cByteLength; --! Word width of avalon bus for the transfer of tasks
+            gWordWidth      : natural := 8*cByteLength; --! Word width of the tasks
+            gSlaveAddrWidth : natural := 11;            --! Address width of avalon bus for the transfer of tasks
+            gAddresswidth   : natural := 8              --! Address width of the tasks
+            );
     port(
-        clk:            in std_logic;
+        iClk            : in std_logic;    --! FM clock
         --avalon bus (s_clk domain)
-        s_clk:          in std_logic;   --Clock of the slave
-        s_iAddr:        in std_logic_vector(gSlaveAddrWidth-1 downto 0);
-        s_iWrEn:        in std_logic;
-        s_iRdEn:        in std_logic;
-        s_iByteEn:      in std_logic_vector((gSlaveWordWidth/cByteLength)-1 downto 0);
-        s_iWriteData:   in std_logic_vector(gSlaveWordWidth-1 downto 0);
-        s_oReadData:    out std_logic_vector(gSlaveWordWidth-1 downto 0);
+        iS_clk          : in std_logic;                                                   --! Clock of the slave
+        iSc_addr         : in std_logic_vector(gSlaveAddrWidth-1 downto 0);                --! Task avalon slave address
+        iSc_wrEn         : in std_logic;                                                   --! Task avalon slave write enable
+        iSc_rdEn         : in std_logic;                                                   --! Task avalon slave read enable
+        iSc_byteEn       : in std_logic_vector((gSlaveWordWidth/cByteLength)-1 DOWNTO 0);  --! Task avalon slave byte enable
+        iSc_writeData    : in std_logic_vector(gSlaveWordWidth-1 downto 0);                --! Task avalon slave data write
+        oSc_ReadData     : out std_logic_vector(gSlaveWordWidth-1 downto 0);               --! Task avalon slave read data
         --memory signals
-        iTaskAddr:      in std_logic_vector(gAddresswidth-1 downto 0);  --Address of the current task
-        iClTaskMem:     in std_logic;                                   --Delete task
-        oSettingData:   out std_logic_vector(2*gWordWidth-1 downto 0);  --output task setting
-        oCompFrame:     out std_logic_vector(gWordWidth-1 downto 0);    --output task frame
-        oCompMask:      out std_logic_vector(gWordWidth-1 downto 0)     --output task mask
-     );
+        iTaskAddr       : in std_logic_vector(gAddresswidth-1 downto 0);        --! Address of the current task
+        iClTaskMem      : in std_logic;                                         --! Delete task
+        oSettingData    : out std_logic_vector(2*gWordWidth-1 downto 0);        --! output task setting
+        oCompFrame      : out std_logic_vector(gWordWidth-1 downto 0);          --! output task frame
+        oCompMask       : out std_logic_vector(gWordWidth-1 downto 0)           --! output task
+    );
 end Task_Memory;
 
+
+
+--! @brief Task_Memory architecture
+--! @details Memory for the different manipulation tasks
+--! - Shared memory interface between the Framemanipulator and its POWERLINK Slave
+--! - Stores the tasks
+--! - It consists of 4 DPRams, which act like one big memory for the avalon slave. The
+--!   four DPRams are selected by the first two bits of the avalon slave address with
+--!   a data size of 32 bit.
+--! - The Framemanipulator receives the data of all 4 DPRams at once with a word size
+--!   of 64 bits.
 architecture two_seg_arch of Task_Memory is
 
-    --DPRam Port A= Softcore, B=Hardware Manipulator
-    component DPRAM_Plus
-        generic(gAddresswidthA:     natural :=7;
-                gAddresswidthB:     natural :=6;
-                gWordWidthA:        natural :=32;
-                gWordWidthB:        natural :=64);
-        port
-        (
-            address_a   : IN STD_LOGIC_VECTOR (gAddresswidthA-1 DOWNTO 0);
-            address_b   : IN STD_LOGIC_VECTOR (gAddresswidthB-1 DOWNTO 0);
-            byteena_a   : IN STD_LOGIC_VECTOR ((gWordWidthA/cByteLength)-1 DOWNTO 0) :=  (OTHERS => '1');
-            byteena_b   : IN STD_LOGIC_VECTOR ((gWordWidthB/cByteLength)-1 DOWNTO 0) :=  (OTHERS => '1');
-            clock_a     : IN STD_LOGIC  := '1';
-            clock_b     : IN STD_LOGIC ;
-            data_a      : IN STD_LOGIC_VECTOR (gWordWidthA-1 DOWNTO 0);
-            data_b      : IN STD_LOGIC_VECTOR (gWordWidthB-1 DOWNTO 0);
-            rden_a      : IN STD_LOGIC  := '1';
-            rden_b      : IN STD_LOGIC  := '1';
-            wren_a      : IN STD_LOGIC  := '0';
-            wren_b      : IN STD_LOGIC  := '0';
-            q_a         : OUT STD_LOGIC_VECTOR (gWordWidthA-1 DOWNTO 0);
-            q_b         : OUT STD_LOGIC_VECTOR (gWordWidthB-1 DOWNTO 0)
-        );
-    end component;
-
-    signal s_WriteEn:       std_logic_vector(3 downto 0);               --write enable
-    signal s_SelEn:         std_logic_vector(2 downto 0);               --DPRam Selection
-    signal s_WrTaskAddr:    std_logic_vector(gAddresswidth downto 0);   --write address
-    signal rd_TaskMem:      std_logic;                                  --read task
+    signal slaveWriteEn     : std_logic_vector(3 downto 0);               --! write enable
+    signal slaveSelEn       : std_logic_vector(2 downto 0);               --! DPRam Selection
+    signal slaveWrTaskAddr  : std_logic_vector(gAddresswidth downto 0);   --! write address
+    signal rdTaskMem        : std_logic;                                  --! read task
 
     --data output for PL-Slave
-    signal s_ReadData0:     std_logic_vector(gWordWidth/2-1 downto 0);  --data of PDRam 0
-    signal s_ReadData1:     std_logic_vector(gWordWidth/2-1 downto 0);  --data of PDRam 1
-    signal s_ReadData2:     std_logic_vector(gWordWidth/2-1 downto 0);  --data of PDRam 2
-    signal s_ReadData3:     std_logic_vector(gWordWidth/2-1 downto 0);  --data of PDRam 3
+    signal slaveReadData0   : std_logic_vector(gWordWidth/2-1 downto 0);  --! data of PDRam 0
+    signal slaveReadData1   : std_logic_vector(gWordWidth/2-1 downto 0);  --! data of PDRam 1
+    signal slaveReadData2   : std_logic_vector(gWordWidth/2-1 downto 0);  --! data of PDRam 2
+    signal slaveReadData3   : std_logic_vector(gWordWidth/2-1 downto 0);  --! data of PDRam 3
 
 begin
 
     --Isolate the selection of the Buffers from the address line----------------------------------------
-    s_SelEn<=s_iAddr(s_iAddr'left downto s_iAddr'left-1)&s_iWrEn;   --first two address-bits => DPRam selection + WriteEnable
-    s_WrTaskAddr<=s_iAddr(gAddresswidth downto 0);                  --remaining address-bits => real address
+    slaveSelEn      <= iSc_addr(iSc_addr'left downto iSc_addr'left-1)&iSc_wrEn; --! first two address-bits => DPRam selection + WriteEnable
+    slaveWrTaskAddr <= iSc_addr(gAddresswidth downto 0);                     --! remaining address-bits => real address
 
 
 
     --Aktivate the different Buffer for Port A ---------------------------------------------------------
-    with s_SelEn select --last bit=1 => write
-        s_WriteEn<= "0001" when "001",  --write 00 => PDRam 0
-                    "0010" when "011",  --write 01 => PDRam 1
-                    "0100" when "101",  --write 10 => PDRam 2
-                    "1000" when "111",  --write 11 => PDRam 3
-                    "0000" when others;
+    with slaveSelEn select --last bit=1 => write
+        slaveWriteEn<=  "0001" when "001",  --write 00 => PDRam 0
+                        "0010" when "011",  --write 01 => PDRam 1
+                        "0100" when "101",  --write 10 => PDRam 2
+                        "1000" when "111",  --write 11 => PDRam 3
+                        "0000" when others;
 
 
-    rd_TaskMem <= not iClTaskMem;
+    rdTaskMem   <= not iClTaskMem;
 
 
     --Mapping of the four Buffers ---------------------------------------------------------------------
-    ManiDataBuffer1:DPRAM_Plus
-    generic map(gAddresswidthA=>gAddresswidth+1,gAddresswidthB=>gAddresswidth,gWordWidthA=>gWordWidth/2,
-                gWordWidthB=>gWordWidth)
+
+    --! @brief First Memory
+    --! - Object 0x3001 Setting 1
+    ManiDataBuffer1 : work.DpramAdjustable
+    generic map(
+                gAddresswidthA  => gAddresswidth+1,
+                gAddresswidthB  => gAddresswidth,
+                gWordWidthA     => gWordWidth/2,
+                gWordWidthB     => gWordWidth
+                )
     port map(
-            clock_a=>s_clk,clock_b=>clk,
+            iClock_a    => iS_clk,
+            iClock_b    => iClk,
             --port A PL-Slave
-            address_a=>s_WrTaskAddr,    byteena_a=>s_iByteEn,       data_a=>s_iWriteData,
-            wren_a=>s_WriteEn(0),       rden_a=>s_iRdEn,
+            iAddress_a  => slaveWrTaskAddr,
+            iByteena_a  => iSc_byteEn,
+            iData_a     => iSc_writeData,
+            iWren_a     => slaveWriteEn(0),
+            iRden_a     => iSc_rdEn,
             --port B FM
-            address_b=>iTaskAddr,       byteena_b=>(others=>'1'),   data_b=>(others=>'0'),
-            wren_b=>iClTaskMem,         rden_b=>rd_TaskMem,
+            iAddress_b  => iTaskAddr,
+            iByteena_b  => (others=>'1'),
+            iData_b     => (others=>'0'),
+            iWren_b     => iClTaskMem,
+            iRden_b     => rdTaskMem,
             --output
-            q_a=>s_ReadData0,           q_b=>oSettingData(2*gWordWidth-1 downto gWordWidth));--first 8Byte
+            oQ_a        => slaveReadData0,
+            oQ_b        => oSettingData(2*gWordWidth-1 downto gWordWidth)   --first 8Byte
+            );
 
 
-    ManiDataBuffer2:DPRAM_Plus
-    generic map(gAddresswidthA=>gAddresswidth+1,gAddresswidthB=>gAddresswidth,gWordWidthA=>gWordWidth/2,
-                gWordWidthB=>gWordWidth)
+    --! @brief Second Memory
+    --! - Object 0x3002 Setting 2
+    ManiDataBuffer2 : work.DpramAdjustable
+    generic map(
+                gAddresswidthA  => gAddresswidth+1,
+                gAddresswidthB  => gAddresswidth,
+                gWordWidthA     => gWordWidth/2,
+                gWordWidthB     => gWordWidth
+                )
     port map(
-            clock_a=>s_clk,clock_b=>clk,
+            iClock_a    => iS_clk,
+            iClock_b    => iClk,
             --port A PL-Slave
-            address_a=>s_WrTaskAddr,    byteena_a=>s_iByteEn,       data_a=>s_iWriteData,
-            wren_a=>s_WriteEn(1),       rden_a=>s_iRdEn,
+            iAddress_a  => slaveWrTaskAddr,
+            iByteena_a  => iSc_byteEn,
+            iData_a     => iSc_writeData,
+            iWren_a     => slaveWriteEn(1),
+            iRden_a     => iSc_rdEn,
             --port B FM
-            address_b=>iTaskAddr,       byteena_b=>(others=>'1'),   data_b=>(others=>'0'),
-            wren_b=>iClTaskMem,         rden_b=>rd_TaskMem,
+            iAddress_b  => iTaskAddr,
+            iByteena_b  => (others=>'1'),
+            iData_b     => (others=>'0'),
+            iWren_b     => iClTaskMem,
+            iRden_b     => rdTaskMem,
             --output
-            q_a=>s_ReadData1,           q_b=>oSettingData(gWordWidth-1 downto 0));--second 8Byte
+            oQ_a        => slaveReadData1,
+            oQ_b        => oSettingData(gWordWidth-1 downto 0)  --second 8Byte
+            );
 
 
-    CompFrameBuffer:DPRAM_Plus
-    generic map(gAddresswidthA=>gAddresswidth+1,gAddresswidthB=>gAddresswidth,gWordWidthA=>gWordWidth/2,
-                gWordWidthB=>gWordWidth)
+    --! @brief Third Memory
+    --! - Object 0x3003 Frame data
+    CompFrameBuffer : work.DpramAdjustable
+    generic map(
+                gAddresswidthA  => gAddresswidth+1,
+                gAddresswidthB  => gAddresswidth,
+                gWordWidthA     => gWordWidth/2,
+                gWordWidthB     => gWordWidth
+                )
     port map(
-            clock_a=>s_clk,clock_b=>clk,
+            iClock_a    => iS_clk,
+            iClock_b    => iClk,
             --port A PL-Slave
-            address_a=>s_WrTaskAddr,    byteena_a=>s_iByteEn,       data_a=>s_iWriteData,
-            wren_a=>s_WriteEn(2),       rden_a=>s_iRdEn,
+            iAddress_a  => slaveWrTaskAddr,
+            iByteena_a  => iSc_byteEn,
+            iData_a     => iSc_writeData,
+            iWren_a     => slaveWriteEn(2),
+            iRden_a     => iSc_rdEn,
             --port B FM
-            address_b=>iTaskAddr,       byteena_b=>(others=>'1'),   data_b=>(others=>'0'),
-            wren_b=>iClTaskMem,         rden_b=>rd_TaskMem,
+            iAddress_b  => iTaskAddr,
+            iByteena_b  => (others=>'1'),
+            iData_b     => (others=>'0'),
+            iWren_b     => iClTaskMem,
+            iRden_b     => rdTaskMem,
             --output
-            q_a=>s_ReadData2,q_b=>oCompFrame);
+            oQ_a        => slaveReadData2,
+            oQ_b        => oCompFrame
+            );
 
 
-    CompMaskBuffer:DPRAM_Plus
-    generic map(gAddresswidthA=>gAddresswidth+1,gAddresswidthB=>gAddresswidth,gWordWidthA=>gWordWidth/2,
-                gWordWidthB=>gWordWidth)
+    --! @brief Fourth Memory
+    --! - Object 0x3003 Mask data
+    CompMaskBuffer : work.DpramAdjustable
+    generic map(
+                gAddresswidthA  => gAddresswidth+1,
+                gAddresswidthB  => gAddresswidth,
+                gWordWidthA     => gWordWidth/2,
+                gWordWidthB     => gWordWidth
+                )
     port map(
-            clock_a=>s_clk,clock_b=>clk,
+            iClock_a     => iS_clk,
+            iClock_b     => iClk,
             --port A PL-Slave
-            address_a=>s_WrTaskAddr,    byteena_a=>s_iByteEn,       data_a=>s_iWriteData,
-            wren_a=>s_WriteEn(3),       rden_a=>s_iRdEn,
+            iAddress_a   => slaveWrTaskAddr,
+            iByteena_a   => iSc_byteEn,
+            iData_a      => iSc_writeData,
+            iWren_a      => slaveWriteEn(3),
+            iRden_a      => iSc_rdEn,
             --port B FM
-            address_b=>iTaskAddr,       byteena_b=>(others=>'1'),   data_b=>(others=>'0'),
-            wren_b=>iClTaskMem,         rden_b=>rd_TaskMem,
+            iAddress_b   => iTaskAddr,
+            iByteena_b   => (others=>'1'),
+            iData_b      => (others=>'0'),
+            iWren_b      => iClTaskMem,
+            iRden_b      => rdTaskMem,
             --output
-            q_a=>s_ReadData3,           q_b=>oCompMask);
+            oQ_a         => slaveReadData3,
+            oQ_b         => oCompMask
+            );
 
 
 
     --Select the Output data for Port A ----------------------------------------------------------------
-    with s_SelEn select --last bit=0 => read
-        s_oReadData<=   s_ReadData0 when "000", --read 00 => DPRam 0
-                        s_ReadData1 when "010", --read 01 => DPRam 1
-                        s_ReadData2 when "100", --read 10 => DPRam 2
-                        s_ReadData3 when "110", --read 11 => DPRam 3
+    with slaveSelEn select --last bit=0 => read
+        oSc_ReadData<=   slaveReadData0 when "000", --read 00 => DPRam 0
+                        slaveReadData1 when "010", --read 01 => DPRam 1
+                        slaveReadData2 when "100", --read 10 => DPRam 2
+                        slaveReadData3 when "110", --read 11 => DPRam 3
                         (others=>'0') when others;
 
 

@@ -54,7 +54,8 @@ use work.framemanipulatorPkg.all;
 --! Entity of safety packet control
 entity PacketControl_FSM is
     port(
-        clk, reset          : in std_logic;                                 --! clk, reset
+        iClk                : in std_logic;                                 --! clk
+        iReset              : in std_logic;                                 --! reset
         iSafetyTask         : in std_logic_vector(cByteLength-1 downto 0);  --! current safety task
         iTaskSafetyEn       : in std_logic;                                 --! task: safety packet manipulation
         iStopTest           : in std_logic;                                 --! abort of a series of test
@@ -137,20 +138,20 @@ architecture two_seg_arch of PacketControl_FSM is
     --! Typedef for registers
     type tReg is record
         state           : tMcState;         --!State of FSM
-        Active          : std_logic;        --!Manipulation of safety packets are active
-        SafetyFrame     : std_logic;        --!register for edge detection iSafetyFrame
-        ExchangeData    : std_logic;        --!register for edge detection iExchangeData
-        ExchangeData_l2 : std_logic;        --!register for a delay of two clock cycles
+        active          : std_logic;        --!Manipulation of safety packets are active
+        safetyFrame     : std_logic;        --!register for edge detection iSafetyFrame
+        exchangeData    : std_logic;        --!register for edge detection iExchangeData
+        exchangeData_l2 : std_logic;        --!register for a delay of two clock cycles
     end record;
 
 
     --! Init for registers
     constant cRegInit   : tReg :=(
                                 state           => sIdle,
-                                Active          => '0',
-                                SafetyFrame     => '0',
-                                ExchangeData    => '0',
-                                ExchangeData_l2 => '0'
+                                active          => '0',
+                                safetyFrame     => '0',
+                                exchangeData    => '0',
+                                exchangeData_l2 => '0'
                                 );
 
     signal reg          : tReg; --! Registers
@@ -158,39 +159,39 @@ architecture two_seg_arch of PacketControl_FSM is
 
     --next signals
     signal state_next       : tMcState;         --! Next state of FSM
-    signal Active_next      : std_logic;        --! State of FSM
+    signal active_next      : std_logic;        --! State of FSM
 
 
     --edges
-    signal SafetyFrame_posEdge  : std_logic;    --!positive edge of iSafetyFrame
-    signal ExchangeData_negEdge : std_logic;    --!negative edge of iExchangeData
+    signal safetyFrame_posEdge  : std_logic;    --!positive edge of iSafetyFrame
+    signal exchangeData_negEdge : std_logic;    --!negative edge of iExchangeData
 
 begin
 
     --! @brief Registers
     --! - Storing with asynchronous reset
     regs:
-    process(clk,reset)
+    process(iClk,iReset)
     begin
-        if reset = '1' then
+        if iReset = '1' then
             reg <= cRegInit;
 
-        elsif rising_edge(clk) then
+        elsif rising_edge(iClk) then
             reg.state           <= state_next;
-            reg.Active          <= Active_next;
-            reg.ExchangeData    <= iExchangeData;
-            reg.ExchangeData_l2 <= reg.ExchangeData;
-            reg.SafetyFrame     <= iSafetyFrame;
+            reg.active          <= active_next;
+            reg.exchangeData    <= iExchangeData;
+            reg.exchangeData_l2 <= reg.ExchangeData;
+            reg.safetyFrame     <= iSafetyFrame;
 
         end if;
     end process;
 
 
     --!positive edge of iExchangeData => start of Manipulation
-    SafetyFrame_posEdge     <= '1' when reg.SafetyFrame = '0' and iSafetyFrame='1' else '0';
+    safetyFrame_posEdge     <= '1' when reg.safetyFrame = '0' and iSafetyFrame='1' else '0';
 
     --!negative edge of iExchangeData => end of Manipulation
-    ExchangeData_negEdge    <= '1' when reg.ExchangeData = '1' and iExchangeData='0' else '0';
+    exchangeData_negEdge    <= '1' when reg.exchangeData = '1' and iExchangeData='0' else '0';
 
 
     --! @brief Logic of safety-active signal
@@ -200,18 +201,18 @@ begin
     comp_active:
     process(reg, iCntEnd, iTaskSafetyEn, iStopTest)
     begin
-        Active_next     <= reg.Active;
+        active_next     <= reg.active;
 
         if iTaskSafetyEn='1' then
-            Active_next <= '1';
+            active_next <= '1';
 
         elsif iCntEnd='1' then
-            Active_next <= '0';
+            active_next <= '0';
 
         end if;
 
         if iStopTest    = '1' then  --abort (error or manual stop)
-            Active_next <= '0';
+            active_next <= '0';
 
         end if;
 
@@ -223,8 +224,8 @@ begin
     --! - Execute the different tasks
     --! - Reset when new task arrives or abort of test
     comb_next:
-    process(reg, iStopTest, iNewTask, iSn2Pre, iSafetyTask, iFrameIsSoc, iSafetyFrame, SafetyFrame_posEdge,
-            ExchangeData_negEdge, iLagReached, iResetPaketBuff, Active_next)
+    process(reg, iStopTest, iNewTask, iSn2Pre, iSafetyTask, iFrameIsSoc, iSafetyFrame, safetyFrame_posEdge,
+            exchangeData_negEdge, iLagReached, iResetPaketBuff, active_next)
     begin
 
         --!FSM-logic
@@ -235,25 +236,25 @@ begin
             case reg.state is
                 when sIdle=>
                     case iSafetyTask is
-                        when cTask.Repetition=>
+                        when cTask.repetition=>
                             state_next  <= sRepetition;
 
-                        when cTask.PaLoss=>
+                        when cTask.paLoss=>
                             state_next  <= sPaLoss;
 
-                        when cTask.Insertion=>
+                        when cTask.insertion=>
                             state_next  <= sInsertion;
 
-                        when cTask.IncSeq=>
+                        when cTask.incSeq=>
                             state_next  <= sIncSeq;
 
-                        when cTask.IncData=>
+                        when cTask.incData=>
                             state_next  <= sIncData;
 
-                        when cTask.PaDelay=>
+                        when cTask.paDelay=>
                             state_next  <= sPaDelay;
 
-                        when cTask.Masquerade=>
+                        when cTask.masquerade=>
                             state_next  <= sMasquerade;
 
                         when others=>
@@ -266,15 +267,15 @@ begin
                 --Inactive Part:
 
                 when sRepetition=>                  --Packet repetition
-                    if Active_next  = '1' then      --when manipulation is active
+                    if active_next  = '1' then      --when manipulation is active
                         state_next  <= sRepetitionCloneOutput;
 
-                        if SafetyFrame_posEdge='1' then
+                        if safetyFrame_posEdge='1' then
                             state_next  <= sRepetitionCloneExchange;
 
                         end if;
 
-                    elsif SafetyFrame_posEdge='1' then      --when INACTIVE...
+                    elsif safetyFrame_posEdge='1' then      --when INACTIVE...
                         state_next  <= sRepetitionExchange; --Store clone at incoming safety frame
 
                     else
@@ -283,10 +284,10 @@ begin
                     end if;
 
                 when sRepetitionExchange=>          --Output of (delayed) packets and storage of the clone
-                    if Active_next  = '1' then      --when manipulation goes to active state
+                    if active_next  = '1' then      --when manipulation goes to active state
                         state_next  <= sRepetitionCloneExchange;
 
-                    elsif ExchangeData_negEdge='1' then
+                    elsif exchangeData_negEdge='1' then
                         state_next <= sRepetition;  --return after storage
 
                     else
@@ -297,10 +298,10 @@ begin
                 --Active Part:
 
                 when sRepetitionCloneOutput=>       --Output of clone packets
-                    if Active_next = '0' then       --when manipulation is inactive
+                    if active_next = '0' then       --when manipulation is inactive
                         state_next  <= sRepetition;
 
-                    elsif SafetyFrame_posEdge='1' then              --when ACTIVE...
+                    elsif safetyFrame_posEdge='1' then              --when ACTIVE...
                         state_next  <= sRepetitionCloneExchange;    --Store clone at incoming safety frame
 
                     else
@@ -309,21 +310,21 @@ begin
                     end if;
 
                 when sRepetitionCloneExchange=>     --Exchange packets with clones
-                    if Active_next  = '0' then      --when manipulation goes to inactive state
+                    if active_next  = '0' then      --when manipulation goes to inactive state
                         state_next  <= sRepetitionExchange;
 
-                    elsif ExchangeData_negEdge='1' then
-                        state_next <= sRepetitionCloneOutput;   --return after exchange
+                    elsif exchangeData_negEdge='1' then
+                        state_next  <= sRepetitionCloneOutput;   --return after exchange
 
                     else
-                        state_next<=sRepetitionCloneExchange;
+                        state_next  <= sRepetitionCloneExchange;
 
                     end if;
 
                 -- Loss manipulation --------------------------------------------------
 
                 when sPaLoss=>                      --packet loss
-                    if SafetyFrame_posEdge='1' and Active_next = '1' then
+                    if safetyFrame_posEdge='1' and active_next = '1' then
                         state_next<=sPaLossMani;    --Manipulation at incoming safety frame
 
                     else
@@ -332,7 +333,7 @@ begin
                     end if;
 
                 when sPaLossMani=>                  --packet loss manipulating
-                    if ExchangeData_negEdge='1' then
+                    if exchangeData_negEdge='1' then
                         state_next<=sPaLoss;
 
                     else
@@ -343,12 +344,12 @@ begin
                 -- Insertion manipulation ---------------------------------------------
 
                 when sInsertion=>                       --packet Insertion
-                    if SafetyFrame_posEdge='1' then     --Incoming safety frame
+                    if safetyFrame_posEdge='1' then     --Incoming safety frame
                         if  iSn2Pre     = '1' or        --if SN-packet comes first
-                            Active_next = '0' then      --or manipulation hasn't started
+                            active_next = '0' then      --or manipulation hasn't started
                             state_next<=sStoreSN2;
 
-                        elsif Active_next = '1' then    --if DUT-packet comes first + Active
+                        elsif active_next = '1' then    --if DUT-packet comes first + Active
                             state_next<=sInsertionMani;
 
                         else
@@ -362,7 +363,7 @@ begin
                     end if;
 
                 when sInsertionMani=>                  --packet Insertion starts
-                    if ExchangeData_negEdge='1' then
+                    if exchangeData_negEdge='1' then
                         if iSn2Pre = '0' then          --if DUT-packet comes first
                             state_next<=sStoreSN2;
 
@@ -377,9 +378,9 @@ begin
                     end if;
 
                 when sStoreSN2=>                        --collecting the packet of the second safety node
-                    if ExchangeData_negEdge='1' then
+                    if exchangeData_negEdge='1' then
                         if iSn2Pre      = '1' and       --if SN-packet comes first...
-                            Active_next = '1' then      --... and manipulation is active
+                            active_next = '1' then      --... and manipulation is active
                             state_next<=sInsertionMani;
 
                         else
@@ -397,15 +398,15 @@ begin
                 --Inactive Part:
 
                 when sIncSeq=>                      --Incorrect sequence
-                    if Active_next  = '1' then      --when manipulation is active
+                    if active_next  = '1' then      --when manipulation is active
                         state_next <= sIncSeqAct;
 
-                        if SafetyFrame_posEdge='1' then
+                        if safetyFrame_posEdge='1' then
                             state_next  <= sIncTwistPack;
 
                         end if;
 
-                    elsif SafetyFrame_posEdge='1' then      --when INACTIVE...
+                    elsif safetyFrame_posEdge='1' then      --when INACTIVE...
 
                         if iLagReached = '1' or iResetPaketBuff='1' then    --delayed enough packets or reset active...
                             state_next <= sIncSeqEx;            --...exchange current packet with a delayed one
@@ -421,36 +422,36 @@ begin
                     end if;
 
                 when sIncSeqDelay=>                 --delay packets until reaching required number
-                    if Active_next  = '1' then      --when manipulation goes to active state
-                        state_next<=sIncTwistPack;
+                    if active_next  = '1' then      --when manipulation goes to active state
+                        state_next  <= sIncTwistPack;
 
-                    elsif ExchangeData_negEdge='1' then
-                        state_next <= sIncSeq;  --return after storage
+                    elsif exchangeData_negEdge='1' then
+                        state_next  <= sIncSeq;  --return after storage
 
                     else
-                        state_next<=sIncSeqDelay;
+                        state_next  <= sIncSeqDelay;
 
                     end if;
 
                 when sIncSeqEx=>                    --exchange packet with delayed one
-                    if Active_next  = '1' then      --when manipulation goes to active state
-                        state_next<=sIncTwistPack;
+                    if active_next  = '1' then      --when manipulation goes to active state
+                        state_next  <= sIncTwistPack;
 
-                    elsif ExchangeData_negEdge='1' then
-                        state_next <= sIncSeq;  --return after storage
+                    elsif exchangeData_negEdge='1' then
+                        state_next  <= sIncSeq;  --return after storage
 
                     else
-                        state_next<=sIncSeqEx;
+                        state_next  <= sIncSeqEx;
 
                     end if;
 
                 --Active Part:
 
                 when sIncSeqAct=>                   --Incorrect sequence active
-                    if Active_next  = '0' then      --when manipulation is inactive
+                    if active_next  = '0' then      --when manipulation is inactive
                         state_next <= sIncSeq;
 
-                    elsif SafetyFrame_posEdge='1' then      --when Active...
+                    elsif safetyFrame_posEdge='1' then      --when Active...
                         state_next <= sIncTwistPack;        --...exchange packets in opposite order
 
                     else
@@ -459,7 +460,7 @@ begin
                     end if;
 
                 when sIncTwistPack=>                --exchange packets in opposite order
-                    if Active_next  = '0' then      --when manipulation goes to inactive state
+                    if active_next  = '0' then      --when manipulation goes to inactive state
 
                         if iLagReached = '1' or iResetPaketBuff='1' then    --delayed enough packets...
                             state_next <= sIncSeqEx;            --...exchange current packet with a delayed one
@@ -469,11 +470,11 @@ begin
 
                         end if;
 
-                    elsif ExchangeData_negEdge='1' then
-                        state_next <= sIncSeqAct;  --return after storage
+                    elsif exchangeData_negEdge='1' then
+                        state_next  <= sIncSeqAct;  --return after storage
 
                     else
-                        state_next<=sIncTwistPack;
+                        state_next  <= sIncTwistPack;
 
                     end if;
 
@@ -481,20 +482,20 @@ begin
                 -- Incorrect data manipulation ----------------------------------------
 
                 when sIncData=>                      --Incorrect data
-                    if SafetyFrame_posEdge='1' and Active_next = '1' then
-                        state_next<=sIncDataMani;    --Manipulation at incoming safety frame
+                    if safetyFrame_posEdge='1' and active_next = '1' then
+                        state_next  <= sIncDataMani;    --Manipulation at incoming safety frame
 
                     else
-                        state_next<=sIncData;
+                        state_next  <= sIncData;
 
                     end if;
 
                 when sIncDataMani=>                  --Incorrect data manipulating
-                    if ExchangeData_negEdge='1' then
-                        state_next<=sIncData;
+                    if exchangeData_negEdge='1' then
+                        state_next  <= sIncData;
 
                     else
-                        state_next<=sIncDataMani;
+                        state_next  <= sIncDataMani;
 
                     end if;
 
@@ -504,15 +505,15 @@ begin
                 --Inactive Part:
 
                 when sPaDelay=>                     --Packet delay
-                    if Active_next  = '1' then      --when manipulation is active
+                    if active_next  = '1' then      --when manipulation is active
                         state_next  <= sPaDelayKill;
 
-                        if SafetyFrame_posEdge='1' then
+                        if safetyFrame_posEdge='1' then
                             state_next  <= sPaDelayKillMani;
 
                         end if;
 
-                    elsif SafetyFrame_posEdge='1' then      --when INACTIVE...
+                    elsif safetyFrame_posEdge='1' then      --when INACTIVE...
                         state_next  <= sPaDelayMani; --Exchange frame with delayed packets
 
                     else
@@ -521,10 +522,10 @@ begin
                     end if;
 
                 when sPaDelayMani=>                 --Exchange frame with delayed packets
-                    if Active_next  = '1' then      --when manipulation goes to active state
+                    if active_next  = '1' then      --when manipulation goes to active state
                         state_next  <= sPaDelayKillMani;
 
-                    elsif ExchangeData_negEdge='1' then
+                    elsif exchangeData_negEdge='1' then
                         state_next <= sPaDelay;     --return after storage
 
                     else
@@ -535,10 +536,10 @@ begin
                 --Active Part:
 
                 when sPaDelayKill=>                 --Remove packets
-                    if Active_next  = '0' then      --when manipulation is inactive
+                    if active_next  = '0' then      --when manipulation is inactive
                         state_next  <= sPaDelay;
 
-                    elsif SafetyFrame_posEdge='1' then      --when ACTIVE...
+                    elsif safetyFrame_posEdge='1' then      --when ACTIVE...
                         state_next  <= sPaDelayKillMani;    --Remove packets
 
                     else
@@ -547,10 +548,10 @@ begin
                     end if;
 
                 when sPaDelayKillMani=>             --Remove packets
-                    if Active_next  = '0' then      --when manipulation goes to inactive state
+                    if active_next  = '0' then      --when manipulation goes to inactive state
                         state_next  <= sPaDelayMani;
 
-                    elsif ExchangeData_negEdge='1' then
+                    elsif exchangeData_negEdge='1' then
                         state_next <= sPaDelayKill;     --return after exchange
 
                     else
@@ -565,7 +566,7 @@ begin
                     if iFrameIsSoc='1' then
                         state_next      <= sStoreSoC;   --store incoming SoCs
 
-                    elsif SafetyFrame_posEdge='1' and Active_next = '1' then
+                    elsif safetyFrame_posEdge='1' and active_next = '1' then
                         state_next  <= sMasqueradeMani; --Manipulation at incoming safety frame
 
                     else
@@ -574,7 +575,7 @@ begin
                     end if;
 
                 when sMasqueradeMani=>                  --Masquerade manipulating
-                    if ExchangeData_negEdge='1' then
+                    if exchangeData_negEdge='1' then
                         state_next  <= sMasquerade;
 
                     else

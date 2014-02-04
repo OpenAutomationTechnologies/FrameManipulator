@@ -1,65 +1,97 @@
+-------------------------------------------------------------------------------
+--! @file ReadAddress_FSM.vhd
+--! @brief FSM for reading the frame addresss Fifo
+-------------------------------------------------------------------------------
+--
+--    (c) B&R, 2014
+--
+--    Redistribution and use in source and binary forms, with or without
+--    modification, are permitted provided that the following conditions
+--    are met:
+--
+--    1. Redistributions of source code must retain the above copyright
+--       notice, this list of conditions and the following disclaimer.
+--
+--    2. Redistributions in binary form must reproduce the above copyright
+--       notice, this list of conditions and the following disclaimer in the
+--       documentation and/or other materials provided with the distribution.
+--
+--    3. Neither the name of B&R nor the names of its
+--       contributors may be used to endorse or promote products derived
+--       from this software without prior written permission. For written
+--       permission, please contact office@br-automation.com
+--
+--    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+--    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+--    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+--    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+--    COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+--    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+--    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+--    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+--    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+--    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+--    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+--    POSSIBILITY OF SUCH DAMAGE.
+--
+-------------------------------------------------------------------------------
 
--- ******************************************************************************************
--- *                                ReadAddress_FSM                                         *
--- ******************************************************************************************
--- *                                                                                        *
--- * FSM for reading the Fifo and storing the addresses from the fifo. It starts a new frame*
--- * when the Frame-Creator and new frame-data addresses are ready.                         *
--- *                                                                                        *
--- * States:                                                                                *
--- *    sIdle:                  Wait for ready-signal from the Frame-Creator                *
--- *    sWait_new_frame_data:   Wait for new frame data/start address                       *
--- *    sStart_frame:           Stores start address                                        *
--- *    sWait_end_addr:         Wait for valid end position                                 *
--- *    sRd_end_addr:           Stores end address                                          *
--- *                                                                                        *
--- *----------------------------------------------------------------------------------------*
--- *                                                                                        *
--- * 09.08.12 V1.0      ReadAddress_FSM                         by Sebastian Muelhausen     *
--- *                                                                                        *
--- ******************************************************************************************
-
+--! Use standard ieee library
 library ieee;
+--! Use logic elements
 use ieee.std_logic_1164.all;
+--! Use numeric functions
 use ieee.numeric_std.all;
 
+
+--! Entity of the FSM for reading the frame addresss Fifo
 entity ReadAddress_FSM is
-        generic(
-                gAddrDataWidth:natural:=11;
-                gBuffBitWidth:natural:=16
-        );
-        port(
-            clk, reset:     in std_logic;
-            --control signals
-            iNextFrame:     in std_logic;   --frame-creator is ready for new data
-            iDataReady:     in std_logic;   --address data is ready
-            oStart:         out std_logic;  --start new frame
-            --fifo signals
-            oRd:            out std_logic;                                  --read fifo
-            iFifoData:      in std_logic_vector(gBuffBitWidth-1 downto 0);  --fifo data
-            --new frame positions
-            oDataOutStart:  out std_logic_vector(gAddrDataWidth-1 downto 0);--start address of new frame
-            oDataOutEnd:    out std_logic_vector(gAddrDataWidth-1 downto 0) --end address of new frame
-        );
+    generic(
+            gAddrDataWidth  : natural := 11;    --! Address width of the frame buffer
+            gBuffBitWidth   : natural := 16     --! Width of the FiFo data
+            );
+    port(
+        iClk            : in std_logic;     --! clk
+        iReset          : in std_logic;     --! reset
+        --control signals
+        iNextFrame      : in std_logic;     --! frame-creator is ready for new data
+        iDataReady      : in std_logic;     --! address data is ready
+        oStart          : out std_logic;    --! start new frame
+        --fifo signals
+        oRd             : out std_logic;                                    --! read fifo
+        iFifoData       : in std_logic_vector(gBuffBitWidth-1 downto 0);    --! fifo data
+        --new frame positions
+        oDataOutStart   : out std_logic_vector(gAddrDataWidth-1 downto 0);  --! start address of new frame
+        oDataOutEnd     : out std_logic_vector(gAddrDataWidth-1 downto 0)   --! end address of new frame
+    );
 end ReadAddress_FSM;
 
 
+--! @brief ReadAddress_FSM architecture
+--! @details FSM for reading the Fifo and storing the addresses from the fifo
+--! - It starts a new frame when the Frame-Creator and new frame-data addresses are ready.
 architecture two_seg_arch of ReadAddress_FSM is
 
-    --states
-    type mc_state_type is
-        (sIdle,sWait_new_frame_data,sStart_frame,sWait_end_addr,sRd_end_addr);
+    --! Typedef for states
+    type tMcState is
+        (
+        sIdle,                  --! Wait for ready-signal from the Frame-Creator
+        sWait_new_frame_data,   --! Wait for new frame data/start address
+        sStart_frame,           --! Stores start address
+        sWait_end_addr,         --! Wait for valid end position
+        sRd_end_addr            --! Stores end address
+        );
 
-    signal state_reg:   mc_state_type;
-    signal state_next:  mc_state_type;
+    signal state_reg    : tMcState; --! Current state
+    signal state_next   : tMcState; --! Next state
 
     --register: start address of new frame
-    signal Next_DataOutStart:   std_logic_vector(gAddrDataWidth-1 downto 0);
-    signal Reg_DataOutStart:    std_logic_vector(gAddrDataWidth-1 downto 0);
+    signal next_dataOutStart    : std_logic_vector(gAddrDataWidth-1 downto 0);  --! Next start address
+    signal reg_dataOutStart     : std_logic_vector(gAddrDataWidth-1 downto 0);  --! Start address of new frame
 
     --register: end address of new frame
-    signal Next_DataOutEnd: std_logic_vector(gAddrDataWidth-1 downto 0);
-    signal Reg_DataOutEnd:  std_logic_vector(gAddrDataWidth-1 downto 0);
+    signal next_dataOutEnd  : std_logic_vector(gAddrDataWidth-1 downto 0);  --! Next end address
+    signal reg_dataOutEnd   : std_logic_vector(gAddrDataWidth-1 downto 0);  --! End address of new frame
 
 begin
 
@@ -68,97 +100,96 @@ begin
     --! @brief Registers
     --! - Storing with asynchronous reset
     registers :
-    process(clk, reset)
+    process(iClk, iReset)
     begin
-        if reset='1' then
-            Reg_DataOutEnd          <= (others=>'0');
-                Reg_DataOutStart    <= (others=>'0');
-                state_reg           <= sIdle;
+        if iReset='1' then
+            reg_dataOutEnd      <= (others=>'0');
+            reg_dataOutStart    <= (others=>'0');
+            state_reg           <= sIdle;
 
-        elsif rising_edge(clk) then
-            Reg_DataOutEnd          <= Next_DataOutEnd;
-                Reg_DataOutStart    <= Next_DataOutStart;
-                state_reg           <= state_next;
+        elsif rising_edge(iClk) then
+            reg_dataOutEnd      <= next_dataOutEnd;
+            reg_dataOutStart    <= next_dataOutStart;
+            state_reg           <= state_next;
 
         end if;
     end process;
 
 
-    --next state logic
+    --! @brief next state logic
     process(state_reg,iDataReady,iNextFrame)
     begin
        case state_reg is
 
             when sIdle=>
                 if iNextFrame='1' then                  --if Frame-Creator is ready
-                    state_next<=sWait_new_frame_data;   --check of new frame data
+                    state_next  <= sWait_new_frame_data;    --check of new frame data
 
                 else
-                    state_next<=sIdle;
+                    state_next  <= sIdle;
 
                 end if;
 
             when sWait_new_frame_data=>
                 if iDataReady='1' then          --if new data is ready
-                    state_next<=sStart_frame;   --start a new frame
+                    state_next  <= sStart_frame;    --start a new frame
 
                 else
-                    state_next<=sWait_new_frame_data;
+                    state_next  <= sWait_new_frame_data;
 
                 end if;
 
             when sStart_frame=>
-                state_next<=sWait_end_addr;     --goto: wait for end address
+                state_next  <= sWait_end_addr;  --goto: wait for end address
 
             when sWait_end_addr=>
                 if iDataReady='1' then          --if data is ready
-                    state_next<=sRd_end_addr;   --read end address
+                    state_next  <= sRd_end_addr;    --read end address
 
                 else
-                    state_next<=sWait_end_addr;
+                    state_next  <= sWait_end_addr;
 
                 end if;
 
             when sRd_end_addr=>
-                state_next<=sIdle;              --goto: idle
-
-            when others=>
-                state_next<= sIdle;
+                state_next  <= sIdle;               --goto: idle
 
         end case;
     end process;
 
-    --Moore output
-    process(state_reg,Reg_DataOutStart,Reg_DataOutEnd,iFifoData)
+    --! @brief Moore output
+    process(state_reg,reg_dataOutStart,reg_dataOutEnd,iFifoData)
     begin
-    --store addresses
-    Next_DataOutStart   <=Reg_DataOutStart;
-    Next_DataOutEnd     <=Reg_DataOutEnd;
 
-    oDataOutStart<=Reg_DataOutStart;
-    oDataOutEnd <=Reg_DataOutEnd;
-    oRd         <='0';
-    oStart      <='0';
+        --store addresses
+        next_dataOutStart   <= reg_dataOutStart;
+        next_dataOutEnd     <= reg_dataOutEnd;
+
+        oDataOutStart   <= reg_dataOutStart;
+        oDataOutEnd     <= reg_dataOutEnd;
+        oRd             <= '0';
+        oStart          <= '0';
 
         case state_reg is
             when sIdle=>
+                null;
 
             when sWait_new_frame_data=>
+                null;
 
-            when sStart_frame=>                 --start new frame
-                oRd<='1';                       --read fifo
-                oStart<='1';                    --set start signal
-                oDataOutStart   <=iFifoData;    --store start address
-                Next_DataOutStart<=iFifoData;
+            when sStart_frame=>                     --start new frame
+                oRd                 <= '1';         --read fifo
+                oStart              <= '1';         --set start signal
+                oDataOutStart       <= iFifoData;   --store start address
+                next_dataOutStart   <= iFifoData;
 
             when sWait_end_addr=>
+                null;
 
             when sRd_end_addr=>                 --read end address
-                oRd<='1';                       --read fifo
-                oDataOutEnd     <=iFifoData;    --store end address
-                Next_DataOutEnd <=iFifoData;
-
-            when others =>
+                oRd             <= '1';         --read fifo
+                oDataOutEnd     <= iFifoData;   --store end address
+                next_dataOutEnd <= iFifoData;
 
         end case;
 

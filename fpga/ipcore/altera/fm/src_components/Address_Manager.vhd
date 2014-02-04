@@ -1,25 +1,47 @@
+-------------------------------------------------------------------------------
+--! @file Address_Manager.vhd
+--! @brief The Address_Manager handels the start-address of the Frame_Receiver
+-------------------------------------------------------------------------------
+--
+--    (c) B&R, 2014
+--
+--    Redistribution and use in source and binary forms, with or without
+--    modification, are permitted provided that the following conditions
+--    are met:
+--
+--    1. Redistributions of source code must retain the above copyright
+--       notice, this list of conditions and the following disclaimer.
+--
+--    2. Redistributions in binary form must reproduce the above copyright
+--       notice, this list of conditions and the following disclaimer in the
+--       documentation and/or other materials provided with the distribution.
+--
+--    3. Neither the name of B&R nor the names of its
+--       contributors may be used to endorse or promote products derived
+--       from this software without prior written permission. For written
+--       permission, please contact office@br-automation.com
+--
+--    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+--    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+--    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+--    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+--    COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+--    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+--    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+--    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+--    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+--    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+--    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+--    POSSIBILITY OF SUCH DAMAGE.
+--
+-------------------------------------------------------------------------------
 
--- ******************************************************************************************
--- *                                Address_Manager                                         *
--- ******************************************************************************************
--- *                                                                                        *
--- * The Address_Manager handels the start-address of the Frame_Receiver. Invalid and       *
--- * dropped frames are overwritten by the next frame. The accepted ones start after the    *
--- * last end-address.                                                                      *
--- * The delay-task is also processed here. A delayed frame receives a timestamp and get    *
--- * stored with it. Once it is loaded, the Address_Manager waits until it has passed this  *
--- * point of time.                                                                         *
--- * The loaded addresses are then stored and passed on to the Frame_Creator with the CRC-  *
--- * distortion flag (which is stored with the end-address).                                *
--- *                                                                                        *
--- *----------------------------------------------------------------------------------------*
--- *                                                                                        *
--- * 09.08.12 V1.0      Address_Manager                         by Sebastian Muelhausen     *
--- *                                                                                        *
--- ******************************************************************************************
 
+--! Use standard ieee library
 library ieee;
+--! Use logic elements
 use ieee.std_logic_1164.all;
+--! Use numeric functions
 use ieee.numeric_std.all;
 
 --! Use work library
@@ -28,185 +50,125 @@ library work;
 use work.global.all;
 
 
+--! This is the entity of the address handler of the frame buffer
 entity Address_Manager is
     generic(
-            gAddrDataWidth:     natural:=11;
-            gDelayDataWidth:    natural:=6*cByteLength;
-            gNoOfDelFrames:     natural:=8
-    );
+            gAddrDataWidth  : natural:=11;              --! Address width of the frame buffer
+            gDelayDataWidth : natural:=6*cByteLength;   --! Width of setting from delay-manipulation
+            gNoOfDelFrames  : natural:=255              --! Maximal number of delayed frames
+            );
     port(
-        clk, reset:         in std_logic;
+        iClk                : in std_logic;     --! clk
+        iReset              : in std_logic;     --! reset
         --control signals
-        iStartFrameStorage: in std_logic;   --frame position can be stored
-        iFrameEnd:          in std_logic;   --frame reached its end => endaddress is valid
-        iFrameIsSoC:        in std_logic;   --current frame is a SoC
-        iTestSync:          in std_logic;   --sync: Test started
-        iTestStop:          in std_logic;   --Test abort
-        iNextFrame:         in std_logic;   --frame_creator is ready for new data
-        oStartNewFrame:     out std_logic;  --new frame data is vaild
+        iStartFrameStorage  : in std_logic;     --! frame position can be stored
+        iFrameEnd           : in std_logic;     --! frame reached its end => endaddress is valid
+        iFrameIsSoC         : in std_logic;     --! current frame is a SoC
+        iTestSync           : in std_logic;     --! sync: Test started
+        iTestStop           : in std_logic;     --! Test abort
+        iNextFrame          : in std_logic;     --! frame_creator is ready for new data
+        oStartNewFrame      : out std_logic;    --! new frame data is vaild
         --manipulations
-        iDelaySetting:      in std_logic_vector(gDelayDataWidth-1 downto 0);    --setting for delaying frames
-        iTaskDelayEn:       in std_logic;                                       --task: delay frames
-        iTaskCrcEn:         in std_logic;                                       --task: distort crc ready to be stored
-        oDistCrcEn:         out std_logic;                                      --task: new frame receives a distorted crc
+        iDelaySetting       : in std_logic_vector(gDelayDataWidth-1 downto 0);  --! setting for delaying frames
+        iTaskDelayEn        : in std_logic;                                     --! task: delay frames
+        iTaskCrcEn          : in std_logic;                                     --! task: distort crc ready to be stored
+        oDistCrcEn          : out std_logic;                                    --! task: new frame receives a distorted crc
         --memory management
-        iDataInEndAddr:     in std_logic_vector(gAddrDataWidth-1 downto 0);     --end position of current frame
-        oDataInStartAddr:   out std_logic_vector(gAddrDataWidth-1 downto 0);    --start position of next incoming frame
-        oDataOutStartAddr:  out std_logic_vector(gAddrDataWidth-1 downto 0);    --start position of next created frame
-        oDataOutEndAddr:    out std_logic_vector(gAddrDataWidth-1 downto 0);    --end position of next created frame
-        oError_Addr_Buff_OV:out std_logic                                       --error: address-buffer-overflow
+        iDataInEndAddr      : in std_logic_vector(gAddrDataWidth-1 downto 0);   --! end position of current frame
+        oDataInStartAddr    : out std_logic_vector(gAddrDataWidth-1 downto 0);  --! start position of next incoming frame
+        oDataOutStartAddr   : out std_logic_vector(gAddrDataWidth-1 downto 0);  --! start position of next created frame
+        oDataOutEndAddr     : out std_logic_vector(gAddrDataWidth-1 downto 0);  --! end position of next created frame
+        oError_addrBuffOv   : out std_logic                                     --! error: address-buffer-overflow
     );
 end Address_Manager;
 
+
+--! @brief Address_Manager architecture
+--! @details The Address_Manager handels the start-address of the Frame_Receiver
+--! - Invalid and dropped frames are overwritten by the next frame. The accepted ones start
+--!   after the last end-address.
+--! - The delay-task is also processed here. A delayed frame receives a timestamp and get
+--!   stored with it. Once it is loaded, the Address_Manager waits until it has passed this
+--!   point of time.
+--! - The loaded addresses are then stored and passed on to the Frame_Creator with the CRC-
+--!   distortion flag (which is stored with the end-address).
 architecture two_seg_arch of Address_Manager is
 
-
-    --component for handling the delay-frame task
-    component Delay_Handler
-        generic(
-                gDelayDataWidth:    natural:=6*cByteLength;
-                gNoOfDelFrames:     natural:=255
-        );
-        port(
-            clk, reset:         in std_logic;
-            --control signals
-            iStart:             in std_logic;   --start delay process
-            iFrameIsSoC:        in std_logic;   --current frame is a SoC
-            iTestSync:          in std_logic;   --reset: a new test has started
-            iTestStop:          in std_logic;   --abort of test series
-            oStartAddrStorage:  out std_logic;  --start storage of the frame-data positions
-            --delay variables
-            iDelayEn:           in std_logic;                                       --task: delay enable
-            iDelayData:         in std_logic_vector(gDelayDataWidth-1 downto 0);    --delay data
-            iDelFrameLoaded:    in std_logic;                                       --a deleted frame was loaded from the address-fifo
-            oCurrentTime:       out std_logic_vector(gDelayDataWidth-cByteLength downto 0);   --timeline which starts with the first delayed frame
-            oDelayTime:         out std_logic_vector(gDelayDataWidth-cByteLength downto 0)    --start time of the stored frame
-        );                                         --size=gDelayDataWidth-stateByte+1 bit to prevent overflow
-    end component;
-
-
-    --FSM for storing the frame-data-position
-    component StoreAddress_FSM
-        generic(
-                gAddrDataWidth: natural:=11;
-                gSize_Time:     natural:=5*cByteLength;
-                gFiFoBitWidth:  natural:=52
-        );
-        port(
-            clk, reset:         in std_logic;
-            --control signals
-            iStartStorage:      in std_logic;                                   --start storing positions
-            iFrameEnd:          in std_logic;                                   --end position is valid
-            iDataInEndAddr:     in std_logic_vector(gAddrDataWidth-1 downto 0); --end position of the current frame
-            oDataInStartAddr:   out std_logic_vector(gAddrDataWidth-1 downto 0);--new start position of the next frame
-            --tasks
-            iCRCManEn:          in std_logic;                                   --task: crc distortion
-            iDelayTime:         in std_logic_vector(gSize_Time-1 downto 0);     --delay timestamp
-            --storing data
-            oWr:                out std_logic;                                  --write Fifo
-            oFiFoData :         out std_logic_vector(gFiFoBitWidth-1 downto 0)  --Fifo data
-        );
-    end component;
-
-
-    --Fifo for address-data
-    component FiFo_top
-        generic(
-            B:natural:=8;       --number of Bits
-            W:natural:=8;       --number of address bits
-            Cnt_Mode:natural:=0 --binary or LFSR(not included)
-        );
-        port(
-            clk, reset: in std_logic;
-            iRd:        in std_logic;
-            iWr:        in std_logic;
-            iWrData:    in std_logic_vector(B-1 downto 0);
-            oFull:      out std_logic;
-            oEmpty:     out std_logic;
-            oRdData:    out std_logic_vector(B-1 downto 0)
-        );
-    end component;
-
-
-    --FSM for reading Fifo an storing the data positions of new frames
-    component ReadAddress_FSM
-        generic(
-                gAddrDataWidth:natural:=11;
-                gBuffBitWidth:natural:=16
-        );
-        port(
-            clk, reset:     in std_logic;
-            --control signals
-            iNextFrame:     in std_logic;   --frame-creator is ready for new data
-            iDataReady:     in std_logic;   --has to wait for new data
-            oStart:         out std_logic;  --start new frame
-            --fifo signals
-            oRd:            out std_logic;                                  --read fifo
-            iFifoData:      in std_logic_vector(gBuffBitWidth-1 downto 0);  --fifo data
-            --new frame positions
-            oDataOutStart:  out std_logic_vector(gAddrDataWidth-1 downto 0);--start position of new frame
-            oDataOutEnd:    out std_logic_vector(gAddrDataWidth-1 downto 0) --end position of new frame
-        );
-    end component;
-
     --constants
-    constant cSize_Time: natural:=gDelayDataWidth-cByteLength+1;  -- +1 in case of overflow
+    constant cSize_Time     : natural:=gDelayDataWidth-cByteLength+1;   --! Width of the delay parameter. +1 in case of overflow
 
     --Fifo address and word width
-    constant cBuffAddrWidth:natural:=LogDualis((2**gAddrDataWidth)/60*2);   -- => every frame uses two entries of the fifo
-    constant cBuffWordWidth:natural:=gAddrDataWidth+cSize_Time;
+    constant cBuffAddrWidth : natural:=LogDualis((2**gAddrDataWidth)/60*2); --! Fifo address width. Every frame uses two entries of the fifo --TODO framesize => package
+    constant cBuffWordWidth : natural:=gAddrDataWidth+cSize_Time;           --! Fifo word width
 
 
-    signal StartAddrStorage:std_logic;  --start address storage of the current frame
+    signal startAddrStorage :std_logic; --! start address storage of the current frame
 
-    signal DelayTime:       std_logic_vector(cSize_Time-1 downto 0);    --delay timestamp for the incoming frame
+    signal delayTime        : std_logic_vector(cSize_Time-1 downto 0);      --! delay timestamp for the incoming frame
 
     --received fifo data
-    signal AddrOutData:     std_logic_vector(gAddrDataWidth-1 downto 0);--address for new frame
-    signal FrameTimestamp:  std_logic_vector(cSize_Time-1 downto 0);    --frame timestamp
-    signal CurrentTime:     std_logic_vector(cSize_Time-1 downto 0);    --current time
-    signal DelFrameLoaded:  std_logic;                                  --a delayed frame was loaded
+    signal addrOutData      : std_logic_vector(gAddrDataWidth-1 downto 0);  --! address for new frame
+    signal frameTimestamp   : std_logic_vector(cSize_Time-1 downto 0);      --! frame timestamp
+    signal currentTime      : std_logic_vector(cSize_Time-1 downto 0);      --! current time
+    signal delFrameLoaded   : std_logic;                                    --! a delayed frame was loaded
 
     --Fifo signals
-    signal FifoWr:          std_logic;  --write data
-    signal FifoRd:          std_logic;  --read data
-    signal FifoFull:        std_logic;  --fifo overflow
-    signal FifoEmpty:       std_logic;  --fifo empty
-    signal FifoDataReady:   std_logic;  --fifo data is ready
+    signal fifoWr           : std_logic;    --! write data
+    signal fifoRd           : std_logic;    --! read data
+    signal fifoFull         : std_logic;    --! fifo overflow
+    signal fifoEmpty        : std_logic;    --! fifo empty
+    signal fifoDataReady    : std_logic;    --! fifo data is ready
 
     --fifo data
-    signal WrFifoData:      std_logic_vector(cBuffWordWidth-1 downto 0);--data in
-    signal RdFifoData:      std_logic_vector(cBuffWordWidth-1 downto 0);--data out
+    signal wrFifoData       : std_logic_vector(cBuffWordWidth-1 downto 0);  --! data in
+    signal rdFifoData       : std_logic_vector(cBuffWordWidth-1 downto 0);  --! data out
 
 
 begin
 
     --FRAME STORING---------------------------------------------------------------------------
 
-    --delay task handler
-    --generates delay timestamp for incoming frames
-    DelHan:Delay_Handler
-    generic map(gDelayDataWidth =>gDelayDataWidth,
-                gNoOfDelFrames  =>gNoOfDelFrames)
-    port map(
-            clk=>clk,reset=>reset,
-            iStart=>iStartFrameStorage,         iFrameIsSoC=>iFrameIsSoC,   iDelayEn=>iTaskDelayEn,
-            iTestSync=>iTestSync,               iTestStop=>iTestStop,       iDelayData=>iDelaySetting,
-            iDelFrameLoaded=>DelFrameLoaded,
-            oStartAddrStorage=>StartAddrStorage,oCurrentTime=>CurrentTime,  oDelayTime=>DelayTime);
-
-    --address storer
-    --stores start and end address with delay timestamp and crc distortion flag
-    Addr_in:StoreAddress_FSM
+    --! @brief delay task handler
+    --! - generates delay timestamp for incoming frames
+    DelHan : work.Delay_Handler
     generic map(
-            gAddrDataWidth=>gAddrDataWidth,
-            gSize_Time=>cSize_Time,
-            gFiFoBitWidth=>cBuffWordWidth)
+                gDelayDataWidth => gDelayDataWidth,
+                gNoOfDelFrames  => gNoOfDelFrames
+                )
     port map(
-            clk=>clk, reset=>reset,
-            iStartStorage=>StartAddrStorage,        iFrameEnd=>iFrameEnd,   iCRCManEn=>iTaskCrcEn,
-            iDataInEndAddr=>iDataInEndAddr,         iDelayTime=>DelayTime,
-            oDataInStartAddr=>oDataInStartAddr,     oWr=>FifoWr,            oFiFoData=>WrFifoData
+            iClk                => iClk,
+            iReset              => iReset,
+            iStart              => iStartFrameStorage,
+            iFrameIsSoC         => iFrameIsSoC,
+            iDelayEn            => iTaskDelayEn,
+            iTestSync           => iTestSync,
+            iTestStop           => iTestStop,
+            iDelayData          => iDelaySetting,
+            iDelFrameLoaded     => delFrameLoaded,
+            oStartAddrStorage   => startAddrStorage,
+            oCurrentTime        => currentTime,
+            oDelayTime          => delayTime
+            );
+
+    --! @brief address storer
+    --! - stores start and end address with delay timestamp and crc distortion flag
+    Addr_in : work.StoreAddress_FSM
+    generic map(
+            gAddrDataWidth  => gAddrDataWidth,
+            gSize_Time      => cSize_Time,
+            gFiFoBitWidth   => cBuffWordWidth
+            )
+    port map(
+            iClk                => iClk,
+            iReset              => iReset,
+            iStartStorage       => startAddrStorage,
+            iFrameEnd           => iFrameEnd,
+            iCRCManEn           => iTaskCrcEn,
+            iDataInEndAddr      => iDataInEndAddr,
+            iDelayTime          => delayTime,
+            oDataInStartAddr    => oDataInStartAddr,
+            oWr                 => fifoWr,
+            oFiFoData           => wrFifoData
             );
     ------------------------------------------------------------------------------------------
 
@@ -215,16 +177,27 @@ begin
 
     --FIFO------------------------------------------------------------------------------------
 
-    --Fifo for frame address and timestamp/crc
-    FiFo:FiFo_top
-    generic map(B=>cBuffWordWidth,W=>cBuffAddrWidth,Cnt_Mode=>1)
+    --! @brief Fifo for frame address and timestamp/crc
+    FiFo : work.FiFo_top
+    generic map(
+                gDataWidth  => cBuffWordWidth,
+                gAddrWidth  => cBuffAddrWidth,
+                gCnt_Mode   => 1
+                )
     port map(
-            clk=>clk,       reset=>reset,
-            iRd=>FifoRd,    iWr=>FifoWr,        iWrData=>WrFifoData,
-            oFull=>FifoFull,oEmpty=>FifoEmpty,  oRdData=>RdFifoData);
+            iClk    => iClk,
+            iReset  => iReset,
+            iRd     => fifoRd,
+            iWr     => fifoWr,
+            iWrData => wrFifoData,
+            oFull   => fifoFull,
+            oEmpty  => fifoEmpty,
+            oRdData => rdFifoData
+            );
+
 
     --address-buffer-overflow, when Fifo=full+write
-    oError_Addr_Buff_OV<='1' when FifoWr='1' and FifoFull='1' else '0';
+    oError_addrBuffOv   <= '1' when fifoWr='1' and fifoFull='1' else '0';
     ------------------------------------------------------------------------------------------
 
 
@@ -233,14 +206,14 @@ begin
     --DATA-SPLIT OFF--------------------------------------------------------------------------
 
     --first bits => Timestamp                           iNextFrame='1' appears only at reading the start address
-    FrameTimestamp<=    RdFifoData(RdFifoData'left downto gAddrDataWidth) when iNextFrame='1'
+    frameTimestamp  <= rdFifoData(rdFifoData'left downto gAddrDataWidth) when iNextFrame='1'
                         and iTestStop='0' else (others=>'0');
 
     --CRC flag                                          iNextFrame='0' appears only at reading the end address
-    oDistCrcEn<=    RdFifoData(gAddrDataWidth)  when iNextFrame='0' else '0';
+    oDistCrcEn      <= rdFifoData(gAddrDataWidth)  when iNextFrame='0' else '0';
 
     --last bits => address-data
-    AddrOutData<=   RdFifoData(gAddrDataWidth-1 downto 0);
+    addrOutData     <= rdFifoData(gAddrDataWidth-1 downto 0);
     ------------------------------------------------------------------------------------------
 
 
@@ -249,10 +222,10 @@ begin
     --DELAYING FRAME--------------------------------------------------------------------------
 
     --Timestamp isn't zero => a delayed frame was loaded => pull counter +1
-    DelFrameLoaded<='1' when FrameTimestamp/=(FrameTimestamp'range=>'0') else '0';
+    delFrameLoaded  <= '1' when frameTimestamp/=(frameTimestamp'range=>'0') else '0';
 
     --data is ready, when data is available and timestamp has been reached
-    FifoDataReady<= not FifoEmpty when FrameTimestamp<=CurrentTime else '0';
+    fifoDataReady   <= not fifoEmpty when frameTimestamp<=currentTime else '0';
     ------------------------------------------------------------------------------------------
 
 
@@ -260,16 +233,22 @@ begin
 
     --DATA OUTPUT-----------------------------------------------------------------------------
 
-    --storing addresses of the next frame
-    Addr_out:ReadAddress_FSM
+    --! @brief storing addresses of the next frame
+    Addr_out : work.ReadAddress_FSM
         generic map(
-            gAddrDataWidth=>gAddrDataWidth,
-            gBuffBitWidth=>gAddrDataWidth)
+                    gAddrDataWidth  => gAddrDataWidth,
+                    gBuffBitWidth   => gAddrDataWidth
+                    )
     port map(
-            clk=>clk,                           reset=>reset,
-            iFifoData=>AddrOutData,             iDataReady=>FifoDataReady,      iNextFrame=>iNextFrame,
-            oDataOutStart=>oDataOutStartAddr,   oDataOutEnd=>oDataOutEndAddr,   oRd=>FifoRd,
-            oStart=>oStartNewFrame
+            iClk            => iClk,
+            iReset          => iReset,
+            iFifoData       => addrOutData,
+            iDataReady      => fifoDataReady,
+            iNextFrame      => iNextFrame,
+            oDataOutStart   => oDataOutStartAddr,
+            oDataOutEnd     => oDataOutEndAddr,
+            oRd             => fifoRd,
+            oStart          => oStartNewFrame
             );
     ------------------------------------------------------------------------------------------
 

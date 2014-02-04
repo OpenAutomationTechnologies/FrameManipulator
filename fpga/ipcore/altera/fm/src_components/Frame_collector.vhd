@@ -1,122 +1,145 @@
--- ****************************************************************
--- *                      Frame_collector                         *
--- ****************************************************************
--- *                                                              *
--- * A Component to collect the data of Ethernet Frames and stores*
--- * it at oFrameData                                             *
--- *                                                              *
--- *   Generics:                                                  *
--- *   gFrom: Number of the first Byte of the Datastream          *
--- *   gTo:   Number of the last Byte                             *
--- *                                                              *
--- * in:  iData          input of the data stream                 *
--- *      iSync          sync. signal for the Start of the stream *
--- * out: oFrameData     Collected Bytes   Width=no. of Bytes x 8 *
--- *      oFrameFinished Signal after checking the last Byte      *
--- *                                                              *
--- *--------------------------------------------------------------*
--- *                                                              *
--- * 22.05.12 V1.0 created Frame_collector by Sebastian Muelhausen*
--- *                                                              *
--- ****************************************************************
+-------------------------------------------------------------------------------
+--! @file Frame_collector.vhd
+--! @brief A component to collect the data of Ethernet frames
+-------------------------------------------------------------------------------
+--
+--    (c) B&R, 2014
+--
+--    Redistribution and use in source and binary forms, with or without
+--    modification, are permitted provided that the following conditions
+--    are met:
+--
+--    1. Redistributions of source code must retain the above copyright
+--       notice, this list of conditions and the following disclaimer.
+--
+--    2. Redistributions in binary form must reproduce the above copyright
+--       notice, this list of conditions and the following disclaimer in the
+--       documentation and/or other materials provided with the distribution.
+--
+--    3. Neither the name of B&R nor the names of its
+--       contributors may be used to endorse or promote products derived
+--       from this software without prior written permission. For written
+--       permission, please contact office@br-automation.com
+--
+--    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+--    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+--    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+--    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+--    COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+--    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+--    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+--    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+--    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+--    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+--    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+--    POSSIBILITY OF SUCH DAMAGE.
+--
+-------------------------------------------------------------------------------
 
+
+--! Use standard ieee library
 library ieee;
+--! Use logic elements
 use ieee.std_logic_1164.all;
+--! Use numeric functions
 use ieee.numeric_std.all;
 
+--! Use work library
 library work;
 --! use global library
 use work.global.all;
 
+
+--! This is the entity of a component to collect the data of Ethernet frames
 entity Frame_collector is
-        generic(
-            gFrom:natural:=13;
-            gTo : natural:=22
+    generic(
+        gFrom   : natural:=13;  --! First byte of needed frame data
+        gTo     : natural:=22   --! Last byte of needed frame data
         );
-        port(
-            clk, reset:         in std_logic;
-            iData:              in std_logic_vector(cByteLength-1 downto 0);
-            iSync:              in std_logic;
-            oFrameData :        out std_logic_vector((gTo-gFrom+1)*cByteLength-1 downto 0);
-            oCollectorFinished: out std_logic
-        );
+    port(
+        iClk                : in std_logic;                                                 --! clk
+        iReset              : in std_logic;                                                 --! reset
+        iData               : in std_logic_vector(cByteLength-1 downto 0);                  --! Frame stream
+        iSync               : in std_logic;                                                 --! Synchronous iReset
+        oFrameData          : out std_logic_vector((gTo-gFrom+1)*cByteLength-1 downto 0);   --! Collected data
+        oCollectorFinished  : out std_logic                                                 --! Data is complete
+    );
 end Frame_collector;
 
+
+--! @brief Frame_collector architecture
+--! @details A component to collect the data of Ethernet frames
 architecture two_seg_arch of Frame_collector is
 
-    --Counter
-    component Basic_Cnter
-        generic(gCntWidth: natural := 2);
-        port(
-          clk, reset:   in std_logic;
-          iClear:       in std_logic;
-          iEn   :       in std_logic;
-          iStartValue:  in std_logic_vector(gCntWidth-1 downto 0);
-          iEndValue:    in std_logic_vector(gCntWidth-1 downto 0);
-          oQ:           out std_logic_vector(gCntWidth-1 downto 0);
-          oOv:          out std_logic
-        );
-    end component;
+    constant cWidth_ByteCnt : natural := LogDualis(gTo-gFrom+1)+1;  --! Width of the counter for the byte number
+    constant cNumCollBytes  : natural := gTo-gFrom+1;               --! Number of bytes of the collected data
 
-    --Logic to select the bytes, which should be compared
-    component From_To_Cnt_Filter
-        generic(
-            gFrom:    natural:=13;
-            gTo:      natural:=16;
-            gWidthIn: natural:=5;
-            gWidthOut:natural:=2
-            );
-        port(
-            iCnt:  in std_logic_vector(gWidthIn-1 downto 0);
-            oCnt: out std_logic_vector(gWidthOut-1 downto 0);
-            oEn : out std_logic;
-            oEnd: out   std_logic
-        );
-    end component;
+    signal div4     : std_logic;                                        --! Prescaler enabled
+    signal cnt      : std_logic_vector(LogDualis(gTo+2)-1 downto 0);    --! Number of current Byte of frame
+    signal cntout   : std_logic_vector(cWidth_ByteCnt-1 downto 0);      --! Number of needed Byte
 
-    constant cWidth_ByteCnt:natural :=LogDualis(gTo-gFrom+1)+1;
+    signal filter_end   : std_logic;                                    --! Reached the last Byte (gTo)
+    signal cnt_stop     : std_logic;                                    --! Clear Signal after filter_end and iSync
+    signal memEn        : std_logic;                                    --! Enable to store the data
 
-    signal div4:    std_logic;                                      --Prescaler
-    signal cnt:     std_logic_vector(LogDualis(gTo+2)-1 downto 0);      --Number of Current Byte
-    signal cntout:  std_logic_vector(cWidth_ByteCnt-1 downto 0);    --Number of Current Byte - gFrom
+    signal reg_q    : std_logic_vector(cNumCollBytes*cByteLength-1 downto 0);   --! Register for output data
+    signal reg_next : std_logic_vector(cNumCollBytes*cByteLength-1 downto 0);   --! Register for output data
 
-    signal filter_end:  std_logic;                                  --Reached the last Byte (gTo)
-    signal cnt_stop:    std_logic;                                  --Clear Signal after filter_end and iSync
-    signal MemEn:       std_logic;                                  --Enable to store the data
-
-    signal reg_q:   std_logic_vector((gTo-gFrom+1)*cByteLength-1 downto 0);   --Register for output data
-    signal reg_next:std_logic_vector((gTo-gFrom+1)*cByteLength-1 downto 0);   --Register for output data
 begin
 
 
     --Counting current Byte------------------------------------------------------------------------------------
-    cnt_4 : Basic_Cnter         --Prescaler
-    generic map (gCntWidth => 2)
-    port map (
-            clk=>clk, reset=>reset,
-            iClear=>cnt_stop,iEn => '1', iStartValue=>(others=>'0'),iEndValue=>(others=>'1'),
-            oQ => open, oOv => div4
+
+    --! @brief Prescaler
+    --! - stops at the end
+    --! - sync at start
+    cnt_4 : work.Basic_Cnter
+    generic map(gCntWidth   => 2)
+    port map(
+            iClk        => iClk,
+            iReset      => iReset,
+            iClear      => cnt_stop,
+            iEn         => '1',
+            iStartValue => (others=>'0'),
+            iEndValue   => (others=>'1'),
+            oQ          => open,
+            oOv         => div4
             );
 
-    cnt_5bit : Basic_Cnter  --Counter, which counts the Bytes
-    generic map (gCntWidth => LogDualis(gTo+2))
-    port map (
-            clk=>clk, reset=>reset,
-            iClear=>iSync,iEn => div4, iStartValue=>(others=>'0'),iEndValue=>(others=>'1'),
-            oQ => cnt, oOv => open
+    --! @brief Counter, which counts the Bytes of the frame stream
+    --! - sync at start
+    cnt_5bit : work.Basic_Cnter
+    generic map(gCntWidth   => LogDualis(gTo+2))
+    port map(
+            iClk        => iClk,
+            iReset      => iReset,
+            iClear      => iSync,
+            iEn         => div4,
+            iStartValue => (others=>'0'),
+            iEndValue   => (others=>'1'),
+            oQ          => cnt,
+            oOv         => open
             );
 
 
     --Selecting the important Bytes----------------------------------------------------------------------------
-    cnt_f_t : From_To_Cnt_Filter    --Logic to select the wanted Bytes
-    generic map (gFrom => gFrom, gTo => gTo, gWidthIn => LogDualis(gTo+2), gWidthOUT => cWidth_ByteCnt)
-    port map (
-            iCnt => cnt,
-            oCnt => cntout, oEn => MemEn, oEnd => filter_end
+
+    --! @brief Logic to select the wanted Bytes
+    cnt_f_t : work.From_To_Cnt_Filter
+    generic map(
+                gFrom       => gFrom,
+                gTo         => gTo,
+                gWidthIn    => LogDualis(gTo+2),
+                gWidthOUT   => cWidth_ByteCnt)
+    port map(
+            iCnt    => cnt,
+            oCnt    => cntout,
+            oEn     => memEn,
+            oEnd    => filter_end
             );
 
 
-    cnt_stop <= filter_end or iSync;--reset at every new Frame and stop after reaching the last Byte
+    cnt_stop    <= filter_end or iSync; --reset at every new Frame and stop after reaching the last Byte
 
 
     --Register to Save the new Data----------------------------------------------------------------------------
@@ -124,29 +147,32 @@ begin
     --! @brief Registers
     --! - Storing with asynchronous reset
     registers :
-    process(clk, reset)
+    process(iClk, iReset)
     begin
-        if reset='1' then
+        if iReset='1' then
             reg_q <= (others=>'0');
 
-        elsif rising_edge(clk) then
+        elsif rising_edge(iClk) then
             reg_q <=reg_next;
 
         end if;
     end process;
 
 
-    process(iData, reg_q, cntout,MemEn,filter_end)
+    --! @brief Next value logic
+    --! - reset at start
+    combNext :
+    process(iData, reg_q, cntout,memEn,filter_end)
     begin
 
-        reg_next<=reg_q;
+        reg_next    <= reg_q;
 
-        if (MemEn='0' and filter_end='0') then --deleting the last Ethertype
-            reg_next<=(others=>'0');
+        if (memEn='0' and filter_end='0') then --deleting the last Ethertype
+            reg_next    <= (others=>'0');
 
-        elsif (MemEn='1' and filter_end='0') then --TODO alias
-            reg_next((gTo-gFrom-to_integer(unsigned(cntout))+1)*cByteLength-1 downto (gTo-gFrom-to_integer(unsigned(cntout)))*cByteLength)<=iData(cByteLength-1 downto 0);
---  e.g.    reg_next(    (10    -                      3    +1)*cByteLength-1 downto (    10    -                       3   )*cByteLength)<=iData(7 downto 0);
+        elsif (memEn='1' and filter_end='0') then --TODO Rewrite this storage logic with an array
+            reg_next((gTo-gFrom-to_integer(unsigned(cntout))+1)*cByteLength-1 downto (gTo-gFrom-to_integer(unsigned(cntout)))*cByteLength)<= iData;
+--  e.g.    reg_next(    (10    -                      3    +1)*cByteLength-1 downto (    10    -                       3   )*cByteLength)<= iData;
 --  =       reg_next(8*8-1 downto 7*8) =reg_next(63 downto 56)<=iData(7 downto 0);
 
         end if;
@@ -154,7 +180,7 @@ begin
     end process;
 
     --Output
-    oFrameData<=reg_q;
-    oCollectorFinished <= filter_end;
+    oFrameData          <= reg_q;
+    oCollectorFinished  <= filter_end;
 
 end two_seg_arch;
