@@ -1,0 +1,19 @@
+#!/bin/bash
+# Settings file for running simulation.
+STIM_FILE="altera/fm/tb/tbFromToCntFilter.txt"
+GEN_FILE="altera/fm/tb/tbFromToCntFilterOut.txt"
+POST_SCRIPT="altera/fm/sh/tbFromToCntFilterPost.sh"
+
+G_FROM=13
+G_TO=16
+
+SRC_LIST="\
+altera/fm/src/lib_Basics/From_To_Cnt_Filter.vhd \
+altera/fm/tb/tbFromToCntFilter.vhd \
+"
+
+GEN_LIST=( \
+"gStimFile=${STIM_FILE} gfileOut=${GEN_FILE} gFrom=$G_FROM gTo=$G_TO gWidthIn=5 gWidthOut=2" \
+)
+
+TOP_LEVEL=tbFromToCntFilter
