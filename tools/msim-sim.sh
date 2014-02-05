@@ -62,5 +62,17 @@ do
     CNT=$(( CNT + 1 ))
 done
 
+
+#Execute post script, when defined
+if [ "$POST_SCRIPT" ]; then
+    chmod +x $POST_SCRIPT
+    $POST_SCRIPT $SETTINGS_FILE|| {
+        echo "Post-Scrip failed"
+        exit 1
+    }
+
+fi
+
+
 #exit with simulation return
 exit $RET
