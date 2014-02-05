@@ -51,7 +51,7 @@ set_module_property VERSION 0.2.0
 set_module_property INTERNAL false
 set_module_property AUTHOR "B&R"
 set_module_property DISPLAY_NAME FrameManipulator
-set_module_property TOP_LEVEL_HDL_FILE FrameManipulator.vhd
+set_module_property TOP_LEVEL_HDL_FILE "../fm/src/FrameManipulator.vhd"
 set_module_property TOP_LEVEL_HDL_MODULE FrameManipulator
 set_module_property INSTANTIATE_IN_SYSTEM_MODULE true
 set_module_property EDITABLE false
@@ -64,53 +64,53 @@ set_module_property ICON_PATH "img/br.png"
 # | files
 # |
 add_file "../../../../stacks/openPOWERLINK/hardware/ipcore/common/lib/src/global.vhd" {SYNTHESIS SIMULATION}
-add_file framemanipulatorPkg.vhd {SYNTHESIS SIMULATION}
-add_file FrameManipulator.vhd {SYNTHESIS SIMULATION}
-add_file lib_Basics/adder_2121.vhd {SYNTHESIS SIMULATION}
-add_file lib_Basics/Basic_Cnter.vhd {SYNTHESIS SIMULATION}
-add_file lib_Basics/Basic_DownCnter.vhd {SYNTHESIS SIMULATION}
-add_file lib_Basics/From_To_Cnt_Filter.vhd {SYNTHESIS SIMULATION}
-add_file lib_Basics/Mux1D.vhd {SYNTHESIS SIMULATION}
-add_file lib_Basics/Mux2D.vhd {SYNTHESIS SIMULATION}
-add_file lib_Basics/shift_right_register.vhd {SYNTHESIS SIMULATION}
-add_file lib_Ethernet/CRC_calculator.vhd {SYNTHESIS SIMULATION}
-add_file lib_Ethernet/end_of_frame_detection.vhd {SYNTHESIS SIMULATION}
-add_file lib_Ethernet/Preamble_check.vhd {SYNTHESIS SIMULATION}
-add_file lib_Ethernet/Preamble_Generator.vhd {SYNTHESIS SIMULATION}
-add_file lib_Ethernet/sync_newData.vhd {SYNTHESIS SIMULATION}
-add_file lib_Ethernet/sync_RxFrame.vhd {SYNTHESIS SIMULATION}
-add_file lib_Memory/DpramAdjustable.vhd {SYNTHESIS SIMULATION}
-add_file lib_Memory/DpramFix.vhd {SYNTHESIS SIMULATION}
-add_file lib_Memory/FiFo_File.vhd {SYNTHESIS SIMULATION}
-add_file lib_Memory/FiFo_Sync_Ctrl.vhd {SYNTHESIS SIMULATION}
-add_file lib_Memory/FiFo_top.vhd {SYNTHESIS SIMULATION}
-add_file lib_Memory/read_logic.vhd {SYNTHESIS SIMULATION}
-add_file lib_Memory/write_logic.vhd {SYNTHESIS SIMULATION}
-add_file src_components/Address_Manager.vhd {SYNTHESIS SIMULATION}
-add_file src_components/Byte_to_TXData.vhd {SYNTHESIS SIMULATION}
-add_file src_components/Control_Register.vhd {SYNTHESIS SIMULATION}
-add_file src_components/Delay_FSM.vhd {SYNTHESIS SIMULATION}
-add_file src_components/Delay_Handler.vhd {SYNTHESIS SIMULATION}
-add_file src_components/Frame_collector.vhd {SYNTHESIS SIMULATION}
-add_file src_components/Frame_Create_FSM.vhd {SYNTHESIS SIMULATION}
-add_file src_components/Manipulation_Manager.vhd {SYNTHESIS SIMULATION}
-add_file src_components/Packet_MemCnter.vhd {SYNTHESIS SIMULATION}
-add_file src_components/Packet_Memory.vhd {SYNTHESIS SIMULATION}
-add_file src_components/Packet_StartAddrMem.vhd {SYNTHESIS SIMULATION}
-add_file src_components/PacketControl_FSM.vhd {SYNTHESIS SIMULATION}
-add_file src_components/ReadAddress_FSM.vhd {SYNTHESIS SIMULATION}
-add_file src_components/RXData_to_Byte.vhd {SYNTHESIS SIMULATION}
-add_file src_components/SafetyTaskSelection.vhd {SYNTHESIS SIMULATION}
-add_file src_components/SoC_Cnter.vhd {SYNTHESIS SIMULATION}
-add_file src_components/StoreAddress_FSM.vhd {SYNTHESIS SIMULATION}
-add_file src_components/Task_Mem_Reset.vhd {SYNTHESIS SIMULATION}
-add_file src_components/Task_Memory.vhd {SYNTHESIS SIMULATION}
-add_file src_Manipulator_top_level/Data_Buffer.vhd {SYNTHESIS SIMULATION}
-add_file src_Manipulator_top_level/Packet_Buffer.vhd {SYNTHESIS SIMULATION}
-add_file src_Manipulator_top_level/Frame_Creator.vhd {SYNTHESIS SIMULATION}
-add_file src_Manipulator_top_level/Frame_Receiver.vhd {SYNTHESIS SIMULATION}
-add_file src_Manipulator_top_level/Memory_Interface.vhd {SYNTHESIS SIMULATION}
-add_file src_Manipulator_top_level/Process_Unit.vhd {SYNTHESIS SIMULATION}
+add_file "../fm/src/framemanipulatorPkg.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/FrameManipulator.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Basics/adder_2121.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Basics/Basic_Cnter.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Basics/Basic_DownCnter.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Basics/From_To_Cnt_Filter.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Basics/Mux1D.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Basics/Mux2D.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Basics/shift_right_register.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Ethernet/CRC_calculator.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Ethernet/end_of_frame_detection.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Ethernet/Preamble_check.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Ethernet/Preamble_Generator.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Ethernet/sync_newData.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Ethernet/sync_RxFrame.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Memory/DpramAdjustable.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Memory/DpramFix.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Memory/FiFo_File.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Memory/FiFo_Sync_Ctrl.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Memory/FiFo_top.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Memory/read_logic.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Memory/write_logic.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/Address_Manager.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/Byte_to_TXData.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/Control_Register.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/Delay_FSM.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/Delay_Handler.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/Frame_collector.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/Frame_Create_FSM.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/Manipulation_Manager.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/Packet_MemCnter.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/Packet_Memory.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/Packet_StartAddrMem.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/PacketControl_FSM.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/ReadAddress_FSM.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/RXData_to_Byte.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/SafetyTaskSelection.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/SoC_Cnter.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/StoreAddress_FSM.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/Task_Mem_Reset.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_components/Task_Memory.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_Manipulator_top_level/Data_Buffer.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_Manipulator_top_level/Packet_Buffer.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_Manipulator_top_level/Frame_Creator.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_Manipulator_top_level/Frame_Receiver.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_Manipulator_top_level/Memory_Interface.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/src_Manipulator_top_level/Process_Unit.vhd" {SYNTHESIS SIMULATION}
 # |
 # +-----------------------------------
 
