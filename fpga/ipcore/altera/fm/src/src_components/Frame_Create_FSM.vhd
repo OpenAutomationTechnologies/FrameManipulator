@@ -45,6 +45,8 @@ use ieee.numeric_std.all;
 
 --! Use work library
 library work;
+--! use fm library
+use work.framemanipulatorPkg.all;
 
 --! Common library
 library libcommon;
@@ -86,15 +88,6 @@ end Frame_Create_FSM;
 --! @details The FSM for creating Ethernet frames and the TXDV signal
 architecture Behave of Frame_Create_FSM is
 
-    constant cCntWidth  : natural:=6;   --! Width of time counter TODO transfer to FM package
-
-    --timings: -- TODO transfer to FM package
-    constant cPramble_Time  : natural := 31;    --! 8Byte => 8Byte*8Bit/2Width => 32
-    constant cPre_Read_Time : natural := 5;     --! Forerun of the reading logic of 5 cycles
-    constant cCRC_Time      : natural := 15;    --! 4Byte => 4Byte*8Bit/2Width => 16
-    constant cIPG_Time      : natural := 43;    --! Whole delay of 960ns => here 880ns + process time
-
-
     --States
     type tMcState is
             (
@@ -113,7 +106,7 @@ architecture Behave of Frame_Create_FSM is
     --counter variables
     signal clearCnt     : std_logic;                                            --! Clear of timing counter
     signal clearPCnt    : std_logic;                                            --! Clear of packet counter
-    signal cnt          : std_logic_vector(cCntWidth-1 downto 0);               --! Counter for timings
+    signal cnt          : std_logic_vector(cCreateTime.cntWidth-1 downto 0);               --! Counter for timings
     signal pCnt         : std_logic_vector(gSafetyPackSelCntWidth-1 downto 0);  --! Byte counter for packet exchange
     signal pCntPre      : std_logic;                                            --! Prescaler for packet counter
 
@@ -122,10 +115,10 @@ begin
     --! @brief counter for timings
     FSM_Cnter : entity work.FixCnter
     generic map(
-                gCntWidth   => cCntWidth,
-                gStartValue => (cCntWidth-1 downto 0 => '0'),
-                gInitValue  => (cCntWidth-1 downto 0 => '0'),
-                gEndValue   => (cCntWidth-1 downto 0 => '1')
+                gCntWidth   => cCreateTime.cntWidth,
+                gStartValue => (cCreateTime.cntWidth-1 downto 0 => '0'),
+                gInitValue  => (cCreateTime.cntWidth-1 downto 0 => '0'),
+                gEndValue   => (cCreateTime.cntWidth-1 downto 0 => '1')
                 )
     port map(
             iClk    => iClk,
@@ -207,7 +200,7 @@ begin
                 end if;
 
             when sPreamble =>
-                if cnt=std_logic_vector(to_unsigned(cPramble_Time-cPre_Read_Time,cnt'length)) then
+                if cnt=std_logic_vector(to_unsigned(cCreateTime.preamble-cCreateTime.preReadTime,cnt'length)) then
                     state_next  <= sPre_read;   --pre-read after constant timing
 
                 else
@@ -219,7 +212,7 @@ begin
                 if iReadBuffDone='1' then
                     state_next  <= sCrc;    --goto CRC, when there's no payload (e.g. frame cut to size of 0)
 
-                elsif cnt=std_logic_vector(to_unsigned(cPramble_Time,cnt'length)) then
+                elsif cnt=std_logic_vector(to_unsigned(cCreateTime.preamble,cnt'length)) then
                     state_next  <= sRead;   --read after timing
 
                 else
@@ -249,7 +242,7 @@ begin
                 end if;
 
             when sCrc =>
-                if cnt=std_logic_vector(to_unsigned(cCRC_Time,Cnt'length)) then
+                if cnt=std_logic_vector(to_unsigned(cCreateTime.crcTime,cnt'length)) then
                     state_next  <= sWait_IPG;   --goto waiting after CRC has finished
 
                 else
@@ -258,7 +251,7 @@ begin
                 end if;
 
             when sWait_IPG =>
-                if cnt>std_logic_vector(to_unsigned(cCRC_Time+cIPG_Time,Cnt'length)) and iFrameStart='0' then
+                if cnt>std_logic_vector(to_unsigned(cCreateTime.crcTime+cCreateTime.ipgTime,cnt'length)) and iFrameStart='0' then
                     state_next  <= sIdle;   --goto idle after waiting for the IPG
 
                 else

@@ -223,6 +223,27 @@ package framemanipulatorPkg is
                                 );
 
 
+    ---------------------------------------------------------------------------
+    -- Frame create timing parameters
+    ---------------------------------------------------------------------------
+    --! Definition of timing parameters for frame creation
+    type tFrameCreateTime is record
+        cntWidth    : natural;  --! Width of time counter
+        preamble    : natural;  --! Clock cycles to create the Preamble
+        preReadTime : natural;  --! Clock cycles to compensate the delay of the read operation
+        crcTime     : natural;  --! Clock cycles to create the CRC
+        ipgTime     : natural;  --! Clock cycles to keep the Inter packet gap of 960 ns
+    end record;
+
+    --! Set predefined value for timing parameters for frame creation
+    constant cCreateTime    : tFrameCreateTime :=(
+                                cntWidth    => 6,
+                                preamble    => 31,  --! 8Byte => 8Byte*8Bit/2Width => 32
+                                preReadTime => 5,   --! Forerun of the reading logic of 5 cycles
+                                crcTime     => 15,  --! 4Byte => 4Byte*8Bit/2Width => 16
+                                ipgTime     => 43   --! Whole delay of 960ns => here 880ns + process time
+                                );
+
 end framemanipulatorPkg;
 
 package body framemanipulatorPkg is
