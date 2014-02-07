@@ -69,7 +69,7 @@ begin
 
     --! @brief Counter for Preamble
     --! - Sync, when modul is inactive
-    preamble_clk : work.Basic_Cnter
+    preamble_clk : entity work.Basic_Cnter
     generic map (gCntWidth => 5)
     port map (
             iClk        => iClk,

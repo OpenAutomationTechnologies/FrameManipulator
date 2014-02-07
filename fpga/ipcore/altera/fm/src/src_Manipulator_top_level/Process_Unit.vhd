@@ -140,7 +140,7 @@ begin
     --! - compares the ethernet-header-data with the task settings, filter and mask
     --! - process the drop-frame manipulation task
     --! - enables the active manipulation
-    M_Manager : work.Manipulation_Manager
+    M_Manager : entity work.Manipulation_Manager
     generic map(gFrom               => cEth.StartFrameFilter,
                 gTo                 => cEth.EndFrameFilter,
                 gWordWidth          => gTaskWordWidth,
@@ -193,7 +193,7 @@ begin
     --!   these frames are overwritten with the data following frame.
     --! - The delay task is also done in this component.
     --! - Addresses for new frames can be ordered from the Frame-Creator with iNextFrame
-    A_Manager : work.Address_Manager
+    A_Manager : entity work.Address_Manager
     generic map(gAddrDataWidth  => gDataBuffAddrWidth,
                 gDelayDataWidth => cDelayDataWidth,
                 gNoOfDelFrames  => gNoOfDelFrames)

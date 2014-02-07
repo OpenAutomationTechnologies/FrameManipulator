@@ -88,7 +88,7 @@ begin
 
 
     --! @brief Synchronize the module to the data stream
-    syncronizer : work.sync_newData
+    syncronizer : entity work.sync_newData
     generic map (gWidth  => cByteLength)
     port map (
             iClk    => iClk,
@@ -100,7 +100,7 @@ begin
 
 
     --! @brief Multiplexer selection
-    cnt_2bit : work.Basic_Cnter      --Counter, which controlls the DMux
+    cnt_2bit : entity work.Basic_Cnter      --Counter, which controlls the DMux
     generic map (gCntWidth  => 2)
     port map (
             iClk        => iClk,
@@ -115,7 +115,7 @@ begin
 
 
     --! @brief Multiplexer
-    DMux8to2 : work.Mux2D
+    DMux8to2 : entity work.Mux2D
     generic map(
                 gWordsWidth => 2,
                 gWordsNo    => 4,

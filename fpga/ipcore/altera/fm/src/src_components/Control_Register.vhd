@@ -159,7 +159,7 @@ begin
 
     --! @brief Control memory
     --! - Storing of operations and status/error flags
-    ControlMem : work.DpramAdjustable
+    ControlMem : entity work.DpramAdjustable
     generic map(
                 gAddresswidthA  => gAddresswidth,
                 gAddresswidthB  => gAddresswidth,

@@ -120,7 +120,7 @@ begin
     --! @brief data width converter
     --! - converted data output             => oData
     --! - generates synchronization signal  => oSync
-    Rx : work.RXData_to_Byte
+    Rx : entity work.RXData_to_Byte
     port map(
             iClk    => iClk,
             iReset  => iReset,
@@ -134,7 +134,7 @@ begin
 
     --! @brief preamble checker
     --! - valid preamble detected  =>  oPreOk
-    PreCheck : work.Preamble_check
+    PreCheck : entity work.Preamble_check
     port map(
             iClk    => iClk,
             iReset  => iReset,
@@ -148,7 +148,7 @@ begin
     --! @brief Ethertype collector
     --! - collected data            =>  oFrameData
     --! - collector has finisched   =>  oCollectorFinished
-    EtherType_Collector : work.Frame_collector
+    EtherType_Collector : entity work.Frame_collector
     generic map(
                 gFrom   => cEth.StartEtherType,
                 gTo     => cEth.EndEtherType
@@ -178,7 +178,7 @@ begin
 
     --! @brief Memory write logic
     --! - gPrescaler = 4
-    WL : work.write_logic
+    WL : entity work.write_logic
     generic map(
                 gPrescaler  => 4,  --writes data every fourth tick
                 gAddrWidth  => gBuffAddrWidth
@@ -197,7 +197,7 @@ begin
     --! - detects the end of the frame                      =>  oFrameEnd
     --! - as well as the memory-address of the last byte    =>  oEndAddr
     --! - also truncates the frame in the cut-frame-task    =>  iCutEn, iCutData
-    end_of_frame : work.end_of_frame_detection
+    end_of_frame : entity work.end_of_frame_detection
     generic map(gBuffAddrWidth  => gBuffAddrWidth)
     port map (
             iClk        => iClk,

@@ -116,7 +116,7 @@ architecture Behave of Frame_Create_FSM is
 begin
 
     --! @brief counter for timings
-    FSM_Cnter : work.Basic_Cnter
+    FSM_Cnter : entity work.Basic_Cnter
     generic map(gCntWidth   => cCntWidth)
     port map(
             iClk        => iClk,
@@ -132,7 +132,7 @@ begin
 
     --! @brief prescaler for safety counter
     --! - starts with Ov to eliminate register delay
-    Packet_Prescaler : work.Basic_Cnter
+    Packet_Prescaler : entity work.Basic_Cnter
     generic map(gCntWidth   => 2)
     port map(
             iClk        => iClk,
@@ -148,7 +148,7 @@ begin
 
     --! @brief safety counter for packet exchange
     --! - starts with value 1
-    Packet_Cnter : work.Basic_Cnter
+    Packet_Cnter : entity work.Basic_Cnter
     generic map(gCntWidth   => gSafetyPackSelCntWidth)
     port map(
             iClk        => iClk,

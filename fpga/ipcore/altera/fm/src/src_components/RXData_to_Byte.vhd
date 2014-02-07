@@ -77,7 +77,7 @@ architecture two_seg_arch of RXData_to_Byte is
 begin
 
     --! @brief first shift register for RxD0
-    shift1_4bit : work.shift_right_register
+    shift1_4bit : entity work.shift_right_register
     generic map (gWidth => 4)
     port map(
             iClk    => iClk,
@@ -88,7 +88,7 @@ begin
 
 
     --! @brief second shift register for RxD1
-    shift2_4bit : work.shift_right_register
+    shift2_4bit : entity work.shift_right_register
     generic map (gWidth => 4)
     port map(
             iClk    => iClk,
@@ -99,7 +99,7 @@ begin
 
 
     --! @brief Synchronizer for the counter
-    synchronizer : work.sync_RxFrame
+    synchronizer : entity work.sync_RxFrame
     port map(
             iClk    => iClk,
             iReset  => iReset,
@@ -110,7 +110,7 @@ begin
 
 
     --! @brief Prescaler for an enable every 4th clock(Data is ready in the Shift register)
-    cnt_2bit : work.Basic_Cnter
+    cnt_2bit : entity work.Basic_Cnter
     generic map (gCntWidth => 2)
     port map(
             iClk        => iClk,
@@ -125,7 +125,7 @@ begin
 
 
     --! @brief Adder, which generates the Byte from the two shift registers after every enable
-    adder : work.adder_2121
+    adder : entity work.adder_2121
     generic map(WIDTH_IN => 4)
     port map(
             iClk    => iClk,

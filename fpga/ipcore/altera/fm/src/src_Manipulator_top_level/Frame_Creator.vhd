@@ -122,7 +122,7 @@ begin
     --! - starts with the iFrameStart signal
     --! - selection of the different signals with oSelectTX
     --! - PreReadBuff to eliminate problems with delays of the DPRam and read logic
-    FSM : work.Frame_Create_FSM
+    FSM : entity work.Frame_Create_FSM
     generic map(gSafetyPackSelCntWidth  => gSafetyPackSelCntWidth)
     port map(
         iClk                => iClk,
@@ -145,7 +145,7 @@ begin
     oExchangeData   <= ExchangeData;
 
     --! @brief preamble generator
-    Preamble : work.Preamble_Generator
+    Preamble : entity work.Preamble_Generator
     port map (
             iClk                => iClk,
             iReset              => iReset,
@@ -160,7 +160,7 @@ begin
 
     --! @brief read frame-data logic
     --! - starts reading from the address of the first byte of the memory   => iDataStartAddr
-    RL : work.read_logic
+    RL : entity work.read_logic
     generic map(
                 gPrescaler  => 4,
                 gAddrWidth  => gDataBuffAddrWidth
@@ -180,7 +180,7 @@ begin
 
     --! @brief byte to 2bit converter
     --! - converts the frame data to a width of two bits
-    Byte_to_Tx : work.Byte_to_TXData
+    Byte_to_Tx : entity work.Byte_to_TXData
     port map (
             iClk    => iClk,
             iReset  => iReset,
@@ -193,7 +193,7 @@ begin
     --! - iReadBuff_Active  => CRC is calculated
     --! - iCrcActive       => CRC is shifted out
     --! - iCRCMani          => CRC is distorted
-    CRC_calc : work.CRC_calculator
+    CRC_calc : entity work.CRC_calculator
         port map (
             iClk                => iClk,
             iReadBuffActive     => readBuffActive,
@@ -211,7 +211,7 @@ begin
 
     --! @brief Stream selector
     --! - selects the active stream by TXD_Selection of the FSM
-    TXDMux : work.Mux2D
+    TXDMux : entity work.Mux2D
     generic map(
                 gWordsWidth => 2,
                 gWordsNo    => 4,

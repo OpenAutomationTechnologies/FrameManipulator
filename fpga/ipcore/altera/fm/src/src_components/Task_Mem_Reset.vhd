@@ -96,7 +96,7 @@ begin
     end process;
 
     --! @brief Counter for the addresses to clear
-    Cnter : work.Basic_Cnter
+    Cnter : entity work.Basic_Cnter
     generic map(gCntWidth=>gAddrWidth)
     port map(
             iClk        => iClk,

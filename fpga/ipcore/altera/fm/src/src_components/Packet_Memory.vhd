@@ -169,7 +169,7 @@ begin
     --! @brief Counter for memory
     --! - Select address for packet memory to store and exchange packets
     --! - Prescales the counting to fit to the stream
-    PacketAddressLogic : work.Packet_MemCnter
+    PacketAddressLogic : entity work.Packet_MemCnter
     generic map(gPacketAddrWidth    => gPacketAddrWidth)
     port map(
             iClk            => iClk,
@@ -191,7 +191,7 @@ begin
 
     --! @brief Packet memory
     --! - RAM with the packet data
-    PacketRAM : work.FiFo_File
+    PacketRAM : entity work.FiFo_File
     generic map(
                 gAddrWidth  => gPacketAddrWidth,
                 gDataWidth  => cByteLength
@@ -295,7 +295,7 @@ begin
     --! - Address output like a Fifo
     --! - Temporary Lifo output at Incorrect-Sequence
     --! - Error output at overlapping packets
-    RdAddressMem : work.Packet_StartAddrMem
+    RdAddressMem : entity work.Packet_StartAddrMem
     generic map(
                 gPacketAddrWidth    => gPacketAddrWidth,
                 gAddrMemoryWidth    => gAddrMemoryWidth
@@ -344,7 +344,7 @@ begin
 
     --! @brief Counter for the Number of delayed packets
     --! - Overflow of counter occures at the same time as the overflow of the address memory
-    lagCnter : work.Basic_Cnter
+    lagCnter : entity work.Basic_Cnter
     generic map(gCntWidth   => gAddrMemoryWidth)
     port map(
             iClk        => iClk,

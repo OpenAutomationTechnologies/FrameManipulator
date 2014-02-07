@@ -99,7 +99,7 @@ begin
 
 
     --! @brief Collector for POWERLINK SoC
-    messageType_Collector : work.Frame_collector
+    messageType_Collector : entity work.Frame_collector
     generic map(
                 gFrom   => cEth.StartmessageType,
                 gTo     => cEth.StartmessageType
@@ -122,7 +122,7 @@ begin
 
 
     --! @brief Cycle Counter
-    Cnter : work.Basic_Cnter
+    Cnter : entity work.Basic_Cnter
     generic map(gCntWidth=>gCnterWidth)
     port map(
             iClk        => iClk,

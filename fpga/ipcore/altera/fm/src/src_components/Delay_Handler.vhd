@@ -150,7 +150,7 @@ begin
 
     --! @brief Delay FSM
     --! - provides active-task signal, cnts the push-cnter up and resets the frame-cnter
-    FSM : work.Delay_FSM
+    FSM : entity work.Delay_FSM
     port map(
             iClk                => iClk,
             iReset              => iReset,
@@ -166,7 +166,7 @@ begin
 
     --! @brief Number of stored Delayed Frame
     --! - push delayed frame to buffer
-    PushCnter : work.Basic_Cnter
+    PushCnter : entity work.Basic_Cnter
     generic map(gCntWidth   => LogDualis(gNoOfDelFrames))
     port map(
             iClk        => iClk,
@@ -182,7 +182,7 @@ begin
 
     --! @brief Number of loaded Delayed Frame
     --! - delayed frame was pulled from buffer
-    PullCnter : work.Basic_Cnter
+    PullCnter : entity work.Basic_Cnter
     generic map(gCntWidth   => LogDualis(gNoOfDelFrames))
     port map(
             iClk        => iClk,
@@ -204,7 +204,7 @@ begin
     --Time of delayed frames--------------------------------------------------------------
 
     --! @brief Counter for the time in 50MHz ticks, when task is active
-    TimeCnter : work.Basic_Cnter
+    TimeCnter : entity work.Basic_Cnter
     generic map(gCntWidth   => oCurrentTime'length)
     port map(
             iClk        => iClk,

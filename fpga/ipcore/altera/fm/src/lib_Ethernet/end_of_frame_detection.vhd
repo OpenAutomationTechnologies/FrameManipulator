@@ -104,7 +104,7 @@ begin
 
 
     --! @brief shift register to save the last values of RXDV
-    RX_shift : work.shift_right_register
+    RX_shift : entity work.shift_right_register
     generic map(gWidth  => 3)
     port map(
             iClk    => iClk,

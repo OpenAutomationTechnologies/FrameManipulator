@@ -203,7 +203,7 @@ begin
     --! output of test status => oStartTest, oStopTest
     --! reading tasks         => iRdTaskAddr
     --! output tasks          => oTaskSettingData, oTaskCompFrame, oTaskCompMask
-    M_Interface : work.Memory_Interface
+    M_Interface : entity work.Memory_Interface
     generic map(
                 gSlaveTaskWordWidth     => cSlaveTaskWordWidth,
                 gSlaveTaskAddrWidth     => cSlaveTaskAddr,
@@ -254,7 +254,7 @@ begin
     --! storing the Frames in the Data-Buffer     => oWrBuffAddr, oWrBuffEn
     --! Checking the Preamble                     => oFrameStart
     --! generating sync signal for Process-Unit   => oFrameSync
-    F_Receiver : work.Frame_Receiver
+    F_Receiver : entity work.Frame_Receiver
     generic map(
                 gBuffAddrWidth      => cDataBuffAddrWidth,
                 gEtherTypeFilter    => cEth.FilterEtherType
@@ -284,7 +284,7 @@ begin
     --! reading frame data        => oData, iRdAddress, iRdEn
     --! manipuating header files  => iTaskManiEn, iManiSetting, iDataStartAddr(for offset)
     --! Overflow detection        => oerror_frameBuffOv
-    D_Buffer : work.Data_Buffer
+    D_Buffer : entity work.Data_Buffer
     generic map(gDataWidth          => cByteLength,
                 gDataAddrWidth      => cDataBuffAddrWidth,
                 gNoOfHeadMani       => cParam.NoOfHeadMani,
@@ -314,7 +314,7 @@ begin
     --!                                           iTaskCompFrame, iTaskCompMask
     --! manages the space of the data memory  =>  oDataInStartAddr, iDataInEndAddr,
     --!                                           oDataOutStartAddr,oDataOutEndAddr
-    P_Unit : work.Process_Unit
+    P_Unit : entity work.Process_Unit
     generic map(gDataBuffAddrWidth  =>  cDataBuffAddrWidth,
                 gTaskWordWidth      =>  cTaskWordWidth,
                 gTaskAddrWidth      =>  cTaskAddrWidth,
@@ -365,7 +365,7 @@ begin
 
     --! @brief component for generating a new frame
     --! readout the data-buffer and generates a new frame
-    F_Creator : work.Frame_Creator
+    F_Creator : entity work.Frame_Creator
     generic map(gDataBuffAddrWidth      => cDataBuffAddrWidth,
                 gSafetyPackSelCntWidth  => cParam.SafetyPackSelCntWidth)
     port map (
@@ -396,7 +396,7 @@ begin
 
     --! @brief component for safety packet manipulations
     --! stores and exchanges safety packets
-    P_Buff : work.Packet_Buffer
+    P_Buff : entity work.Packet_Buffer
     generic map(gSafetySetting      => cSettingSize.Safety,
                 gPacketAddrWidth    => cPacketAddrWidth,
                 gAddrMemoryWidth    => cAddrMemoryWidth)

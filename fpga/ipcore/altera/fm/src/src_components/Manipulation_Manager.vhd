@@ -253,7 +253,7 @@ begin
 
 
     --! @brief Soc Counter: counts PL-cycles as long as TestActive is '1'
-    CycleCnter : work.SoC_Cnter
+    CycleCnter : entity work.SoC_Cnter
     generic map(gCnterWidth => gCycleCntWidth)
     port map(
             iClk        => iClk,
@@ -278,7 +278,7 @@ begin
     --DATA GATHERING (collecting header-data, reading tasks)--------------------------------------
 
     --! @brief Header data collector
-    FC : work.Frame_collector
+    FC : entity work.Frame_collector
     generic map(
                 gFrom   => gFrom,
                 gTo     => gTo
@@ -298,7 +298,7 @@ begin
 
 
     --! @brief logic for reading the task-data
-    CommandRL : work.read_logic
+    CommandRL : entity work.read_logic
     generic map(
                 gPrescaler  => 1,
                 gAddrWidth  => gBuffAddrWidth
@@ -384,7 +384,7 @@ begin
 
 
     --! @brief Check of safety task
-    SafetyTaskCheck : work.SafetyTaskSelection
+    SafetyTaskCheck : entity work.SafetyTaskSelection
     generic map(
                 gWordWidth      => gWordWidth,
                 gSafetySetting  => gSafetySetting

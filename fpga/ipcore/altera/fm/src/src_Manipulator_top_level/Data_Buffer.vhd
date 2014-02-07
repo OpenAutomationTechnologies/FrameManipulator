@@ -145,7 +145,7 @@ begin
     --! @brief Buffer for Frames
     --! - Port A: incoming frame-data
     --! - Port B: outgoing frame-data and frame header manipulation
-    FBuffer : work.DpramFix
+    FBuffer : entity work.DpramFix
     generic map(
                 gWordWidth  => gDataWidth,
                 gAddrWidth  => gDataAddrWidth
@@ -211,7 +211,7 @@ begin
 
     --! @brief Counter to select manipulation data with its offset
     --! - Count up, when port B isn't used for reading frame data
-    SelCntr : work.Basic_Cnter
+    SelCntr : entity work.Basic_Cnter
     generic map(gCntWidth   => cCntWidth)
     port map(
             iClk        => iClk,
@@ -227,7 +227,7 @@ begin
 
     --DeMultiplexer to select the Data-------------------------------------------------------------
     --! @brief Multiplexer for manipulation offset
-    OffsetMux : work.Mux2D
+    OffsetMux : entity work.Mux2D
     generic map(
                 gWordsWidth => cParam.sizeManiHeaderOffset,
                 gWordsNo    => gNoOfHeadMani,
@@ -241,7 +241,7 @@ begin
 
 
     --! @brief Multiplexer for manipulation data
-    WordMux : work.Mux2D
+    WordMux : entity work.Mux2D
     generic map(
                 gWordsWidth => cParam.sizeManiHeaderData,
                 gWordsNo    => gNoOfHeadMani,

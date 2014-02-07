@@ -249,7 +249,7 @@ begin
     --! @brief Control of the safety packet manipulation
     --! - Handles the different tasks
     --! - Controls data stream and storage of data
-    Control : work.PacketControl_FSM
+    Control : entity work.PacketControl_FSM
     port map(
             iClk                => iClk,
             iReset              => iReset,
@@ -335,7 +335,7 @@ begin
     --! @brief Safety frame counter
     --! - Counts every safety frame, when active
     --! - Reset at inactive manipulation
-    frameCnter : work.Basic_Cnter
+    frameCnter : entity work.Basic_Cnter
     generic map(gCntWidth   => reg.NoOfPackets'length)
     port map(
             iClk        => iClk,
@@ -393,7 +393,7 @@ begin
     --! - Output of safety packets in correct or reverse order
     --! - Delete packets at Loss or Delay task
     --! - Error output at overflow of the packet buffer
-    PacketRAM : work.Packet_Memory
+    PacketRAM : entity work.Packet_Memory
     generic map(gPacketAddrWidth    => gPacketAddrWidth,
                 gAddrMemoryWidth    => gAddrMemoryWidth)
     port map(

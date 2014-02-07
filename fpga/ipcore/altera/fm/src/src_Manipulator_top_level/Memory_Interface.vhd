@@ -117,7 +117,7 @@ begin
     --! @brief Control register
     --! - Transfer of operations from PL-Slave to FM
     --! - Transfer of status- and error-flags to PL-Slave
-    C_Reg : work.Control_Register
+    C_Reg : entity work.Control_Register
     generic map(
                 gWordWidth      => gSlaveControlWordWidth,
                 gAddresswidth   => gSlaveControlAddrWidth
@@ -153,7 +153,7 @@ begin
     ------------------------------------------------------------------------------------------
     --! @brief Clear up task memory
     --! - Deletes all tasks
-    T_Mem_Res : work.Task_Mem_Reset
+    T_Mem_Res : entity work.Task_Mem_Reset
     generic map(gAddrWidth  => gTaskAddrWidth)
     port map(
             iClk            => iClk,
@@ -172,7 +172,7 @@ begin
     --! - Task selection with iTaskAddr
     --! - Clear task with iClTaskMem
     --! - Task data: oSettingData, oCompFrame and oCompMask
-    T_Memory : work.Task_Memory
+    T_Memory : entity work.Task_Memory
     generic map(
                 gSlaveWordWidth => gSlaveTaskWordWidth,
                 gWordWidth      => gTaskWordWidth,

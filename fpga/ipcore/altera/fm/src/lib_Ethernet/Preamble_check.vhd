@@ -74,7 +74,7 @@ begin
     --! @brief Counter of toggeling Preamble
     --! - Count up at toggeling bit
     --! - Clear at RXDV = 0
-    cnter : work.Basic_Cnter
+    cnter : entity work.Basic_Cnter
     generic map(gCntWidth   => 6)
     port map(
             iClk        => iClk,

@@ -130,7 +130,7 @@ begin
 
     --! @brief delay task handler
     --! - generates delay timestamp for incoming frames
-    DelHan : work.Delay_Handler
+    DelHan : entity work.Delay_Handler
     generic map(
                 gDelayDataWidth => gDelayDataWidth,
                 gNoOfDelFrames  => gNoOfDelFrames
@@ -152,7 +152,7 @@ begin
 
     --! @brief address storer
     --! - stores start and end address with delay timestamp and crc distortion flag
-    Addr_in : work.StoreAddress_FSM
+    Addr_in : entity work.StoreAddress_FSM
     generic map(
             gAddrDataWidth  => gAddrDataWidth,
             gSize_Time      => cSize_Time,
@@ -178,7 +178,7 @@ begin
     --FIFO------------------------------------------------------------------------------------
 
     --! @brief Fifo for frame address and timestamp/crc
-    FiFo : work.FiFo_top
+    FiFo : entity work.FiFo_top
     generic map(
                 gDataWidth  => cBuffWordWidth,
                 gAddrWidth  => cBuffAddrWidth,
@@ -234,7 +234,7 @@ begin
     --DATA OUTPUT-----------------------------------------------------------------------------
 
     --! @brief storing addresses of the next frame
-    Addr_out : work.ReadAddress_FSM
+    Addr_out : entity work.ReadAddress_FSM
         generic map(
                     gAddrDataWidth  => gAddrDataWidth,
                     gBuffBitWidth   => gAddrDataWidth

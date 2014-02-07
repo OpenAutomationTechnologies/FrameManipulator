@@ -79,7 +79,7 @@ architecture arch of FiFo_top is
 begin
 
     --! @brief Fifo control
-    cntr : work.fifo_sync_ctrl
+    cntr : entity work.fifo_sync_ctrl
     generic map(
                 gAddrWidth  => gAddrWidth,
                 gCnt_Mode   => gCnt_Mode
@@ -99,7 +99,7 @@ begin
     oFull   <= f_status;
 
     --! @brief Fifo memory
-    reg : work.fifo_file
+    reg : entity work.fifo_file
     generic map(
                 gDataWidth  => gDataWidth,
                 gAddrWidth  => gAddrWidth

@@ -93,7 +93,7 @@ begin
     --! @brief Prescaler
     --! - stops at the end
     --! - sync at start
-    cnt_4 : work.Basic_Cnter
+    cnt_4 : entity work.Basic_Cnter
     generic map(gCntWidth   => 2)
     port map(
             iClk        => iClk,
@@ -108,7 +108,7 @@ begin
 
     --! @brief Counter, which counts the Bytes of the frame stream
     --! - sync at start
-    cnt_5bit : work.Basic_Cnter
+    cnt_5bit : entity work.Basic_Cnter
     generic map(gCntWidth   => LogDualis(gTo+2))
     port map(
             iClk        => iClk,
@@ -125,7 +125,7 @@ begin
     --Selecting the important Bytes----------------------------------------------------------------------------
 
     --! @brief Logic to select the wanted Bytes
-    cnt_f_t : work.From_To_Cnt_Filter
+    cnt_f_t : entity work.From_To_Cnt_Filter
     generic map(
                 gFrom       => gFrom,
                 gTo         => gTo,

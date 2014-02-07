@@ -100,7 +100,7 @@ begin
     if gPrescaler>1 generate
 
         --! @brief Prescaler via counter
-        difpre_clk : work.Basic_Cnter
+        difpre_clk : entity work.Basic_Cnter
         generic map (gCntWidth => LogDualis(gPrescaler))
         port map (
                 iClk        => iClk,
@@ -128,7 +128,7 @@ begin
 
 
     --! @brief Address counter
-    buffer_clk : work.Basic_Cnter
+    buffer_clk : entity work.Basic_Cnter
     generic map (gCntWidth => gAddrWidth)
     port map (
             iClk        => iClk,

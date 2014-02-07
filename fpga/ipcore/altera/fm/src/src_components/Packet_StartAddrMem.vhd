@@ -97,7 +97,7 @@ begin
 
     --! @brief Counter for address-memory write address
     --! - Select address for next memory entry
-    WrAddrCnter : work.Basic_Cnter
+    WrAddrCnter : entity work.Basic_Cnter
     generic map(gCntWidth   => gAddrMemoryWidth)
     port map(
             iClk        => iClk,
@@ -112,7 +112,7 @@ begin
 
     --! @brief Counter for address-memory read address
     --! - Select address for the output of the next start-address from memory
-    RdAddrCnter : work.Basic_Cnter
+    RdAddrCnter : entity work.Basic_Cnter
     generic map(gCntWidth   => gAddrMemoryWidth)
     port map(
             iClk        => iClk,
@@ -171,7 +171,7 @@ begin
     --! @brief Counter for the output of packet start addresses in the reverse sequence
     --! - Start with current write address and counts down
     --! - Reset, when task is over
-    TwistCnter : work.Basic_DownCnter
+    TwistCnter : entity work.Basic_DownCnter
     generic map(gCntWidth   => gAddrMemoryWidth)
     port map(
             iClk        => iClk,
@@ -201,7 +201,7 @@ begin
     --! @brief Memory for packet start address
     --! - Normally like a FiFo
     --! - Temporary a LiFo at Incorrect-Sequence task
-    RdAddressMem : work.FiFo_File
+    RdAddressMem : entity work.FiFo_File
     generic map(
                 gAddrWidth  => gAddrMemoryWidth,
                 gDataWidth  => gPacketAddrWidth

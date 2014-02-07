@@ -99,7 +99,7 @@ begin
     --! @brief replicate 1-Bit multiplexer gWordsWidth times
     gen_nbit :
     for i in 0 to (gWordsWidth-1) generate
-        mux : work.Mux1D
+        mux : entity work.Mux1D
             generic map(gWidthData  => gWordsNo,
                         gWidthSel   => gWidthSel
                         )

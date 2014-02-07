@@ -90,7 +90,7 @@ begin
 
     --! @brief Prescaler for write address
     --! - Factor four to match stream
-    WrPre : work.Basic_Cnter
+    WrPre : entity work.Basic_Cnter
     generic map(gCntWidth   => 2)
     port map(
             iClk        => iClk,
@@ -106,7 +106,7 @@ begin
 
     --! @brief Counter for write address
     --! - Select address for packet memory to store packets
-    WrCnter : work.Basic_Cnter
+    WrCnter : entity work.Basic_Cnter
     generic map(gCntWidth   => gPacketAddrWidth)
     port map(
             iClk        => iClk,
@@ -124,7 +124,7 @@ begin
     --! @brief Prescaler for read address
     --! - Factor four to match stream
     --! - Start with the value of one to compensate the delay of the memory
-    RdPre : work.Basic_Cnter
+    RdPre : entity work.Basic_Cnter
     generic map(gCntWidth   => 2)
     port map(
             iClk        => iClk,
@@ -140,7 +140,7 @@ begin
 
     --! @brief Counter for read address
     --! - Select address for packet memory to exchange packets
-    RdCnter : work.Basic_Cnter
+    RdCnter : entity work.Basic_Cnter
     generic map(gCntWidth   => gPacketAddrWidth)
     port map(
             iClk        => iClk,

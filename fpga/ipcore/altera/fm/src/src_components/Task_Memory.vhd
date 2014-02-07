@@ -122,7 +122,7 @@ begin
 
     --! @brief First Memory
     --! - Object 0x3001 Setting 1
-    ManiDataBuffer1 : work.DpramAdjustable
+    ManiDataBuffer1 : entity work.DpramAdjustable
     generic map(
                 gAddresswidthA  => gAddresswidth+1,
                 gAddresswidthB  => gAddresswidth,
@@ -152,7 +152,7 @@ begin
 
     --! @brief Second Memory
     --! - Object 0x3002 Setting 2
-    ManiDataBuffer2 : work.DpramAdjustable
+    ManiDataBuffer2 : entity work.DpramAdjustable
     generic map(
                 gAddresswidthA  => gAddresswidth+1,
                 gAddresswidthB  => gAddresswidth,
@@ -182,7 +182,7 @@ begin
 
     --! @brief Third Memory
     --! - Object 0x3003 Frame data
-    CompFrameBuffer : work.DpramAdjustable
+    CompFrameBuffer : entity work.DpramAdjustable
     generic map(
                 gAddresswidthA  => gAddresswidth+1,
                 gAddresswidthB  => gAddresswidth,
@@ -212,7 +212,7 @@ begin
 
     --! @brief Fourth Memory
     --! - Object 0x3003 Mask data
-    CompMaskBuffer : work.DpramAdjustable
+    CompMaskBuffer : entity work.DpramAdjustable
     generic map(
                 gAddresswidthA  => gAddresswidth+1,
                 gAddresswidthB  => gAddresswidth,
