@@ -65,7 +65,8 @@ entity tbFmIpCore is
     generic(gStimIn             : string := "stimEthPacket.txt";    --! Stimulation file in
             gFileFrameOutStim   : string := "outStim.txt";          --! Output of stimulation file
             gFileFrameOutFm     : string := "outFm.txt";            --! Output of stimulation file
-            gFileFrameOutTiming : string := "outTiming.txt"         --! Output of frame delay
+            gFileFrameOutTiming : string := "outTiming.txt";        --! Output of frame delay
+            gTestSetting        : string := "passTest"              --! Task configuration
             );
 end tbFmIpCore;
 
@@ -95,7 +96,6 @@ architecture two_seg_arch of tbFmIpCore is
     signal TXDV : std_logic;                                        --! RMII data valid from FM
     signal TXD  : std_logic_vector(1 downto 0);                     --! RMII data from FM
     signal LED  : std_logic_vector(1 downto 0);                     --! FM LED output
-
 
 begin
 
@@ -139,7 +139,7 @@ begin
     end process;
 
 
-    writeEn <='0' when CommData=X"000F0000" else '1';
+
 
     --! DUT
     FM : entity work.FrameManipulator
@@ -168,10 +168,6 @@ begin
             );
 
 
-    wrCommAddr  <= (others=>'0');
-    commData    <= (others=>'0');
-
-
     --! Ethernet packet generator
     packGen : entity work.ethPktGen
     generic map(gDataWidth  => 2)
@@ -185,6 +181,40 @@ begin
             oTxDone     => open,
             oStimDone   => stimDone
             );
+
+
+    --! Generate configuration
+    Conv : entity work.configurateFm
+    generic map(gTestSetting    => gTestSetting)
+    port map(
+            iWrCommAddr => wrCommAddr,
+            oCommData   => commData
+            );
+
+
+
+    --! Generate configuration
+    genAddr:
+    process
+    begin
+        wrCommAddr  <= (others=>'0');
+        writeEn     <= '1';
+
+        wait until reset='0';
+
+        while wrCommAddr/= (wrCommAddr'range=>'1') loop
+
+            wait until rising_edge(clk);
+
+            wrCommAddr  <= std_logic_vector(unsigned(wrCommAddr)+1);
+
+        end loop;
+
+        writeEn     <= '0';
+
+        wait;
+
+    end process;
 
 
     --! Output input data

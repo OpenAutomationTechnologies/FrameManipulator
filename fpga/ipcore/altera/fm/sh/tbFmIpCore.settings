@@ -1,9 +1,9 @@
 #!/bin/bash
 # Settings file for running simulation.
 STIM_FILE="altera/fm/tb/stimEthPacket.txt"
-GEN_FILE_STIM="altera/fm/tb/tbFmIpCoreOutStim.txt"
-GEN_FILE_FM="altera/fm/tb/tbFmIpCoreOutFm.txt"
-GEN_FILE_TIME="altera/fm/tb/tbFmIpCoreOutTime.txt"
+GEN_FILE_STIM="altera/fm/tb/tbFmIpCoreOutStim"
+GEN_FILE_FM="altera/fm/tb/tbFmIpCoreOutFm"
+GEN_FILE_TIME="altera/fm/tb/tbFmIpCoreOutTime"
 POST_SCRIPT="altera/fm/sh/tbFmIpCore.sh"
 
 SRC_LIST="\
@@ -55,13 +55,16 @@ altera/fm/src/src_Manipulator_top_level/Memory_Interface.vhd \
 altera/fm/src/src_Manipulator_top_level/Packet_Buffer.vhd \
 altera/fm/src/src_Manipulator_top_level/Process_Unit.vhd \
 altera/fm/src/FrameManipulator.vhd \
+altera/fm/tb/configurateFmBhv.vhd \
 altera/fm/tb/ethPktGenBhv.vhd \
 altera/fm/tb/ethPktStorage.vhd \
 altera/fm/tb/tbFmIpCore.vhd \
 "
 
+TEST1=passFrame
+
 GEN_LIST=( \
-"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM} gFileFrameOutFm=${GEN_FILE_FM} gFileFrameOutTiming=${GEN_FILE_TIME}"\
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}1 gFileFrameOutFm=${GEN_FILE_FM}1 gFileFrameOutTiming=${GEN_FILE_TIME}1 gTestSetting=${TEST1}"\
 )
 
 TOP_LEVEL=tbFmIpCore
