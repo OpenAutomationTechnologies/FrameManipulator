@@ -46,8 +46,11 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.std_logic_textio.all;
---! use global library
-use work.global.all;
+
+--! Common library
+library libcommon;
+--! Use common library global package
+use libcommon.global.all;
 
 entity ethPktGen is
     generic (
@@ -68,7 +71,9 @@ entity ethPktGen is
         --! Media Interface Data signals
         oTxData : out std_logic_vector(gDataWidth-1 downto 0);
         --! Tx done
-        oTxDone : out std_logic
+        oTxDone : out std_logic;
+        --! Stimulation ended
+        oStimDone   : out std_logic
     );
 end entity ethPktGen;
 
@@ -83,6 +88,10 @@ architecture bhv of ethPktGen is
 
     signal txCnt : natural;
     signal txActive : std_logic;
+    signal txDone   : std_logic;
+
+    signal fileDone : std_logic;
+
 begin
 
     genEthPkt : process(iClk, iRst)
@@ -92,14 +101,14 @@ begin
             oTxData <= (others => cInactivated);
             oTxEnable <= cInactivated;
             txActive <= cInactivated;
-            oTxDone <= cInactivated;
+            txDone <= cInactivated;
         elsif rising_edge(iClk) then
             -- activate packet generation
             if iTrigTx = cActivated and txActive = cInactivated then
                 txActive <= cActivated;
             end if;
 
-            oTxDone <= cInactivated;
+            txDone <= cInactivated;
 
             if txActive = cActivated then
                 oTxData <= ethPktBuf(txCnt);
@@ -110,62 +119,85 @@ begin
                     oTxData <= (others => cInactivated);
                     oTxEnable <= cInactivated;
                     txCnt <= 0;
-                    oTxDone <= cActivated;
+                    txDone <= cActivated;
                 end if;
             end if;
 
         end if;
     end process;
 
+    oTxDone <= txDone;
+
     readFile : process
         file fp : text;
         --variable vLineString : string(1 to 100);
         variable vLineNum : line;
-        variable vByte : std_logic_vector(cByte-1 downto 0);
-        variable vCount : natural := 0;
-        variable vGood : boolean;
+        variable vByte      : std_logic_vector(cByte-1 downto 0);
+        variable vCount     : natural := 0;
+        variable vCntEnd    : natural := 0;
+        variable vGood      : boolean;
     begin
-        wait until rising_edge(txActive);
+
+        fileDone    <= cInactivated;
+        oStimDone   <= cInactivated;
+
         file_open(fp, iSrcFile, READ_MODE);
-        readline(fp, vLineNum);
-        READ(vLineNum, vCount);
-        case gDataWidth is
-            when 2 =>
-                ethPktSize <= vCount * 4;
-            when 4 =>
-                ethPktSize <= vCount * 2;
-            when 8 =>
-                ethPktSize <= vCount;
-            when others =>
-        end case;
-        vCount := 0;
+
         while not endfile(fp) loop
+            wait until rising_edge(txActive);
+
             readline(fp, vLineNum);
-            HREAD(vLineNum, vByte, vGood);
-            if vGood then
-                case gDataWidth is
-                    when 2 =>
-                        ethPktBuf(vCount) <= vByte(1 downto 0);
-                        vCount := vCount + 1;
-                        ethPktBuf(vCount) <= vByte(3 downto 2);
-                        vCount := vCount + 1;
-                        ethPktBuf(vCount) <= vByte(5 downto 4);
-                        vCount := vCount + 1;
-                        ethPktBuf(vCount) <= vByte(7 downto 6);
-                        vCount := vCount + 1;
-                    when 4 =>
-                        ethPktBuf(vCount) <= vByte(3 downto 0);
-                        vCount := vCount + 1;
-                        ethPktBuf(vCount) <= vByte(7 downto 4);
-                        vCount := vCount + 1;
-                    when 8 =>
-                        ethPktBuf(vCount) <= vByte(7 downto 0);
-                        vCount := vCount + 1;
-                    when others =>
-                end case;
-            end if;
+            READ(vLineNum, vCount);
+            case gDataWidth is
+                when 2 =>
+                    vCntEnd := vCount * 4;
+                when 4 =>
+                    vCntEnd := vCount * 2;
+                when 8 =>
+                    vCntEnd := vCount;
+                when others =>
+            end case;
+
+            ethPktSize  <= vCntEnd;
+            vCount      := 0;
+
+            while vCount/=vCntEnd loop
+                readline(fp, vLineNum);
+                HREAD(vLineNum, vByte, vGood);
+                if vGood then
+                    case gDataWidth is
+                        when 2 =>
+                            ethPktBuf(vCount) <= vByte(1 downto 0);
+                            vCount := vCount + 1;
+                            ethPktBuf(vCount) <= vByte(3 downto 2);
+                            vCount := vCount + 1;
+                            ethPktBuf(vCount) <= vByte(5 downto 4);
+                            vCount := vCount + 1;
+                            ethPktBuf(vCount) <= vByte(7 downto 6);
+                            vCount := vCount + 1;
+                        when 4 =>
+                            ethPktBuf(vCount) <= vByte(3 downto 0);
+                            vCount := vCount + 1;
+                            ethPktBuf(vCount) <= vByte(7 downto 4);
+                            vCount := vCount + 1;
+                        when 8 =>
+                            ethPktBuf(vCount) <= vByte(7 downto 0);
+                            vCount := vCount + 1;
+                        when others =>
+                    end case;
+                end if;
+            end loop;
         end loop;
+
         file_close(fp);
+        fileDone    <= cActivated;
+
+        wait until txDone=cActivated;
+
+        oStimDone   <= cActivated;
+
+        wait;
+
     end process;
 
 end architecture bhv;
