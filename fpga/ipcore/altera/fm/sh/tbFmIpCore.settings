@@ -1,0 +1,67 @@
+#!/bin/bash
+# Settings file for running simulation.
+STIM_FILE="altera/fm/tb/stimEthPacket.txt"
+GEN_FILE_STIM="altera/fm/tb/tbFmIpCoreOutStim.txt"
+GEN_FILE_FM="altera/fm/tb/tbFmIpCoreOutFm.txt"
+GEN_FILE_TIME="altera/fm/tb/tbFmIpCoreOutTime.txt"
+POST_SCRIPT="altera/fm/sh/tbFmIpCore.sh"
+
+SRC_LIST="\
+altera/fm/src/framemanipulatorPkg.vhd \
+altera/fm/src/lib_Basics/adder_2121.vhd \
+altera/fm/src/lib_Basics/Basic_Cnter.vhd \
+altera/fm/src/lib_Basics/Basic_DownCnter.vhd \
+altera/fm/src/lib_Basics/From_To_Cnt_Filter.vhd \
+altera/fm/src/lib_Basics/FixCnter.vhd \
+altera/fm/src/lib_Basics/Mux1D.vhd \
+altera/fm/src/lib_Basics/Mux2D.vhd \
+altera/fm/src/lib_Basics/shift_right_register.vhd \
+altera/fm/src/lib_Ethernet/CRC_calculator.vhd \
+altera/fm/src/lib_Ethernet/end_of_frame_detection.vhd \
+altera/fm/src/lib_Ethernet/Preamble_check.vhd \
+altera/fm/src/lib_Ethernet/Preamble_Generator.vhd \
+altera/fm/src/lib_Ethernet/sync_newData.vhd \
+altera/fm/src/lib_Ethernet/sync_RxFrame.vhd \
+altera/fm/src/lib_Memory/DpramAdjustable.vhd \
+altera/fm/src/lib_Memory/DpramFix.vhd \
+altera/fm/src/lib_Memory/FiFo_File.vhd \
+altera/fm/src/lib_Memory/FiFo_Sync_Ctrl.vhd \
+altera/fm/src/lib_Memory/FiFo_top.vhd \
+altera/fm/src/lib_Memory/read_logic.vhd \
+altera/fm/src/lib_Memory/write_logic.vhd \
+altera/fm/src/src_components/Byte_to_TXData.vhd \
+altera/fm/src/src_components/Control_Register.vhd \
+altera/fm/src/src_components/Delay_FSM.vhd \
+altera/fm/src/src_components/StoreAddress_FSM.vhd \
+altera/fm/src/src_components/ReadAddress_FSM.vhd \
+altera/fm/src/src_components/Delay_Handler.vhd \
+altera/fm/src/src_components/Address_Manager.vhd \
+altera/fm/src/src_components/Frame_collector.vhd \
+altera/fm/src/src_components/Frame_Create_FSM.vhd \
+altera/fm/src/src_components/SoC_Cnter.vhd \
+altera/fm/src/src_components/SafetyTaskSelection.vhd \
+altera/fm/src/src_components/Manipulation_Manager.vhd \
+altera/fm/src/src_components/Packet_MemCnter.vhd \
+altera/fm/src/src_components/Packet_StartAddrMem.vhd \
+altera/fm/src/src_components/Packet_Memory.vhd \
+altera/fm/src/src_components/PacketControl_FSM.vhd \
+altera/fm/src/src_components/RXData_to_Byte.vhd \
+altera/fm/src/src_components/Task_Mem_Reset.vhd \
+altera/fm/src/src_components/Task_Memory.vhd \
+altera/fm/src/src_Manipulator_top_level/Data_Buffer.vhd \
+altera/fm/src/src_Manipulator_top_level/Frame_Creator.vhd \
+altera/fm/src/src_Manipulator_top_level/Frame_Receiver.vhd \
+altera/fm/src/src_Manipulator_top_level/Memory_Interface.vhd \
+altera/fm/src/src_Manipulator_top_level/Packet_Buffer.vhd \
+altera/fm/src/src_Manipulator_top_level/Process_Unit.vhd \
+altera/fm/src/FrameManipulator.vhd \
+altera/fm/tb/ethPktGenBhv.vhd \
+altera/fm/tb/ethPktStorage.vhd \
+altera/fm/tb/tbFmIpCore.vhd \
+"
+
+GEN_LIST=( \
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM} gFileFrameOutFm=${GEN_FILE_FM} gFileFrameOutTiming=${GEN_FILE_TIME}"\
+)
+
+TOP_LEVEL=tbFmIpCore
