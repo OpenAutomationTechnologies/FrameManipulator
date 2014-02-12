@@ -62,9 +62,11 @@ altera/fm/tb/tbFmIpCore.vhd \
 "
 
 TEST1=passFrame
+TEST2=dropSocCycle2
 
 GEN_LIST=( \
-"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}1 gFileFrameOutFm=${GEN_FILE_FM}1 gFileFrameOutTiming=${GEN_FILE_TIME}1 gTestSetting=${TEST1}"\
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}1 gFileFrameOutFm=${GEN_FILE_FM}1 gFileFrameOutTiming=${GEN_FILE_TIME}1 gTestSetting=${TEST1}" \
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}2 gFileFrameOutFm=${GEN_FILE_FM}2 gFileFrameOutTiming=${GEN_FILE_TIME}2 gTestSetting=${TEST2}" \
 )
 
 TOP_LEVEL=tbFmIpCore

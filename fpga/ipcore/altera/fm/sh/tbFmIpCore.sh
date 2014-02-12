@@ -8,8 +8,13 @@
 # GEN_FILE_TIME:    Delay of the outgoing frames
 # TEST*:            One of the test functions
 
-# Test PassFrame: Test without manipulations: Frames shouldn't be distorted, Jitter isn't allowed
+# Test PassFrame:       Test without manipulations: Frames shouldn't be distorted, Jitter isn't allowed
+# Test DropSocCycle2:   Drop of the second SoC
 
+
+#Constants
+#22th byte of recorded frame is message type (Header+Preamble)
+MESSAGE_TYPE=22
 
 # Function load sources:
 function loadTestSources()
@@ -56,7 +61,7 @@ function passFrame
 
      #Check if the number of ingoing and outgoing frames is the same:
     if (($NR_OF_FRAME != $NR_OF_FM_FRAME)); then
-        echo "ERROR: Not all frames passed the FM. $NR_OF_FM_FRAME passed instead of $NR_OF_FRAME"
+        echo -e "\n\e[31mERROR: Not all frames passed the FM. $NR_OF_FM_FRAME passed instead of $NR_OF_FRAME\e[0m"
         exit 1
 
     else
@@ -106,6 +111,104 @@ function passFrame
         fi
 
     done
+}
+
+# Function dropSocCycle2: Drop of the second SoC
+function dropSocCycle2
+{
+    DEL_TYPE="SoC"
+    DEL_CYCLE=2
+    dropManipulation
+}
+
+#Function for drop manipulation
+#Predefined variables: DEL_TYPE for type; DEL_CYCLE for cycle
+function dropManipulation
+{
+    echo -e "\n\e[36mTest $TEST_NR: Check Drop-task of second SoC\e[0m"
+
+    #Check if the one frame is missing:
+    if (($NR_OF_FRAME != $(($NR_OF_FM_FRAME+1)) )); then
+
+        if (($NR_OF_FRAME == $NR_OF_FM_FRAME )); then
+            echo -e "\n\e[31mERROR: All $NR_OF_FM_FRAME frames passed the FM. No drop occurred\e[0m"
+            exit 1
+
+        else
+            echo -e "\n\e[31mERROR: More than one frame is missing. $NR_OF_FM_FRAME passed instead of $NR_OF_FRAME\e[0m"
+            exit 1
+
+        fi
+
+    else
+        echo "Missing of one frame confirmed"
+
+    fi
+
+
+    #Check Ethernet frames
+
+    #Testcycle
+    CYCLE=0
+    for ((NR=1, NR_FM=1 ; NR<=$NR_OF_FRAME; NR++))
+    do
+
+        #Load MessageType of stimulated frame and count up cycle at SoC
+        MESSAGE_TYPE_STIM=$(eval "echo \${FRAME"$NR[$MESSAGE_TYPE]})
+
+        case $MESSAGE_TYPE_STIM in
+        01)
+            TYPE_STIM="SoC"
+            CYCLE=$(($CYCLE+1))
+            ;;
+        03)
+            TYPE_STIM="PReq"
+            ;;
+        04)
+            TYPE_STIM="PRes"
+            ;;
+        05)
+            TYPE_STIM="SoA"
+            ;;
+        06)
+            TYPE_STIM="ASnd"
+            ;;
+        *)
+            TYPE_STIM="unknown frame"
+            ;;
+        esac
+
+        #Output detected stimulation frame
+        echo "Stimulated frame $NR is a $TYPE_STIM of test cycle $CYCLE"
+
+        #Stimulated frame is the dropped one?
+        if [ $TYPE_STIM == $DEL_TYPE -a $CYCLE == $DEL_CYCLE ]; then
+        #true:
+
+            echo "This frame is the dropped one"
+
+        else
+        #false:
+
+            FRAME_STIM=$(eval "echo \${FRAME"$NR[*]})
+            FRAME_FM=$(eval "echo \${FM_FRAME"$NR_FM[*]})
+
+            #Compare frames
+            if [ "${FRAME_STIM[*]}" == "${FRAME_FM[*]}" ]; then
+                echo "Outgoing frame $NR_FM is the same"
+
+            else
+                echo -e "\n\e[31mERROR: Mismatch of outgoing frame $NR_FM\e[0m"
+                exit 1
+
+            fi
+
+            #Count FM frame up
+            NR_FM=$(($NR_FM+1))
+        fi
+
+    done
+
 }
 
 
