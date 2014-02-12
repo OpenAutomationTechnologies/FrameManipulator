@@ -121,5 +121,21 @@ begin
 
     end generate delay;
 
+    manipulate:
+    if gTestSetting="maniMtype9PResCycle2" generate
+
+        --! Generate configuration
+        with iWrCommAddr select
+        oCommData<= X"02040000" when "00000001",    --Setting 1 part 1: Manipulate in cycle 2
+                    X"0000000F" when "00000000",    --Setting 1 part 2: MessageType (offset 15)
+                    X"00000000" when "01000001",    --Setting 2 part 1
+                    X"00000009" when "01000000",    --Setting 2 part 2: to value "9"
+                    X"04000000" when "10000001",    --Frame data part 1: PRes
+                    X"00000000" when "10000000",    --Frame data part 2
+                    X"FF000000" when "11000001",    --Frame mask part 1
+                    X"00000000" when "11000000",    --Frame mask part 2
+                    X"00000000" when others;
+
+    end generate manipulate;
 
 end bhv;

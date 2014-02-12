@@ -11,7 +11,7 @@
 # Test PassFrame:                   Test without manipulations: Frames shouldn't be distorted, Jitter isn't allowed
 # Test DropSocCycle2:               Drop of the second SoC
 # Test delay25UsPResCycle1Type1:    Delay of the first PRes of 25 µs with storing all overlapping frames
-
+# Test maniMtype9PResCycle2:        Changing the MessageType to the value "9" of the PRes in the second Cycle
 
 #Constants
 #22th byte of recorded frame is message type (Header+Preamble)
@@ -55,20 +55,53 @@ function loadTestSources()
     source $GEN_FILE_TIME_TEST
 }
 
-# Function PassFrame: Test without manipulations: Frames shouldn't be distorted, Jitter isn't allowed
-function passFrame
+#Check if the number of ingoing and outgoing frames is the same:
+function allFramesPass
 {
-    echo -e "\n\e[36mTest $TEST_NR: Check if Ethernet stream is distorted\e[0m"
-
-     #Check if the number of ingoing and outgoing frames is the same:
     if (($NR_OF_FRAME != $NR_OF_FM_FRAME)); then
         echo -e "\n\e[31mERROR: Not all frames passed the FM. $NR_OF_FM_FRAME passed instead of $NR_OF_FRAME\e[0m"
         exit 1
 
     else
-        echo "All frames passed the FM"
+        echo -e "\e[33mAll frames passed the FM\e[0m"
 
     fi
+}
+
+#Check if there is Jitter:
+function jitterCheck
+{
+    echo "Check the frame delay:"
+
+    NR=1
+    FRAME_DELAY=$(eval "echo \${FRAME_DELAY"$NR[*]})
+    echo "Delay of frame $NR: $FRAME_DELAY"
+
+    for ((NR=2; NR<=$NR_OF_FRAME; NR++))
+    do
+        FRAME_OLD_DELAY=$FRAME_DELAY
+        FRAME_DELAY=$(eval "echo \${FRAME_DELAY"$NR[*]})
+
+        echo "Delay of frame $NR: $FRAME_DELAY"
+
+        if [ "$FRAME_OLD_DELAY" != "$FRAME_DELAY" ]; then
+            echo -e "\n\e[31mERROR: Jitter at frame $NR\e[0m"
+            exit 1
+
+        fi
+
+    done
+
+    echo -e "\e[33mNo jitter occurred\e[0m"
+}
+
+# Function PassFrame: Test without manipulations: Frames shouldn't be distorted, Jitter isn't allowed
+function passFrame
+{
+    echo -e "\n\e[36mTest $TEST_NR: Check if Ethernet stream is distorted\e[0m"
+
+    #Check if the number of ingoing and outgoing frames is the same:
+    allFramesPass
 
     #Check if Frames were distorted:
     echo "Check the data of the $NR_OF_FRAME frames:"
@@ -92,26 +125,7 @@ function passFrame
 
 
     #Check if there is Jitter:
-    echo "Check the frame delay:"
-
-    NR=1
-    FRAME_DELAY=$(eval "echo \${FRAME_DELAY"$NR[*]})
-    echo "Delay of frame $NR: $FRAME_DELAY"
-
-    for ((NR=2; NR<=$NR_OF_FRAME; NR++))
-    do
-        FRAME_OLD_DELAY=$FRAME_DELAY
-        FRAME_DELAY=$(eval "echo \${FRAME_DELAY"$NR[*]})
-
-        echo "Delay of frame $NR: $FRAME_DELAY"
-
-        if [ "$FRAME_OLD_DELAY" != "$FRAME_DELAY" ]; then
-            echo -e "\n\e[31mERROR: Jitter at frame $NR\e[0m"
-            exit 1
-
-        fi
-
-    done
+    jitterCheck
 }
 
 # Function dropSocCycle2: Drop of the second SoC
@@ -142,7 +156,7 @@ function dropManipulation
         fi
 
     else
-        echo "Missing of one frame confirmed"
+        echo -e "\e[33mMissing of one frame confirmed\e[0m"
 
     fi
 
@@ -229,15 +243,7 @@ function frameDelay1
     echo -e "\n\e[36mTest $TEST_NR: Check Delay-task of first PRes with DelayType 1 \e[0m"
 
     #Check if the number of ingoing and outgoing frames is the same:
-    if (($NR_OF_FRAME != $NR_OF_FM_FRAME)); then
-        echo -e "\n\e[31mERROR: Not all frames passed the FM. $NR_OF_FM_FRAME passed instead of $NR_OF_FRAME\e[0m"
-        exit 1
-
-    else
-        echo "All frames passed the FM"
-
-    fi
-
+    allFramesPass
 
     #Check if Frames were distorted:
     echo "Check the data of the $NR_OF_FRAME frames:"
@@ -351,6 +357,126 @@ function frameDelay1
         fi
 
     done
+}
+
+# Function maniMtype9PResCycle2:        Changing the MessageType to the value "9" of the PRes in the second Cycle
+function maniMtype9PResCycle2
+{
+    MANI_M_TYPE="PRes"
+    MANI_CYCLE=2
+    NEW_MTYPE=09
+    maniMtype
+}
+
+# Function to compare arrays
+diff(){
+  awk 'BEGIN{RS=ORS=" "}
+       {NR==FNR?a[$0]++:a[$0]--}
+       END{for(k in a)if(a[k])print k}' <(echo -n "${!1}") <(echo -n "${!2}")
+}
+
+#Function for manipulation of the Messagetype
+#Predefined variables: MANI_M_TYPE for frame messageType; MANI_CYCLE for cycle; NEW_MTYPE for new value
+function maniMtype
+{
+    echo -e "\n\e[36mTest $TEST_NR: Check Manipulation-task with changing the MessageType of second PRes\e[0m"
+
+    #Check if the number of ingoing and outgoing frames is the same:
+    allFramesPass
+
+    #Check frame data
+
+    #Testcycle
+    CYCLE=0
+    for ((NR=1 ; NR<=$NR_OF_FRAME; NR++))
+    do
+
+        #Load MessageType of stimulated frame and count up cycle at SoC
+        MESSAGE_TYPE_STIM=$(eval "echo \${FRAME"$NR[$MESSAGE_TYPE]})
+
+        case $MESSAGE_TYPE_STIM in
+        01)
+            TYPE_STIM="SoC"
+            CYCLE=$(($CYCLE+1))
+            ;;
+        03)
+            TYPE_STIM="PReq"
+            ;;
+        04)
+            TYPE_STIM="PRes"
+            ;;
+        05)
+            TYPE_STIM="SoA"
+            ;;
+        06)
+            TYPE_STIM="ASnd"
+            ;;
+        *)
+            TYPE_STIM="unknown frame"
+            ;;
+        esac
+
+        #Output detected stimulation frame
+        echo "Stimulated frame $NR is a $TYPE_STIM of test cycle $CYCLE"
+
+        #Stimulated frame is the manipulated one?
+        if [ $TYPE_STIM == $MANI_M_TYPE -a $CYCLE == $MANI_CYCLE ]; then
+
+            echo -e "\e[33mThis frame should be manipulated\e[0m"
+
+            #check new MessageType
+            MESSAGE_TYPE_FM=$(eval "echo \${FM_FRAME"$NR[$MESSAGE_TYPE]})
+
+            if [ $MESSAGE_TYPE_FM == $NEW_MTYPE ]; then
+                echo -e "\e[33mManipulation is correct\e[0m"
+
+            else
+                echo -e "\n\e[31mERROR: Manipulation failed. MessageType is $MESSAGE_TYPE_FM\e[0m"
+                exit 1
+
+            fi
+
+            #Check remaining data array
+            FRAME_STIM_A=($(eval "echo \${FRAME"$NR[*]}))
+            FRAME_FM_A=($(eval "echo \${FM_FRAME"$NR[*]}))
+
+            #Compare both arrays
+            ARRAY_DIFF=($(diff FRAME_STIM_A[@] FRAME_FM_A[@]))
+
+            #Number of different bytes: (/2 because diff() sends the different entries of both frames)
+            NR_DIFF=$((${#ARRAY_DIFF[@]}/2))
+
+            echo -e "\e[33m5 Bytes of the frame should be different (Manipulation+CRC)\e[0m"
+
+            if (( $NR_DIFF > 5 )); then
+                echo -e "\n\e[31mERROR: $NR_DIFF bytes are different \e[0m"
+                exit 1
+
+            fi
+
+
+        else
+
+            FRAME_STIM=$(eval "echo \${FRAME"$NR[*]})
+            FRAME_FM=$(eval "echo \${FM_FRAME"$NR[*]})
+
+            #Compare frames
+            if [ "${FRAME_STIM[*]}" == "${FRAME_FM[*]}" ]; then
+                echo "Outgoing frame $NR is the same"
+
+            else
+                echo -e "\n\e[31mERROR: Mismatch of outgoing frame $NR\e[0m"
+                exit 1
+
+            fi
+
+        fi
+
+    done
+
+    #Check Jitter
+    jitterCheck
+
 }
 
 
