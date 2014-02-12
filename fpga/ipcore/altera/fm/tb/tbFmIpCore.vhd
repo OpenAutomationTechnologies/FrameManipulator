@@ -77,7 +77,7 @@ end tbFmIpCore;
 --!   separate files. The data is allocated to bash-variables
 --! - Testbench won't stop in case of an error
 --! - The module check will be processed in the shell post script afterwards
-architecture two_seg_arch of tbFmIpCore is
+architecture bhv of tbFmIpCore is
 
     constant cPeriode   : time := 20 ns;     -- used 50 MHz clock cycle FM/RMII-clock
 
@@ -116,7 +116,10 @@ begin
         testDone    <= '0';
         trig        <= '0';
 
-        wait for 100 ns;
+        wait until reset='0';
+
+        -- Delay to transfer the Framemanipulator configuration
+        wait for 10000 ns;
 
         while stimDone/= '1' loop
 
@@ -131,6 +134,9 @@ begin
             vCntTrig    := vCntTrig+1;
 
         end loop;
+
+        -- Complete all manipulation tasks before simulation is done
+        wait for 50000 ns;
 
         testDone    <= '1';
 
@@ -245,14 +251,25 @@ begin
             );
 
 
-    --! Measure frame delay
+    --! Measure frame delay and the gap between the outgoing frames
     writingTiming :
     process
 
-        file        fOutFile    : text;
-        variable    vLineData   : line;
-        variable    vTimeDelay  : time;
-        variable    vFrameNr    : natural := 0;
+        file        fOutFile        : text;
+        variable    vLineData       : line;
+        variable    vTimeStamp      : time;
+        variable    vTimeDelay      : time;
+        variable    vTimeGap        : time;
+        variable    vFrameStimNr    : natural := 0;
+        variable    vFrameFmNr      : natural := 0;
+        variable    vRXDV_reg       : std_logic := '0';     --! Register of RMII data valid to FM for edge detection
+        variable    vTXDV_reg       : std_logic := '0';     --! Register of RMII data valid from FM for edge detection
+
+        constant    cMaxFrameNr : natural := 60;
+
+        type        tTimeArray is array (natural range <>) of time;
+
+        variable    vStartDelay : tTimeArray(0 to cMaxFrameNr);
 
     begin
 
@@ -261,28 +278,59 @@ begin
         write(vLineData, string'("#!/bin/bash") );
         writeline(fOutFile, vLineData);
 
+        vTimeStamp  := 0 ns;
+        vTimeGap    := 0 ns;
+
         while testDone/='1' loop
 
-            wait until rising_edge(RXDV);
+            --Store Timestamp of the stimulated-frame start
+            if RXDV='1' and vRXDV_reg='0' then
 
-            vFrameNr    := vFrameNr+1;
-            vTimeDelay  := 0 ns;
+                vFrameStimNr    := vFrameStimNr+1;
 
-            while TXDV/='1' loop
-                vTimeDelay  :=vTimeDelay+cPeriode;
+                vStartDelay(vFrameStimNr)   := vTimeStamp;
 
-                wait until rising_edge(clk);
-                wait for 2 ns;  -- wait to update signals
+            end if;
 
-            end loop;
+            --Store the delay and gap
+            if TXDV='1' and vTXDV_reg='0' then
 
-            write(vLineData, string'("FRAME_DELAY") );
-            write(vLineData, vFrameNr );
-            write(vLineData, string'("='") );
-            write(vLineData, vTimeDelay);
-            write(vLineData, string'("'") );
+                vFrameFmNr  := vFrameFmNr+1;
 
-            writeline(fOutFile, vLineData);
+                vTimeDelay  := vTimeStamp-vStartDelay(vFrameFmNr);
+
+                write(vLineData, string'("FRAME_DELAY") );
+                write(vLineData, vFrameFmNr );
+                write(vLineData, string'("='") );
+                write(vLineData, vTimeDelay);
+                write(vLineData, string'("'") );
+
+                writeline(fOutFile, vLineData);
+
+                write(vLineData, string'("FRAME_GAP") );
+                write(vLineData, vFrameFmNr );
+                write(vLineData, string'("='") );
+                write(vLineData, vTimeGap);
+                write(vLineData, string'("'") );
+
+                writeline(fOutFile, vLineData);
+
+            end if;
+
+            --Reset gap at end of frame
+            if TXDV='0' and vTXDV_reg='1' then
+                vTimeGap    := 0 ns;
+
+            end if;
+
+
+            vRXDV_reg    := RXDV;
+            vTXDV_reg    := TXDV;
+
+            vTimeStamp  :=vTimeStamp+cPeriode;
+            vTimeGap    :=vTimeGap+cPeriode;
+
+            wait until rising_edge(clk);
 
         end loop;
 
@@ -292,4 +340,5 @@ begin
 
     end process writingTiming;
 
-end two_seg_arch;
+
+end bhv;
