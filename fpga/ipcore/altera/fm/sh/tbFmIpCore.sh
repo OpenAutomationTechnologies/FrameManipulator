@@ -13,6 +13,7 @@
 # Test delay25UsPResCycle1Type1:    Delay of the first PRes of 25 µs with storing all overlapping frames
 # Test maniMtype9PResCycle2:        Changing the MessageType to the value "9" of the PRes in the second Cycle
 # Test crcPResCycle2:               Distort CRC of PRes in cycle 2
+# Test cut50PResCycle2:             Cut PRes in cycle 2 to a size of 50 Byte (+CRC+Preamble)
 
 #Constants
 #22th byte of recorded frame is message type (Header+Preamble)
@@ -492,7 +493,7 @@ function crcPResCycle2
 #Predefined variables: CRC_TYPE for frame messageType; CRC_CYCLE for cycle
 function distortCrc
 {
-    echo -e "\n\e[36mTest $TEST_NR: Check Distort-CRC-task with of second PRes\e[0m"
+    echo -e "\n\e[36mTest $TEST_NR: Check Distort-CRC-task with the second PRes\e[0m"
 
     #Check if the number of ingoing and outgoing frames is the same:
     allFramesPass
@@ -589,6 +590,124 @@ function distortCrc
     jitterCheck
 
 }
+
+# Function cut50PResCycle2:             Cut PRes in cycle 2 to a size of 50 Byte (+CRC+Preamble)
+function cut50PResCycle2
+{
+    CUT_TYPE="PRes"
+    CUT_CYCLE=2
+    CUT_LENGTH=50
+    cutFrame
+}
+
+# Function cutFrame:
+#Predefined variables: CUT_TYPE for frame messageType; CUT_CYCLE for cycle; CUT_LENGTH for size
+function cutFrame
+{
+    echo -e "\n\e[36mTest $TEST_NR: Check Cut-task with a truncation to 50 Byte of second PRes\e[0m"
+
+    #Check if the number of ingoing and outgoing frames is the same:
+    allFramesPass
+
+    #Check frame data
+
+    #Testcycle
+    CYCLE=0
+    for ((NR=1 ; NR<=$NR_OF_FRAME; NR++))
+    do
+
+        #Load MessageType of stimulated frame and count up cycle at SoC
+        MESSAGE_TYPE_STIM=$(eval "echo \${FRAME"$NR[$MESSAGE_TYPE]})
+
+        case $MESSAGE_TYPE_STIM in
+        01)
+            TYPE_STIM="SoC"
+            CYCLE=$(($CYCLE+1))
+            ;;
+        03)
+            TYPE_STIM="PReq"
+            ;;
+        04)
+            TYPE_STIM="PRes"
+            ;;
+        05)
+            TYPE_STIM="SoA"
+            ;;
+        06)
+            TYPE_STIM="ASnd"
+            ;;
+        *)
+            TYPE_STIM="unknown frame"
+            ;;
+        esac
+
+        #Output detected stimulation frame
+        echo "Stimulated frame $NR is a $TYPE_STIM of test cycle $CYCLE"
+
+        #Stimulated frame is the manipulated one?
+        if [ $TYPE_STIM == $CUT_TYPE -a $CYCLE == $CUT_CYCLE ]; then
+
+            echo -e "\e[33mThis frame should be truncated to $CUT_LENGTH Byte\e[0m"
+
+            #Add 12 Byte for Preamble and CRC
+            CUT_LENGTH_NEW=$(($CUT_LENGTH+12))
+
+            #Load frames
+            FRAME_STIM_A=($(eval "echo \${FRAME"$NR[*]}))
+            FRAME_FM_A=($(eval "echo \${FM_FRAME"$NR[*]}))
+
+            #Check truncated frame size
+            if (( ${#FRAME_FM_A[*]} == $CUT_LENGTH_NEW )); then
+                echo -e "\e[33mNew frame size is correct\e[0m"
+
+            else
+                echo -e "\n\e[31mERROR: Size ${#FRAME_FM_A[*]} is wrong. It should be $CUT_LENGTH_NEW \e[0m"
+                exit 1
+
+            fi
+
+
+            #Remove CRC
+            SIZE_MIN_CRC=$(($CUT_LENGTH_NEW-4))
+
+            FRAME_STIM_A2=${FRAME_STIM_A[*]:0:$SIZE_MIN_CRC}
+            FRAME_FM_A2=${FRAME_FM_A[*]:0:$SIZE_MIN_CRC}
+
+            #Check the rest of the frame
+            if [ "${FRAME_STIM_A2[*]}" == "${FRAME_FM_A2[*]}" ]; then
+
+                echo -e "\e[33mThe data wasn't manipulated\e[0m"
+
+            else
+                echo -e "\n\e[31mERROR: The frame was also manipulated \e[0m"
+                exit 1
+
+            fi
+
+        else
+
+            FRAME_STIM=$(eval "echo \${FRAME"$NR[*]})
+            FRAME_FM=$(eval "echo \${FM_FRAME"$NR[*]})
+
+            #Compare frames
+            if [ "${FRAME_STIM[*]}" == "${FRAME_FM[*]}" ]; then
+                echo "Outgoing frame $NR is the same"
+
+            else
+                echo -e "\n\e[31mERROR: Mismatch of outgoing frame $NR\e[0m"
+                exit 1
+
+            fi
+
+        fi
+
+    done
+
+    #Check Jitter
+    jitterCheck
+}
+
+
 
 #Load settings file
 SETTINGS_FILE=$1
