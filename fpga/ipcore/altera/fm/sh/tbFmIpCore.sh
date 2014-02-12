@@ -12,6 +12,7 @@
 # Test DropSocCycle2:               Drop of the second SoC
 # Test delay25UsPResCycle1Type1:    Delay of the first PRes of 25 µs with storing all overlapping frames
 # Test maniMtype9PResCycle2:        Changing the MessageType to the value "9" of the PRes in the second Cycle
+# Test crcPResCycle2:               Distort CRC of PRes in cycle 2
 
 #Constants
 #22th byte of recorded frame is message type (Header+Preamble)
@@ -479,6 +480,115 @@ function maniMtype
 
 }
 
+# Function crcPResCycle2:               Distort CRC of PRes in cycle 2
+function crcPResCycle2
+{
+    CRC_TYPE="PRes"
+    CRC_CYCLE=2
+    distortCrc
+}
+
+# Function distortCrc:
+#Predefined variables: CRC_TYPE for frame messageType; CRC_CYCLE for cycle
+function distortCrc
+{
+    echo -e "\n\e[36mTest $TEST_NR: Check Distort-CRC-task with of second PRes\e[0m"
+
+    #Check if the number of ingoing and outgoing frames is the same:
+    allFramesPass
+
+    #Check frame data
+
+    #Testcycle
+    CYCLE=0
+    for ((NR=1 ; NR<=$NR_OF_FRAME; NR++))
+    do
+
+        #Load MessageType of stimulated frame and count up cycle at SoC
+        MESSAGE_TYPE_STIM=$(eval "echo \${FRAME"$NR[$MESSAGE_TYPE]})
+
+        case $MESSAGE_TYPE_STIM in
+        01)
+            TYPE_STIM="SoC"
+            CYCLE=$(($CYCLE+1))
+            ;;
+        03)
+            TYPE_STIM="PReq"
+            ;;
+        04)
+            TYPE_STIM="PRes"
+            ;;
+        05)
+            TYPE_STIM="SoA"
+            ;;
+        06)
+            TYPE_STIM="ASnd"
+            ;;
+        *)
+            TYPE_STIM="unknown frame"
+            ;;
+        esac
+
+        #Output detected stimulation frame
+        echo "Stimulated frame $NR is a $TYPE_STIM of test cycle $CYCLE"
+
+        #Stimulated frame is the manipulated one?
+        if [ $TYPE_STIM == $CRC_TYPE -a $CYCLE == $CRC_CYCLE ]; then
+
+            echo -e "\e[33mThis frame should have a wrong CRC\e[0m"
+
+            #Check if manipulation occurred
+            FRAME_STIM_A=($(eval "echo \${FRAME"$NR[*]}))
+            FRAME_FM_A=($(eval "echo \${FM_FRAME"$NR[*]}))
+
+            #Compare whole frames
+            if [ "${FRAME_STIM_A[*]}" == "${FRAME_FM_A[*]}" ]; then
+                echo -e "\n\e[31mERROR: Frame wasn't manipulated \e[0m"
+                exit 1
+
+            fi
+
+
+            #Remove CRC
+            SIZE_MIN_CRC=$((${#FRAME_STIM_A[*]}-4))
+
+            FRAME_STIM_A2=${FRAME_STIM_A[*]:0:$SIZE_MIN_CRC}
+            FRAME_FM_A2=${FRAME_FM_A[*]:0:$SIZE_MIN_CRC}
+
+            #Check frame without CRC
+            if [ "${FRAME_STIM_A2[*]}" == "${FRAME_FM_A2[*]}" ]; then
+
+                echo -e "\e[33mOnly the CRC was manipulated\e[0m"
+
+            else
+                echo -e "\n\e[31mERROR: Other parts of the frame were also manipulated \e[0m"
+                exit 1
+
+            fi
+
+        else
+
+            FRAME_STIM=$(eval "echo \${FRAME"$NR[*]})
+            FRAME_FM=$(eval "echo \${FM_FRAME"$NR[*]})
+
+            #Compare frames
+            if [ "${FRAME_STIM[*]}" == "${FRAME_FM[*]}" ]; then
+                echo "Outgoing frame $NR is the same"
+
+            else
+                echo -e "\n\e[31mERROR: Mismatch of outgoing frame $NR\e[0m"
+                exit 1
+
+            fi
+
+        fi
+
+    done
+
+    #Check Jitter
+    jitterCheck
+
+}
 
 #Load settings file
 SETTINGS_FILE=$1

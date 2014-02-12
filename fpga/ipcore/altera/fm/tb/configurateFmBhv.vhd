@@ -138,4 +138,22 @@ begin
 
     end generate manipulate;
 
+
+    crc:
+    if gTestSetting="crcPResCycle2" generate
+
+        --! Generate configuration
+        with iWrCommAddr select
+        oCommData<= X"02080000" when "00000001",    --Setting 1 part 1: Distort CRC in cycle 2
+                    X"00000000" when "00000000",    --Setting 1 part 2
+                    X"00000000" when "01000001",    --Setting 2 part 1
+                    X"00000000" when "01000000",    --Setting 2 part 2
+                    X"04000000" when "10000001",    --Frame data part 1: PRes
+                    X"00000000" when "10000000",    --Frame data part 2
+                    X"FF000000" when "11000001",    --Frame mask part 1
+                    X"00000000" when "11000000",    --Frame mask part 2
+                    X"00000000" when others;
+
+    end generate crc;
+
 end bhv;
