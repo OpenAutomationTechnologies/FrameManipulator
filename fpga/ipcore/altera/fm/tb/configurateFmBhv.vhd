@@ -91,16 +91,35 @@ begin
 
         --! Generate configuration
         with iWrCommAddr select
-        oCommData<= X"02010000" when "00000001",    --Setting 1 part 1
+        oCommData<= X"02010000" when "00000001",    --Setting 1 part 1: Drop in cycle 2
                     X"00000000" when "00000000",    --Setting 1 part 2
                     X"00000000" when "01000001",    --Setting 2 part 1
                     X"00000000" when "01000000",    --Setting 2 part 2
-                    X"01FF0000" when "10000001",    --Frame data part 1
+                    X"01FF0000" when "10000001",    --Frame data part 1: SoC from Master
                     X"00000000" when "10000000",    --Frame data part 2
                     X"FFFF0000" when "11000001",    --Frame mask part 1
                     X"00000000" when "11000000",    --Frame mask part 2
                     X"00000000" when others;
 
     end generate drop;
+
+
+    delay:
+    if gTestSetting="delay25UsPResCycle1Type1" generate
+
+        --! Generate configuration
+        with iWrCommAddr select
+        oCommData<= X"01020100" when "00000001",    --Setting 1 part 1: Delay in cycle 1 with type 1
+                    X"000009C4" when "00000000",    --Setting 1 part 2: 2500=25.000 ns
+                    X"00000000" when "01000001",    --Setting 2 part 1
+                    X"00000000" when "01000000",    --Setting 2 part 2
+                    X"04000000" when "10000001",    --Frame data part 1: PRes
+                    X"00000000" when "10000000",    --Frame data part 2
+                    X"FF000000" when "11000001",    --Frame mask part 1
+                    X"00000000" when "11000000",    --Frame mask part 2
+                    X"00000000" when others;
+
+    end generate delay;
+
 
 end bhv;

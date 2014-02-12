@@ -8,8 +8,9 @@
 # GEN_FILE_TIME:    Delay of the outgoing frames
 # TEST*:            One of the test functions
 
-# Test PassFrame:       Test without manipulations: Frames shouldn't be distorted, Jitter isn't allowed
-# Test DropSocCycle2:   Drop of the second SoC
+# Test PassFrame:                   Test without manipulations: Frames shouldn't be distorted, Jitter isn't allowed
+# Test DropSocCycle2:               Drop of the second SoC
+# Test delay25UsPResCycle1Type1:    Delay of the first PRes of 25 µs with storing all overlapping frames
 
 
 #Constants
@@ -116,13 +117,13 @@ function passFrame
 # Function dropSocCycle2: Drop of the second SoC
 function dropSocCycle2
 {
-    DEL_TYPE="SoC"
-    DEL_CYCLE=2
+    DROP_M_TYPE="SoC"
+    DROP_CYCLE=2
     dropManipulation
 }
 
 #Function for drop manipulation
-#Predefined variables: DEL_TYPE for type; DEL_CYCLE for cycle
+#Predefined variables: DROP_M_TYPE for type; DROP_CYCLE for cycle
 function dropManipulation
 {
     echo -e "\n\e[36mTest $TEST_NR: Check Drop-task of second SoC\e[0m"
@@ -182,10 +183,10 @@ function dropManipulation
         echo "Stimulated frame $NR is a $TYPE_STIM of test cycle $CYCLE"
 
         #Stimulated frame is the dropped one?
-        if [ $TYPE_STIM == $DEL_TYPE -a $CYCLE == $DEL_CYCLE ]; then
+        if [ $TYPE_STIM == $DROP_M_TYPE -a $CYCLE == $DROP_CYCLE ]; then
         #true:
 
-            echo "This frame is the dropped one"
+            echo -e "\e[33mThis frame is the dropped one\e[0m"
 
         else
         #false:
@@ -209,6 +210,147 @@ function dropManipulation
 
     done
 
+}
+
+# Function delay25UsPResCycle1Type1:    Delay of the first PRes of 25 µs with storing all overlapping frames
+function delay25UsPResCycle1Type1
+{
+    DELAY_M_TYPE="PRes"
+    DELAY_CYCLE=1
+    DELAY_TIME=25000
+    frameDelay1
+}
+
+# Function for frame delay manipulation with delay type 1
+# Check of configured delay via delay of first SoC as reverence
+# Predefined variables: DELAY_M_TYPE for messageType; DELAY_CYCLE for cycle; DELAY_TIME for the configured delay in ns
+function frameDelay1
+{
+    echo -e "\n\e[36mTest $TEST_NR: Check Delay-task of first PRes with DelayType 1 \e[0m"
+
+    #Check if the number of ingoing and outgoing frames is the same:
+    if (($NR_OF_FRAME != $NR_OF_FM_FRAME)); then
+        echo -e "\n\e[31mERROR: Not all frames passed the FM. $NR_OF_FM_FRAME passed instead of $NR_OF_FRAME\e[0m"
+        exit 1
+
+    else
+        echo "All frames passed the FM"
+
+    fi
+
+
+    #Check if Frames were distorted:
+    echo "Check the data of the $NR_OF_FRAME frames:"
+
+    for ((NR=1; NR<=$NR_OF_FRAME; NR++))
+    do
+        FRAME_STIM=$(eval "echo \${FRAME"$NR[*]})
+        FRAME_FM=$(eval "echo \${FM_FRAME"$NR[*]})
+
+        if [ "${FRAME_STIM[*]}" != "${FRAME_FM[*]}" ]; then
+            echo -e "\n\e[31mERROR: Mismatch of frame $NR\e[0m"
+            exit 1
+
+        else
+            echo "Frame $NR is the same"
+
+        fi
+
+    done
+
+    #Check the delay of the manipulated frame:
+    echo "Check the delay of the manipulated frame:"
+
+    CYCLE=0
+    for ((NR=1, NR_FM=1 ; NR<=$NR_OF_FRAME; NR++))
+    do
+
+        #Load MessageType of stimulated frame and count up cycle at SoC
+        MESSAGE_TYPE_STIM=$(eval "echo \${FRAME"$NR[$MESSAGE_TYPE]})
+
+        case $MESSAGE_TYPE_STIM in
+        01)
+            TYPE_STIM="SoC"
+            CYCLE=$(($CYCLE+1))
+            ;;
+        03)
+            TYPE_STIM="PReq"
+            ;;
+        04)
+            TYPE_STIM="PRes"
+            ;;
+        05)
+            TYPE_STIM="SoA"
+            ;;
+        06)
+            TYPE_STIM="ASnd"
+            ;;
+        *)
+            TYPE_STIM="unknown frame"
+            ;;
+        esac
+
+        #Output detected stimulation frame
+        echo "Stimulated frame $NR is a $TYPE_STIM of test cycle $CYCLE"
+
+        #Searching for the first SoC to receive a reference value
+        if [ $TYPE_STIM == "SoC" -a $CYCLE == 1 ]; then
+
+            REF_DELAY=$(eval "echo \${FRAME_DELAY"$NR[*]})
+            echo -e "\e[33mThis is the first SoC with a delay of $REF_DELAY\e[0m"
+
+        fi
+
+        #Stimulated frame is the delayed one?
+        if [ $TYPE_STIM == $DELAY_M_TYPE -a $CYCLE == $DELAY_CYCLE ]; then
+
+            MAN_DELAY=$(eval "echo \${FRAME_DELAY"$NR[*]})
+            echo -e "\e[33mThis is the manipulated frame with a delay of $MAN_DELAY\e[0m"
+
+            #Remove the "ns"
+            SIZE=$((${#MAN_DELAY}-3))
+            MAN_DELAY_NEW=${MAN_DELAY:0:$SIZE}
+
+            SIZE=$((${#REF_DELAY}-3))
+            REF_DELAY_NEW=${REF_DELAY:0:$SIZE}
+
+            #Check the created delay
+            DELAY_DIV=$(($MAN_DELAY_NEW-$REF_DELAY_NEW))
+
+            if (( $DELAY_DIV == $DELAY_TIME )); then
+                echo -e "\e[33mThe occurred delay of $DELAY_DIV ns is correct\e[0m"
+
+            else
+                echo -e "\n\e[31mERROR: Occurred delay is $DELAY_DIV ns, not $DELAY_TIME ns\e[0m"
+                exit 1
+
+            fi
+
+        fi
+
+    done
+
+    #Check IPG
+    echo "Check inter packet gap of the Outgoing frames:"
+
+    #Start with 2, first value is the time from simulation start to frame start
+    for ((NR=2; NR<=$NR_OF_FM_FRAME; NR++))
+    do
+
+        FRAME_GAP=$(eval "echo \${FRAME_GAP"$NR[*]})
+        echo "Frame $NR starts after $FRAME_GAP"
+
+        #remove ns
+        SIZE=$((${#FRAME_GAP}-3))
+        FRAME_GAP=${FRAME_GAP:0:$SIZE}
+
+        if (( $FRAME_GAP < 960 )); then
+            echo -e "\n\e[31mERROR: This time is to short \e[0m"
+            exit 1
+
+        fi
+
+    done
 }
 
 
