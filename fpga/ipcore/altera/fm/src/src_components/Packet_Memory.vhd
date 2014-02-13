@@ -347,17 +347,20 @@ begin
 
     --! @brief Counter for the Number of delayed packets
     --! - Overflow of counter occures at the same time as the overflow of the address memory
-    lagCnter : entity work.Basic_Cnter
-    generic map(gCntWidth   => gAddrMemoryWidth)
+    lagCnter : entity work.FixCnter
+    generic map(
+                gCntWidth   => gAddrMemoryWidth,
+                gStartValue => (gAddrMemoryWidth-1 downto 0 => '0'),
+                gInitValue  => (gAddrMemoryWidth-1 downto 0 => '0'),
+                gEndValue   => (gAddrMemoryWidth-1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => iResetPaketBuff,
-            iEn         => enLagCnt,
-            iStartValue => (others => '0'),
-            iEndValue   => (others => '1'),
-            oQ          => oNumDelPackets,
-            oOv         => addrBuffOv   --Maximal number of delayed packets is also the number of stored addresses => Overflow is the same
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => iResetPaketBuff,
+            iEn     => enLagCnt,
+            oQ      => oNumDelPackets,
+            oOv     => addrBuffOv   --Maximal number of delayed packets is also the number of stored addresses => Overflow is the same
             );
 
 

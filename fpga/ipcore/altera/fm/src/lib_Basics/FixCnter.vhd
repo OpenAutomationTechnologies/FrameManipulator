@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------------
---! @file Byte_to_TXData.vhd
---! @brief Convertes an 1Byte Stream to the Ethernet TXData of a RMII-PHY
+--! @file FixCnter.vhd
+--! @brief Generic up counter with overflow-flag
 -------------------------------------------------------------------------------
 --
 --    (c) B&R, 2014
@@ -44,35 +44,36 @@ use ieee.std_logic_1164.all;
 --! Use numeric functions
 use ieee.numeric_std.all;
 
---! Use work library
-library work;
 
---! Common library
-library libcommon;
---! Use common library global package
-use libcommon.global.all;
-
-
-
---! This is the entity of the Byte to RMII converter
-entity Byte_to_TXData is
+--! This is the entity of the top-module for the generic up counter
+entity FixCnter is
+    generic(
+            gCntWidth   : natural := 2;     --! Width of the coutner
+            gStartValue : unsigned := "0";  --! Lower limit
+            gInitValue  : unsigned := "0";  --! Init value
+            gEndValue   : unsigned := "1"   --! Upper limit
+            );
     port(
         iClk        : in std_logic;                                 --! clk
         iReset      : in std_logic;                                 --! reset
-        iData       : in std_logic_vector(cByteLength-1 downto 0);  --! Byte in
-        oTXD        : out std_logic_vector(1 downto 0)              --! TXD RMII out
+        iClear      : in std_logic;                                 --! Synchronous reset
+        iEn         : in std_logic;                                 --! Cnt Enable
+        oQ          : out std_logic_vector(gCntWidth-1 downto 0);   --! Current value
+        oOv         : out std_logic                                 --! Overflow
     );
-end Byte_to_TXData;
+end FixCnter;
 
 
---! @brief Byte_to_TXData architecture
---! @details Convertes an 1Byte Stream to the Ethernet TXData
-architecture two_seg_arch of Byte_to_TXData is
+--! @brief FixCnter architecture
+--! @details Generic up counter
+--! - With synchronous reset iClear
+--! - Counts up at enable
+--! - Init and end value
+--! - Overflow at end value
+architecture two_seg_arch of FixCnter is
 
-    signal sync     : std_logic;                                --! Synchronise Reset
-    signal cnt      : std_logic_vector(1 downto 0);             --! Select signal of Mux
-    signal data     : std_logic_vector(cByteLength-1 downto 0); --! Delayed data
-    signal txD_reg  : std_logic_vector(1 downto 0);             --! TX-data with register
+    signal r_next   : unsigned(gCntWidth-1 downto 0);   --! Next value
+    signal r_q      : unsigned(gCntWidth-1 downto 0);   --! Stored value
 
 begin
 
@@ -82,57 +83,40 @@ begin
     process(iClk, iReset)
     begin
         if iReset='1' then
-            oTXD    <= (others => '0');
+            r_q <= gInitValue;
 
         elsif rising_edge(iClk) then
-            oTXD    <= txD_reg;
+            r_q <= r_next;
 
         end if;
     end process;
 
 
-    --! @brief Synchronize the module to the data stream
-    syncronizer : entity work.sync_newData
-    generic map (gWidth  => cByteLength)
-    port map (
-            iClk    => iClk,
-            iReset  => iReset,
-            iData   => iData,
-            oData   => data,
-            oSync   => sync
-            );
+    --! @brief Next value logic
+    --! - Synchronous reset at clear with init value
+    --! - Cnt at enable
+    --! - Overflow at end value
+    combNext :
+    process(iClear, iEn,r_q)
+    begin
+        r_next  <= r_q;
+        oOv     <= '0';
 
+        if iClear='1' then
+            r_next  <= gInitValue;
 
-    --! @brief Multiplexer selection
-    cnt_2bit : entity work.FixCnter      --Counter, which controlls the DMux
-    generic map (
-                gCntWidth   => 2,
-                gStartValue => (1 downto 0 => '0'),
-                gInitValue  => (1 downto 0 => '0'),
-                gEndValue   => (1 downto 0 => '1')
-                )
-    port map (
-            iClk    => iClk,
-            iReset  => iReset,
-            iClear  => sync,
-            iEn     => '1',
-            oQ      => cnt,
-            oOv     => open
-            );
+        elsif iEn='1' then
+            r_next  <= r_q+1;
 
+            if r_q=gEndValue then
+                r_next <= gStartValue;
+                oOv<='1';
+            end if;
 
-    --! @brief Multiplexer
-    DMux8to2 : entity work.Mux2D
-    generic map(
-                gWordsWidth => 2,
-                gWordsNo    => 4,
-                gWidthSel   => 2
-                )
-    port map(
-            iData   => data,
-            iSel    => cnt,
-            oWord   => txD_reg
-            );
+        end if;
 
+    end process;
+
+     oQ <= std_logic_vector(r_q);
 
 end two_seg_arch;

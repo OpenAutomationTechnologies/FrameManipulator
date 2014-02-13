@@ -214,17 +214,20 @@ begin
 
     --! @brief Counter to select manipulation data with its offset
     --! - Count up, when port B isn't used for reading frame data
-    SelCntr : entity work.Basic_Cnter
-    generic map(gCntWidth   => cCntWidth)
+    SelCntr : entity work.FixCnter
+    generic map(
+                gCntWidth   => cCntWidth,
+                gStartValue => (cCntWidth-1 downto 0 => '0'),
+                gInitValue  => (cCntWidth-1 downto 0 => '0'),
+                gEndValue   => (cCntWidth-1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => taskManiEn_posEdge,
-            iEn         => cntEn,
-            iStartValue => (others=>'0'),
-            iEndValue   => (others=>'1'),
-            oQ          => selData,
-            oOv         => open
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => taskManiEn_posEdge,
+            iEn     => cntEn,
+            oQ      => selData,
+            oOv     => open
             );
 
 

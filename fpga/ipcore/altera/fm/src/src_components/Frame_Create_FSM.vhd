@@ -120,49 +120,58 @@ architecture Behave of Frame_Create_FSM is
 begin
 
     --! @brief counter for timings
-    FSM_Cnter : entity work.Basic_Cnter
-    generic map(gCntWidth   => cCntWidth)
+    FSM_Cnter : entity work.FixCnter
+    generic map(
+                gCntWidth   => cCntWidth,
+                gStartValue => (cCntWidth-1 downto 0 => '0'),
+                gInitValue  => (cCntWidth-1 downto 0 => '0'),
+                gEndValue   => (cCntWidth-1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => clearCnt,
-            iEn         => '1',
-            iStartValue => (others=>'0'),
-            iEndValue   => (others=>'1'),
-            oQ          => cnt,
-            oOv         => open
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => clearCnt,
+            iEn     => '1',
+            oQ      => cnt,
+            oOv     => open
             );
 
 
     --! @brief prescaler for safety counter
     --! - starts with Ov to eliminate register delay
-    Packet_Prescaler : entity work.Basic_Cnter
-    generic map(gCntWidth   => 2)
+    Packet_Prescaler : entity work.FixCnter
+    generic map(
+                gCntWidth   => 2,
+                gStartValue => (1 downto 0 => '0'),
+                gInitValue  => to_unsigned(3, 2),
+                gEndValue   => (1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => clearPCnt,
-            iEn         => '1',
-            iStartValue => "11",
-            iEndValue   => (others=>'1'),
-            oQ          => open,
-            oOv         => pCntPre
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => clearPCnt,
+            iEn     => '1',
+            oQ      => open,
+            oOv     => pCntPre
             );
 
 
     --! @brief safety counter for packet exchange
     --! - starts with value 1
-    Packet_Cnter : entity work.Basic_Cnter
-    generic map(gCntWidth   => gSafetyPackSelCntWidth)
+    Packet_Cnter : entity work.FixCnter
+    generic map(
+                gCntWidth   => gSafetyPackSelCntWidth,
+                gStartValue => (gSafetyPackSelCntWidth-1 downto 0 => '0'),
+                gInitValue  => to_unsigned(1, gSafetyPackSelCntWidth),
+                gEndValue   => (gSafetyPackSelCntWidth-1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => clearPCnt,
-            iEn         => pCntPre,
-            iStartValue => (0=>'1',others=>'0'),
-            iEndValue   => (others=>'1'),
-            oQ          => pCnt,
-            oOv         => open
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => clearPCnt,
+            iEn     => pCntPre,
+            oQ      => pCnt,
+            oOv     => open
             );
 
 

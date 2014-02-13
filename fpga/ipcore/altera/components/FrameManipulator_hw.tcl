@@ -68,6 +68,7 @@ add_file "../fm/src/FrameManipulator.vhd" {SYNTHESIS SIMULATION}
 add_file "../fm/src/lib_Basics/adder_2121.vhd" {SYNTHESIS SIMULATION}
 add_file "../fm/src/lib_Basics/Basic_Cnter.vhd" {SYNTHESIS SIMULATION}
 add_file "../fm/src/lib_Basics/Basic_DownCnter.vhd" {SYNTHESIS SIMULATION}
+add_file "../fm/src/lib_Basics/FixCnter.vhd" {SYNTHESIS SIMULATION}
 add_file "../fm/src/lib_Basics/From_To_Cnt_Filter.vhd" {SYNTHESIS SIMULATION}
 add_file "../fm/src/lib_Basics/Mux1D.vhd" {SYNTHESIS SIMULATION}
 add_file "../fm/src/lib_Basics/Mux2D.vhd" {SYNTHESIS SIMULATION}

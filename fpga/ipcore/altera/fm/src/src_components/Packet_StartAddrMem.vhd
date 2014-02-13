@@ -101,32 +101,38 @@ begin
 
     --! @brief Counter for address-memory write address
     --! - Select address for next memory entry
-    WrAddrCnter : entity work.Basic_Cnter
-    generic map(gCntWidth   => gAddrMemoryWidth)
+    WrAddrCnter : entity work.FixCnter
+    generic map(
+                gCntWidth   => gAddrMemoryWidth,
+                gStartValue => (gAddrMemoryWidth-1 downto 0 => '0'),
+                gInitValue  => to_unsigned(2, gAddrMemoryWidth),        --starts with value 2. It has to be a step ahead, that the read address value is correct
+                gEndValue   => (gAddrMemoryWidth-1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => iResetPaketBuff,
-            iEn         => iWrAddrEn,
-            iStartValue => (1 => '1', others => '0'),  --starts with value 2. It has to be a step ahead, that the read address value is correct
-            iEndValue   => (others => '1'),
-            oQ          => fifoWrAddr,
-            oOv         => open);
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => iResetPaketBuff,
+            iEn     => iWrAddrEn,
+            oQ      => fifoWrAddr,
+            oOv     => open);
 
 
     --! @brief Counter for address-memory read address
     --! - Select address for the output of the next start-address from memory
-    RdAddrCnter : entity work.Basic_Cnter
-    generic map(gCntWidth   => gAddrMemoryWidth)
+    RdAddrCnter : entity work.FixCnter
+    generic map(
+                gCntWidth   => gAddrMemoryWidth,
+                gStartValue => (gAddrMemoryWidth-1 downto 0 => '0'),
+                gInitValue  => (gAddrMemoryWidth-1 downto 0 => '0'),
+                gEndValue   => (gAddrMemoryWidth-1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => iResetPaketBuff,
-            iEn         => iRdAddrEn,
-            iStartValue => (others => '0'),
-            iEndValue   => (others => '1'),
-            oQ          => rdAddr,
-            oOv         => open
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => iResetPaketBuff,
+            iEn     => iRdAddrEn,
+            oQ      => rdAddr,
+            oOv     => open
             );
 
 

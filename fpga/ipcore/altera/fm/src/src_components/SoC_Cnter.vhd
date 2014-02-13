@@ -125,17 +125,20 @@ begin
 
 
     --! @brief Cycle Counter
-    Cnter : entity work.Basic_Cnter
-    generic map(gCntWidth=>gCnterWidth)
+    Cnter : entity work.FixCnter
+    generic map(
+                gCntWidth   => gCnterWidth,
+                gStartValue => (gCnterWidth-1 downto 0 => '0'),
+                gInitValue  => (gCnterWidth-1 downto 0 => '0'),
+                gEndValue   => (gCnterWidth-1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => iTestSync,
-            iEn         => cntEn,
-            iStartValue => (others=>'0'),
-            iEndValue   => (others=>'1'),
-            oQ          => oSocCnt,
-            oOv         => open
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => iTestSync,
+            iEn     => cntEn,
+            oQ      => oSocCnt,
+            oOv     => open
             );
 
 

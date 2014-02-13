@@ -69,17 +69,20 @@ begin
 
     --! @brief Counter for Preamble
     --! - Sync, when modul is inactive
-    preamble_clk : entity work.Basic_Cnter
-    generic map (gCntWidth => 5)
+    preamble_clk : entity work.FixCnter
+    generic map (
+                gCntWidth   => 5,
+                gStartValue => (4 downto 0=>'0'),
+                gInitValue  => (4 downto 0=>'0'),
+                gEndValue   => (4 downto 0=>'1')
+                )
     port map (
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => sync,
-            iEn         => '1',
-            iStartValue => (others=>'0'),
-            iEndValue   => (others=>'1'),
-            oQ          => cnt,
-            oOv         => open
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => sync,
+            iEn     => '1',
+            oQ      => cnt,
+            oOv     => open
             );
 
     --55 55 55 55 55 55 55 D5 Pattern

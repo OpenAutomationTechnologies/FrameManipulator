@@ -94,17 +94,20 @@ begin
 
     --! @brief Prescaler for write address
     --! - Factor four to match stream
-    WrPre : entity work.Basic_Cnter
-    generic map(gCntWidth   => 2)
+    WrPre : entity work.FixCnter
+    generic map(
+                gCntWidth   => 2,
+                gStartValue => (1 downto 0 => '0'),
+                gInitValue  => (1 downto 0 => '0'),
+                gEndValue   => (1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => wrCntClear,
-            iEn         => '1',
-            iStartValue => "00",
-            iEndValue   => (others => '1'),
-            oQ          => open,
-            oOv         => wrPreCnt
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => wrCntClear,
+            iEn     => '1',
+            oQ      => open,
+            oOv     => wrPreCnt
             );
 
 
@@ -128,17 +131,20 @@ begin
     --! @brief Prescaler for read address
     --! - Factor four to match stream
     --! - Start with the value of one to compensate the delay of the memory
-    RdPre : entity work.Basic_Cnter
-    generic map(gCntWidth   => 2)
+    RdPre : entity work.FixCnter
+    generic map(
+                gCntWidth   => 2,
+                gStartValue => (1 downto 0 => '0'),
+                gInitValue  => to_unsigned(1, 2),
+                gEndValue   => (1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => rdCntClear,
-            iEn         => '1',
-            iStartValue => "01",
-            iEndValue   => (others => '1'),
-            oQ          => open,
-            oOv         => rdPreCnt
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => rdCntClear,
+            iEn     => '1',
+            oQ      => open,
+            oOv     => rdPreCnt
             );
 
 

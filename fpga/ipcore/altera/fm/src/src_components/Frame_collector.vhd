@@ -97,32 +97,38 @@ begin
     --! @brief Prescaler
     --! - stops at the end
     --! - sync at start
-    cnt_4 : entity work.Basic_Cnter
-    generic map(gCntWidth   => 2)
+    cnt_4 : entity work.FixCnter
+    generic map(
+                gCntWidth   => 2,
+                gStartValue => (1 downto 0 => '0'),
+                gInitValue  => (1 downto 0 => '0'),
+                gEndValue   => (1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => cnt_stop,
-            iEn         => '1',
-            iStartValue => (others=>'0'),
-            iEndValue   => (others=>'1'),
-            oQ          => open,
-            oOv         => div4
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => cnt_stop,
+            iEn     => '1',
+            oQ      => open,
+            oOv     => div4
             );
 
     --! @brief Counter, which counts the Bytes of the frame stream
     --! - sync at start
-    cnt_5bit : entity work.Basic_Cnter
-    generic map(gCntWidth   => LogDualis(gTo+2))
+    cnt_5bit : entity work.FixCnter
+    generic map(
+                gCntWidth   => LogDualis(gTo+2),
+                gStartValue => (LogDualis(gTo+2)-1 downto 0 => '0'),
+                gInitValue  => (LogDualis(gTo+2)-1 downto 0 => '0'),
+                gEndValue   => (LogDualis(gTo+2)-1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => iSync,
-            iEn         => div4,
-            iStartValue => (others=>'0'),
-            iEndValue   => (others=>'1'),
-            oQ          => cnt,
-            oOv         => open
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => iSync,
+            iEn     => div4,
+            oQ      => cnt,
+            oOv     => open
             );
 
 

@@ -104,18 +104,21 @@ begin
     if gPrescaler>1 generate
 
         --! @brief Prescaler via counter
-        difpre_clk : entity work.Basic_Cnter
-        generic map (gCntWidth => LogDualis(gPrescaler))
+        difpre_clk : entity work.FixCnter
+        generic map (
+                    gCntWidth   => LogDualis(gPrescaler),
+                    gStartValue => (LogDualis(gPrescaler)-1 downto 0 => '0'),
+                    gInitValue  => (LogDualis(gPrescaler)-1 downto 0 => '0'),
+                    gEndValue   => to_unsigned(gPrescaler-1,LogDualis(gPrescaler))
+                    )
         port map (
-                iClk        => iClk,
-                iReset      => iReset,
-                iClear      => iSync,
-                iEn         => iEn,
-                iStartValue => (others=>'0'),
-                iEndValue   => (others=>'1'),
-                oQ          => cntpre,
-                oOv         => open
-        );
+                iClk    => iClk,
+                iReset  => iReset,
+                iClear  => iSync,
+                iEn     => iEn,
+                oQ      => cntpre,
+                oOv     => open
+                );
 
         preEn   <='1' when cntpre=(cntpre'range=>'0') and iEn='1' else '0';--TODO: gPrescaler can only be a two's complement
 

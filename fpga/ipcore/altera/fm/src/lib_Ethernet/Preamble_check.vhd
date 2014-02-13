@@ -74,17 +74,20 @@ begin
     --! @brief Counter of toggeling Preamble
     --! - Count up at toggeling bit
     --! - Clear at RXDV = 0
-    cnter : entity work.Basic_Cnter
-    generic map(gCntWidth   => 6)
+    cnter : entity work.FixCnter
+    generic map(
+                gCntWidth   => 6,
+                gStartValue => (5 downto 0=>'0'),
+                gInitValue  => (5 downto 0=>'0'),
+                gEndValue   => (5 downto 0=>'1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => clear,
-            iEn         => en,
-            iStartValue => (others=>'0'),
-            iEndValue   => (others=>'1'),
-            oQ          => cnt,
-            oOv         => open
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => clear,
+            iEn     => en,
+            oQ      => cnt,
+            oOv     => open
             );
 
     oPreOk<='1' when cnt>std_logic_vector(to_unsigned(24,6)) else '0';

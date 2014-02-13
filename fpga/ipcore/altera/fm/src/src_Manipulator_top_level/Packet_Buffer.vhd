@@ -339,17 +339,20 @@ begin
     --! @brief Safety frame counter
     --! - Counts every safety frame, when active
     --! - Reset at inactive manipulation
-    frameCnter : entity work.Basic_Cnter
-    generic map(gCntWidth   => reg.NoOfPackets'length)
+    frameCnter : entity work.FixCnter
+    generic map(
+                gCntWidth   => reg.NoOfPackets'length,
+                gStartValue => (reg.NoOfPackets'range => '0'),
+                gInitValue  => (reg.NoOfPackets'range => '0'),
+                gEndValue   => (reg.NoOfPackets'range => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => frameCntClear,
-            iEn         => frameCntEn,
-            iStartValue => (others=>'0'),
-            iEndValue   => (others=>'1'),
-            oQ          => frameCnt,
-            oOv         => open
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => frameCntClear,
+            iEn     => frameCntEn,
+            oQ      => frameCnt,
+            oOv     => open
             );
 
 

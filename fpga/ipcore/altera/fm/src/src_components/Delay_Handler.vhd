@@ -169,33 +169,39 @@ begin
 
     --! @brief Number of stored Delayed Frame
     --! - push delayed frame to buffer
-    PushCnter : entity work.Basic_Cnter
-    generic map(gCntWidth   => LogDualis(gNoOfDelFrames))
+    PushCnter : entity work.FixCnter
+    generic map(
+                gCntWidth   => LogDualis(gNoOfDelFrames),
+                gStartValue => (LogDualis(gNoOfDelFrames)-1 downto 0 => '0'),
+                gInitValue  => (LogDualis(gNoOfDelFrames)-1 downto 0 => '0'),
+                gEndValue   => (LogDualis(gNoOfDelFrames)-1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => delCntSync,
-            iEn         => pushCntEn,
-            iStartValue => (others=>'0'),
-            iEndValue   => (others=>'1'),
-            oQ          => delCntPush,
-            oOv         => open
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => delCntSync,
+            iEn     => pushCntEn,
+            oQ      => delCntPush,
+            oOv     => open
             );
 
 
     --! @brief Number of loaded Delayed Frame
     --! - delayed frame was pulled from buffer
-    PullCnter : entity work.Basic_Cnter
-    generic map(gCntWidth   => LogDualis(gNoOfDelFrames))
+    PullCnter : entity work.FixCnter
+    generic map(
+                gCntWidth   => LogDualis(gNoOfDelFrames),
+                gStartValue => (LogDualis(gNoOfDelFrames)-1 downto 0 => '0'),
+                gInitValue  => (LogDualis(gNoOfDelFrames)-1 downto 0 => '0'),
+                gEndValue   => (LogDualis(gNoOfDelFrames)-1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => delCntSync,
-            iEn         => nEdge_DelFrameLoaded,
-            iStartValue => (others=>'0'),
-            iEndValue   => (others=>'1'),
-            oQ          => delCntPull,
-            oOv         => open
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => delCntSync,
+            iEn     => nEdge_DelFrameLoaded,
+            oQ      => delCntPull,
+            oOv     => open
             );
 
     noDelFrameInBuffer  <= '1' when delCntPush<=delCntPull else '0';
@@ -207,17 +213,20 @@ begin
     --Time of delayed frames--------------------------------------------------------------
 
     --! @brief Counter for the time in 50MHz ticks, when task is active
-    TimeCnter : entity work.Basic_Cnter
-    generic map(gCntWidth   => oCurrentTime'length)
+    TimeCnter : entity work.FixCnter
+    generic map(
+                gCntWidth   => oCurrentTime'length,
+                gStartValue => (oCurrentTime'length-1 downto 0 => '0'),
+                gInitValue  => (oCurrentTime'length-1 downto 0 => '0'),
+                gEndValue   => (oCurrentTime'length-1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => iTestSync,
-            iEn         => active,
-            iStartValue => (others=>'0'),
-            iEndValue   => (others=>'1'),
-            oQ          => currentTime,
-            oOv         => open
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => iTestSync,
+            iEn     => active,
+            oQ      => currentTime,
+            oOv     => open
             );
 
                                                     --"-8" for DelayData without the first byte for the states

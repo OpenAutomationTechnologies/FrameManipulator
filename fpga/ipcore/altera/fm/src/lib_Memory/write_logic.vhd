@@ -87,17 +87,20 @@ begin
     if gPrescaler>1 generate
 
         --! @brief Prescaler with counter
-        difpre_clk : entity work.Basic_Cnter
-        generic map (gCntWidth => LogDualis(gPrescaler))
+        difpre_clk : entity work.FixCnter
+        generic map (
+                    gCntWidth   => LogDualis(gPrescaler),
+                    gStartValue => (LogDualis(gPrescaler)-1 downto 0 => '0'),
+                    gInitValue  => (LogDualis(gPrescaler)-1 downto 0 => '0'),
+                    gEndValue   => to_unsigned(gPrescaler-1,LogDualis(gPrescaler))
+                    )
         port map (
-                iClk        => iClk,
-                iReset      => iReset,
-                iClear      => iSync,
-                iEn         => iEn,
-                iStartValue => (others=>'0'),
-                iEndValue   => (others=>'1'),
-                oQ          => preEn,
-                oOv         => open
+                iClk    => iClk,
+                iReset  => iReset,
+                iClear  => iSync,
+                iEn     => iEn,
+                oQ      => preEn,
+                oOv     => open
                 );
     end generate;
 

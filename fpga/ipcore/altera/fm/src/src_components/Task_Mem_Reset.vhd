@@ -96,17 +96,20 @@ begin
     end process;
 
     --! @brief Counter for the addresses to clear
-    Cnter : entity work.Basic_Cnter
-    generic map(gCntWidth=>gAddrWidth)
+    Cnter : entity work.FixCnter
+    generic map(
+                gCntWidth   => gAddrWidth,
+                gStartValue => (gAddrWidth-1 downto 0 => '0'),
+                gInitValue  => (gAddrWidth-1 downto 0 => '0'),
+                gEndValue   => (gAddrWidth-1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => '0',
-            iEn         => clearEn,
-            iStartValue => (others=>'0'),
-            iEndValue   => (others=>'1'),
-            oQ          => addrCnt,
-            oOv         => addrOv
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => '0',
+            iEn     => clearEn,
+            oQ      => addrCnt,
+            oOv     => addrOv
             );
 
 

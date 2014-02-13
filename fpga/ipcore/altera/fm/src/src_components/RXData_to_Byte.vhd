@@ -114,17 +114,20 @@ begin
 
 
     --! @brief Prescaler for an enable every 4th clock(Data is ready in the Shift register)
-    cnt_2bit : entity work.Basic_Cnter
-    generic map (gCntWidth => 2)
+    cnt_2bit : entity work.FixCnter
+    generic map (
+                gCntWidth   => 2,
+                gStartValue => (1 downto 0 => '0'),
+                gInitValue  => (1 downto 0 => '0'),
+                gEndValue   => (1 downto 0 => '1')
+                )
     port map(
-            iClk        => iClk,
-            iReset      => iReset,
-            iClear      => sync,
-            iEn         => '1',
-            iStartValue => (others=>'0'),
-            iEndValue   => (others=>'1'),
-            oQ          => open,
-            oOv         => div4_en
+            iClk    => iClk,
+            iReset  => iReset,
+            iClear  => sync,
+            iEn     => '1',
+            oQ      => open,
+            oOv     => div4_en
             );
 
 
