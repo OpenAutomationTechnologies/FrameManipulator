@@ -179,7 +179,7 @@ begin
 
         --! Generate configuration
         with iWrCommAddr select
-        oCommData<= X"0381290B" when "00000001",    --Setting 1 part 1: Packet Repetition in cycle 2 at start 41 with size 11
+        oCommData<= X"0381290B" when "00000001",    --Setting 1 part 1: Packet Repetition in cycle 3 at start 41 with size 11
                     X"00020000" when "00000000",    --Setting 1 part 2: of 2 packets
                     X"00000000" when "01000001",    --Setting 2 part 1
                     X"00000000" when "01000000",    --Setting 2 part 2
@@ -196,7 +196,7 @@ begin
 
         --! Generate configuration
         with iWrCommAddr select
-        oCommData<= X"0382290B" when "00000001",    --Setting 1 part 1: Packet Repetition in cycle 2 at start 41 with size 11
+        oCommData<= X"0382290B" when "00000001",    --Setting 1 part 1: Packet Loss in cycle 3 at start 41 with size 11
                     X"00020000" when "00000000",    --Setting 1 part 2: of 2 packets
                     X"00000000" when "01000001",    --Setting 2 part 1
                     X"00000000" when "01000000",    --Setting 2 part 2
@@ -207,5 +207,23 @@ begin
                     X"00000000" when others;
 
     end generate safetyLoss;
+
+
+    safetyInsertion:
+    if gTestSetting="safetyInsertion2Start41Size11StartSn52PResCycle3" generate
+
+        --! Generate configuration
+        with iWrCommAddr select
+        oCommData<= X"0383290B" when "00000001",    --Setting 1 part 1: Packet Insertion in cycle 3 at start 41 with size 11
+                    X"00023400" when "00000000",    --Setting 1 part 2: of 2 packets and start of other packet at 52
+                    X"00000000" when "01000001",    --Setting 2 part 1
+                    X"00000000" when "01000000",    --Setting 2 part 2
+                    X"04000000" when "10000001",    --Frame data part 1: PRes
+                    X"00000000" when "10000000",    --Frame data part 2
+                    X"FF000000" when "11000001",    --Frame mask part 1
+                    X"00000000" when "11000000",    --Frame mask part 2
+                    X"00000000" when others;
+
+    end generate safetyInsertion;
 
 end bhv;

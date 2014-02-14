@@ -8,14 +8,15 @@
 # GEN_FILE_TIME:    Delay of the outgoing frames
 # TEST*:            One of the test functions
 
-# Test PassFrame:                           Test without manipulations: Frames shouldn't be distorted, Jitter isn't allowed
-# Test DropSocCycle2:                       Drop of the second SoC
-# Test delay25UsPResCycle1Type1:            Delay of the first PRes of 25 µs with storing all overlapping frames
-# Test maniMtype9PResCycle2:                Changing the MessageType to the value "9" of the PRes in the second Cycle
-# Test crcPResCycle2:                       Distort CRC of PRes in cycle 2
-# Test cut50PResCycle2:                     Cut PRes in cycle 2 to a size of 50 Byte (+CRC+Preamble)
-# Test safetyRep2Start41Size11PResCycle3:   Safety Repetition of 2 packets. The packet starts at Byte 41 and are 11 Bytes long. Start at PRes of Cycle 3
-# Test safetyLoss2Start41Size11PResCycle3:  Safety Loss of 2 packets. The packet starts at Byte 41 and are 11 Bytes long. Start at PRes of Cycle 3
+# Test PassFrame:                                           Test without manipulations: Frames shouldn't be distorted, Jitter isn't allowed
+# Test DropSocCycle2:                                       Drop of the second SoC
+# Test delay25UsPResCycle1Type1:                            Delay of the first PRes of 25 µs with storing all overlapping frames
+# Test maniMtype9PResCycle2:                                Changing the MessageType to the value "9" of the PRes in the second Cycle
+# Test crcPResCycle2:                                       Distort CRC of PRes in cycle 2
+# Test cut50PResCycle2:                                     Cut PRes in cycle 2 to a size of 50 Byte (+CRC+Preamble)
+# Test safetyRep2Start41Size11PResCycle3:                   Safety Repetition of 2 packets. The packet starts at Byte 41 and are 11 Bytes long. Start at PRes of Cycle 3
+# Test safetyLoss2Start41Size11PResCycle3:                  Safety Loss of 2 packets. The packet starts at Byte 41 and are 11 Bytes long. Start at PRes of Cycle 3
+# Test safetyInsertion2Start41Size11StartSn52PResCycle3:    Safety Insertion of 2 packets. The packet starts at Byte 41 and are 11 Bytes long. Second packet starts at 52. Start at PRes of Cycle 3
 
 #Constants
 #22th byte of recorded frame is message type (Header+Preamble)
@@ -1014,6 +1015,234 @@ function safetyLoss
                 fi
 
                 #check remaining of the data
+
+                #Select frame before packet
+                FRAME_STIM_1=${FRAME_STIM_A[*]:0:$PACK_START}
+                FRAME_FM_1=${FRAME_FM_A[*]:0:$PACK_START}
+
+                #Check the first part
+                if [ "${FRAME_STIM_1[*]}" != "${FRAME_FM_1[*]}" ]; then
+
+                    echo -e "\n\e[31mERROR: There is an error in the rest of the frame \e[0m"
+                    exit 1
+
+                fi
+
+                #Select frame after packet
+
+                #Byte after safety packet
+                END_START=$(($PACK_START+$PACK_SIZE))
+
+                #End of frame without CRC
+                FRAME_END=$((${#FRAME_STIM_A[*]}-4))
+
+                #Size of the last part
+                END_SIZE=$(($FRAME_END-$END_START))
+
+                FRAME_STIM_2=${FRAME_STIM_A[*]:$END_START:$END_SIZE}
+                FRAME_FM_2=${FRAME_FM_A[*]:$END_START:$END_SIZE}
+
+                #Check the last part
+                if [ "${FRAME_STIM_2[*]}" != "${FRAME_FM_2[*]}" ]; then
+
+                    echo -e "\n\e[31mERROR: There is an error in the rest of the frame \e[0m"
+                    exit 1
+
+                fi
+
+                echo -e "\e[33mThe rest of the frame is correct\e[0m"
+
+
+            else
+                #Packet not deleted
+
+                FRAME_STIM=$(eval "echo \${FRAME"$NR[*]})
+                FRAME_FM=$(eval "echo \${FM_FRAME"$NR[*]})
+
+                #Compare frames
+                if [ "${FRAME_STIM[*]}" == "${FRAME_FM[*]}" ]; then
+                    echo "Outgoing frame $NR is the same"
+
+                else
+                    echo -e "\n\e[31mERROR: Mismatch of outgoing frame $NR\e[0m"
+                    exit 1
+
+                fi
+            fi
+
+        else
+
+            FRAME_STIM=$(eval "echo \${FRAME"$NR[*]})
+            FRAME_FM=$(eval "echo \${FM_FRAME"$NR[*]})
+
+            #Compare frames
+            if [ "${FRAME_STIM[*]}" == "${FRAME_FM[*]}" ]; then
+                echo "Outgoing frame $NR is the same"
+
+            else
+                echo -e "\n\e[31mERROR: Mismatch of outgoing frame $NR\e[0m"
+                exit 1
+
+            fi
+
+        fi
+
+    done
+
+    #Check Jitter
+    jitterCheck
+}
+
+# Function safetyInsertion2Start41Size11StartSn52PResCycle3:   Safety Insertion of 2 packets. The packet starts at Byte 41 and are 11 Bytes long. Second packet starts at 52. Start at PRes of Cycle 3
+function safetyInsertion2Start41Size11StartSn52PResCycle3
+{
+    FRAME_TYPE="PRes"
+    FRAME_CYCLE=3
+    PACK_NR=2
+    PACK_START=41
+    PACK2_START=52
+    PACK_SIZE=11
+    echo -e "\n\e[36mTest $TEST_NR: Check safety packet Insertion-task with exchanging data two packets (Start 41, Size 11) with the data of another packet (Start 52) beginning with PRes of cycle three\e[0m"
+    safetyInsertion
+}
+
+# Function safetyInsertion:
+#Predefined variables: FRAME_TYPE for frame messageType; FRAME_CYCLE for cycle; PACK_NR number of manipulated packets; PACK_START start Byte of the packet; PACK2_START start of second packet. PACK_SIZE size of the packets
+function safetyInsertion
+{
+    #Add Preamble to start (8) (-1 for start at entry 0)
+    PACK_START=$(($PACK_START+8-1))
+    PACK2_START=$(($PACK2_START+8-1))
+
+    #Check if the number of ingoing and outgoing frames is the same:
+    allFramesPass
+
+
+    #Check frame data
+
+    #Testcycle
+    CYCLE=0
+
+    for ((NR=1 ; NR<=$NR_OF_FRAME; NR++))
+    do
+
+        #Load MessageType of stimulated frame and count up cycle at SoC
+        MESSAGE_TYPE_STIM=$(eval "echo \${FRAME"$NR[$MESSAGE_TYPE]})
+
+        case $MESSAGE_TYPE_STIM in
+        01)
+            TYPE_STIM="SoC"
+            CYCLE=$(($CYCLE+1))
+            ;;
+        03)
+            TYPE_STIM="PReq"
+            ;;
+        04)
+            TYPE_STIM="PRes"
+            ;;
+        05)
+            TYPE_STIM="SoA"
+            ;;
+        06)
+            TYPE_STIM="ASnd"
+            ;;
+        *)
+            TYPE_STIM="unknown frame"
+            ;;
+        esac
+
+        #Output detected stimulation frame
+        echo "Stimulated frame $NR is a $TYPE_STIM of test cycle $CYCLE"
+
+        #Stimulated frame is the start of the manipulation?
+        if [ $TYPE_STIM == $FRAME_TYPE -a  $CYCLE -ge $FRAME_CYCLE ]; then
+
+            #Number of manipulated packet
+            MAN_PACK_NR=$(($CYCLE-$FRAME_CYCLE+1))
+
+            #Is current packet a deleted one?
+            if (( $MAN_PACK_NR <= $PACK_NR )); then
+                #deleted packet
+                echo -e "\e[33mThe safety packet of this frame should be exchanged \e[0m"
+
+                #Load frames as array:
+                FRAME_FM_A=($(eval "echo \${FM_FRAME"$NR[*]}))
+
+                #Select packet DUT
+                FRAME_FM_P=${FRAME_FM_A[*]:$PACK_START:$PACK_SIZE}
+
+                #Load the exchanged packet
+                if (( $PACK2_START < $PACK_START )); then
+                    #if other packet is sent before the DUT packet
+                    echo -e "\e[33mThe other packet is sent before the DUT packet: The exchanged packet is in the same frame \e[0m"
+
+                    FRAME_STIM_A=($(eval "echo \${FRAME"$NR[*]}))
+
+                else
+                    #other packet is sent after DUT packet: exchanged packet is from the last safety frame
+                    PACK2_CYCLE=$(($CYCLE-1))
+                    echo -e "\e[33mThe DUT packet is sent before the other packet: The exchanged packet was sent in the safety frame of cycle $PACK2_CYCLE \e[0m"
+
+                    #Looking for the frame with the packet data
+
+                    CYCLE_P=0
+
+                    for ((NR_P=1 ; NR_P<=$NR_OF_FRAME; NR_P++))
+                    do
+
+                        #Load MessageType of stimulated frame and count up cycle at SoC
+                        MESSAGE_TYPE_STIM=$(eval "echo \${FRAME"$NR_P[$MESSAGE_TYPE]})
+
+                        case $MESSAGE_TYPE_STIM in
+                        01)
+                            TYPE_STIM="SoC"
+                            CYCLE_P=$(($CYCLE_P+1))
+                            ;;
+                        03)
+                            TYPE_STIM="PReq"
+                            ;;
+                        04)
+                            TYPE_STIM="PRes"
+                            ;;
+                        05)
+                            TYPE_STIM="SoA"
+                            ;;
+                        06)
+                            TYPE_STIM="ASnd"
+                            ;;
+                        *)
+                            TYPE_STIM="unknown frame"
+                            ;;
+                        esac
+
+
+                        if [ $TYPE_STIM == $FRAME_TYPE -a  $CYCLE_P == $PACK2_CYCLE ]; then
+                            echo -e "\e[33mThat is frame Nr $NR_P\e[0m"
+
+                            #Load frames as array:
+                            FRAME_STIM_A=($(eval "echo \${FRAME"$NR_P[*]}))
+
+                        fi
+                    done
+                fi
+
+                #select packet
+                FRAME_STIM_P=${FRAME_STIM_A[*]:$PACK2_START:$PACK_SIZE}
+
+
+                #Check the exchange of the packet
+                if [ "$FRAME_FM_P" == "$FRAME_STIM_P" ]; then
+
+                    echo -e "\e[33mThe safety packet was successfully exchanged\e[0m"
+
+                else
+                    echo -e "\n\e[31mERROR: The safety packet is wrong \e[0m"
+                    exit 1
+
+                fi
+
+                #Load stimulation of current frame
+                FRAME_STIM_A=($(eval "echo \${FRAME"$NR[*]}))
 
                 #Select frame before packet
                 FRAME_STIM_1=${FRAME_STIM_A[*]:0:$PACK_START}
