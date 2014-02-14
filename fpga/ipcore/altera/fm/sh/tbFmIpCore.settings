@@ -70,6 +70,7 @@ TEST6=cut50PResCycle2
 TEST7=safetyRep2Start41Size11PResCycle3
 TEST8=safetyLoss2Start41Size11PResCycle3
 TEST9=safetyInsertion2Start41Size11StartSn52PResCycle3
+TEST10=safetyIncSeq2Start41Size11PResCycle4
 
 GEN_LIST=( \
 "gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}1 gFileFrameOutFm=${GEN_FILE_FM}1 gFileFrameOutTiming=${GEN_FILE_TIME}1 gTestSetting=${TEST1}" \
@@ -81,6 +82,7 @@ GEN_LIST=( \
 "gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}7 gFileFrameOutFm=${GEN_FILE_FM}7 gFileFrameOutTiming=${GEN_FILE_TIME}7 gTestSetting=${TEST7}" \
 "gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}8 gFileFrameOutFm=${GEN_FILE_FM}8 gFileFrameOutTiming=${GEN_FILE_TIME}8 gTestSetting=${TEST8}" \
 "gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}9 gFileFrameOutFm=${GEN_FILE_FM}9 gFileFrameOutTiming=${GEN_FILE_TIME}9 gTestSetting=${TEST9}" \
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}10 gFileFrameOutFm=${GEN_FILE_FM}10 gFileFrameOutTiming=${GEN_FILE_TIME}10 gTestSetting=${TEST10}" \
 )
 
 TOP_LEVEL=tbFmIpCore
