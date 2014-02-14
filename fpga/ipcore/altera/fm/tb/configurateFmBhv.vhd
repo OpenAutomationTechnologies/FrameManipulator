@@ -249,7 +249,7 @@ begin
 
         --! Generate configuration
         with iWrCommAddr select
-        oCommData<= X"0385290B" when "00000001",    --Setting 1 part 1: Incorrect Sequence in cycle 3 at start 41 with size 11
+        oCommData<= X"0385290B" when "00000001",    --Setting 1 part 1: Incorrect Data in cycle 3 at start 41 with size 11
                     X"00020000" when "00000000",    --Setting 1 part 2: of 2 packets
                     X"00000000" when "01000001",    --Setting 2 part 1
                     X"00000000" when "01000000",    --Setting 2 part 2
@@ -260,5 +260,22 @@ begin
                     X"00000000" when others;
 
     end generate incData;
+
+    paDelay:
+    if gTestSetting="safetyDelay2Start41Size11PResCycle3" generate
+
+        --! Generate configuration
+        with iWrCommAddr select
+        oCommData<= X"0386290B" when "00000001",    --Setting 1 part 1: Packet delay in cycle 3 at start 41 with size 11
+                    X"00020000" when "00000000",    --Setting 1 part 2: of 2 packets
+                    X"00000000" when "01000001",    --Setting 2 part 1
+                    X"00000000" when "01000000",    --Setting 2 part 2
+                    X"04000000" when "10000001",    --Frame data part 1: PRes
+                    X"00000000" when "10000000",    --Frame data part 2
+                    X"FF000000" when "11000001",    --Frame mask part 1
+                    X"00000000" when "11000000",    --Frame mask part 2
+                    X"00000000" when others;
+
+    end generate paDelay;
 
 end bhv;
