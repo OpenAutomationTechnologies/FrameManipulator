@@ -18,10 +18,14 @@
 # Test safetyLoss2Start41Size11PResCycle3:                  Safety Loss of 2 packets. The packet starts at Byte 41 and are 11 Bytes long. Start at PRes of Cycle 3
 # Test safetyInsertion2Start41Size11StartSn52PResCycle3:    Safety Insertion of 2 packets. The packet starts at Byte 41 and are 11 Bytes long. Second packet starts at 52. Start at PRes of Cycle 3
 # Test safetyIncSeq2Start41Size11PResCycle4:                Safety Incorrect-Sequence of 2 packets. The packet starts at Byte 41 and are 11 Bytes long. Start at PRes of Cycle 4
+# Test safetyIncData2Start41Size11PResCycle3:               Safety Incorrect-Data of 2 packets. The packet starts at Byte 41 and are 11 Bytes long. Start at PRes of Cycle 3
 
 #Constants
 #22th byte of recorded frame is message type (Header+Preamble)
 MESSAGE_TYPE=22
+
+#First Byte of safety payload: Byte number 5 (+4)
+SAFETY_PAYLOAD=4
 
 # Function load sources:
 function loadTestSources()
@@ -1322,7 +1326,7 @@ function safetyInsertion
     jitterCheck
 }
 
-# Test safetyIncSeq2Start41Size11PResCycle4:                Safety Incorrect-Sequence of 2 packets. The packet starts at Byte 41 and are 11 Bytes long. Start at PRes of Cycle 4
+# Function safetyIncSeq2Start41Size11PResCycle4:                Safety Incorrect-Sequence of 2 packets. The packet starts at Byte 41 and are 11 Bytes long. Start at PRes of Cycle 4
 function safetyIncSeq2Start41Size11PResCycle4
 {
     FRAME_TYPE="PRes"
@@ -1563,6 +1567,179 @@ function safetyInc
     #Check Jitter
     jitterCheck
 
+}
+
+# Function safetyIncData2Start41Size11PResCycle3:                Safety Incorrect-Data of 2 packets. The packet starts at Byte 41 and are 11 Bytes long. Start at PRes of Cycle 3
+function safetyIncData2Start41Size11PResCycle3
+{
+    FRAME_TYPE="PRes"
+    FRAME_CYCLE=3
+    PACK_NR=2
+    PACK_START=41
+    PACK_SIZE=11
+    echo -e "\n\e[36mTest $TEST_NR: Check safety Incorrect-Data with manipulating the payload of two packets (Start 41, Size 11) beginning with PRes of cycle three\e[0m"
+    safetyData
+}
+
+# Function safetyInc:
+#Predefined variables: FRAME_TYPE for frame messageType; FRAME_CYCLE for cycle; PACK_NR number of manipulated packets; PACK_START start Byte of the packet; PACK_SIZE size of the packets
+function safetyData
+{
+    #Add Preamble to start (8) (-1 for start at entry 0)
+    PACK_START=$(($PACK_START+8-1))
+
+    #Offset of manipulated Payload
+    PAYLOAD_OFFSET=$(($PACK_START+$SAFETY_PAYLOAD))
+
+    #Check if the number of ingoing and outgoing frames is the same:
+    allFramesPass
+
+
+    #Check frame data
+
+    #Testcycle
+    CYCLE=0
+
+    for ((NR=1 ; NR<=$NR_OF_FRAME; NR++))
+    do
+
+        #Load MessageType of stimulated frame and count up cycle at SoC
+        MESSAGE_TYPE_STIM=$(eval "echo \${FRAME"$NR[$MESSAGE_TYPE]})
+
+        case $MESSAGE_TYPE_STIM in
+        01)
+            TYPE_STIM="SoC"
+            CYCLE=$(($CYCLE+1))
+            ;;
+        03)
+            TYPE_STIM="PReq"
+            ;;
+        04)
+            TYPE_STIM="PRes"
+            ;;
+        05)
+            TYPE_STIM="SoA"
+            ;;
+        06)
+            TYPE_STIM="ASnd"
+            ;;
+        *)
+            TYPE_STIM="unknown frame"
+            ;;
+        esac
+
+        #Output detected stimulation frame
+        echo "Stimulated frame $NR is a $TYPE_STIM of test cycle $CYCLE"
+
+        #Stimulated frame is the start of the manipulation?
+        if [ $TYPE_STIM == $FRAME_TYPE -a  $CYCLE -ge $FRAME_CYCLE ]; then
+
+
+            #Number of manipulated packet
+            MAN_PACK_NR=$(($CYCLE-$FRAME_CYCLE+1))
+
+            #Is current packet a manipulated one?
+            if (( $MAN_PACK_NR <= $PACK_NR )); then
+                #deleted packet
+                echo -e "\e[33mThe safety payload of this frame should be manipulated \e[0m"
+
+                #Load frames as array:
+                FRAME_STIM_A=($(eval "echo \${FRAME"$NR[*]}))
+                FRAME_FM_A=($(eval "echo \${FM_FRAME"$NR[*]}))
+
+                #Select manipulated payload
+                FRAME_FM_P=${FRAME_FM_A[PAYLOAD_OFFSET]}
+                FRAME_STIM_P=${FRAME_STIM_A[PAYLOAD_OFFSET]}
+
+                #Check the deleted packet
+                if [ "$FRAME_FM_P" != "$FRAME_STIM_P" ]; then
+
+                    echo -e "\e[33mThe payload was manipulated\e[0m"
+
+                else
+                    echo -e "\n\e[31mERROR: The payload wasn't manipulated \e[0m"
+                    exit 1
+
+                fi
+
+
+                #check remaining of the data
+
+                #Select frame before first payload Byte
+                FRAME_STIM_1=${FRAME_STIM_A[*]:0:$PAYLOAD_OFFSET}
+                FRAME_FM_1=${FRAME_FM_A[*]:0:$PAYLOAD_OFFSET}
+
+                #Check the first part
+                if [ "${FRAME_STIM_1[*]}" != "${FRAME_FM_1[*]}" ]; then
+
+                    echo -e "\n\e[31mERROR: There is an error in the rest of the frame \e[0m"
+                    exit 1
+
+                fi
+
+                #Select frame after first payload Byte
+
+                #Byte after manipulated payload
+                END_START=$(($PAYLOAD_OFFSET+1))
+
+                #End of frame without CRC
+                FRAME_END=$((${#FRAME_STIM_A[*]}-4))
+
+                #Size of the last part
+                END_SIZE=$(($FRAME_END-$END_START))
+
+                FRAME_STIM_2=${FRAME_STIM_A[*]:$END_START:$END_SIZE}
+                FRAME_FM_2=${FRAME_FM_A[*]:$END_START:$END_SIZE}
+
+                #Check the last part
+                if [ "${FRAME_STIM_2[*]}" != "${FRAME_FM_2[*]}" ]; then
+
+                    echo -e "\n\e[31mERROR: There is an error in the rest of the frame \e[0m"
+                    exit 1
+
+                fi
+
+                echo -e "\e[33mThe rest of the frame is correct\e[0m"
+
+
+            else
+                #Packet not deleted
+
+                FRAME_STIM=$(eval "echo \${FRAME"$NR[*]})
+                FRAME_FM=$(eval "echo \${FM_FRAME"$NR[*]})
+
+                #Compare frames
+                if [ "${FRAME_STIM[*]}" == "${FRAME_FM[*]}" ]; then
+                    echo "Outgoing frame $NR is the same"
+
+                else
+                    echo -e "\n\e[31mERROR: Mismatch of outgoing frame $NR\e[0m"
+                    exit 1
+
+                fi
+            fi
+
+        else
+
+            FRAME_STIM=$(eval "echo \${FRAME"$NR[*]})
+            FRAME_FM=$(eval "echo \${FM_FRAME"$NR[*]})
+
+            #Compare frames
+            if [ "${FRAME_STIM[*]}" == "${FRAME_FM[*]}" ]; then
+                echo "Outgoing frame $NR is the same"
+
+            else
+                echo -e "\n\e[31mERROR: Mismatch of outgoing frame $NR\e[0m"
+                exit 1
+
+            fi
+
+        fi
+
+    done
+
+    #Check Jitter
+    jitterCheck
 }
 
 #Load settings file
