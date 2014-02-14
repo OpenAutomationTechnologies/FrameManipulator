@@ -45,10 +45,13 @@ use ieee.numeric_std.all;
 
 --! Use work library
 library work;
---! use global library
-use work.global.all;
 --! use fm library
 use work.framemanipulatorPkg.all;
+
+--! Common library
+library libcommon;
+--! Use common library global package
+use libcommon.global.all;
 
 
 --! Entity of safety packet control

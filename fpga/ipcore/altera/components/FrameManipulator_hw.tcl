@@ -63,7 +63,6 @@ set_module_property ICON_PATH "img/br.png"
 # +-----------------------------------
 # | files
 # |
-add_file "../../../../stacks/openPOWERLINK/hardware/ipcore/common/lib/src/global.vhd" {SYNTHESIS SIMULATION}
 add_file "../fm/src/framemanipulatorPkg.vhd" {SYNTHESIS SIMULATION}
 add_file "../fm/src/FrameManipulator.vhd" {SYNTHESIS SIMULATION}
 add_file "../fm/src/lib_Basics/adder_2121.vhd" {SYNTHESIS SIMULATION}

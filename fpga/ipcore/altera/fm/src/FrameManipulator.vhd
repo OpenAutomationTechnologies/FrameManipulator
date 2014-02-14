@@ -46,10 +46,14 @@ use ieee.numeric_std.all;
 
 --! Use work library
 library work;
---! use global library
-use work.global.all;
 --! use fm library
 use work.framemanipulatorPkg.all;
+
+
+--! Common library
+library libcommon;
+--! Use common library global package
+use libcommon.global.all;
 
 
 --! This is the entity is the top-module of the Framemanipulator

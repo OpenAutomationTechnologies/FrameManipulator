@@ -286,6 +286,7 @@ set_location_assignment PIN_AE25 -to BENCHMARK[7]
 
 # other assignments
 
+set_global_assignment -name QIP_FILE ../../../../ipcore/altera/components/libcommon.qip
 set_global_assignment -name SDC_FILE PLK_MII_base.sdc
 set_global_assignment -name VHDL_FILE toplevel.vhd
 set_global_assignment -name QIP_FILE ipcore/pll.qip

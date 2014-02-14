@@ -52,8 +52,12 @@ use altera_mf.altera_mf_components.all;
 
 --! Use work library
 library work;
---! use global library
-use work.global.all;
+
+--! Common library
+library libcommon;
+--! Use common library global package
+use libcommon.global.all;
+
 
 
 --! This is the entity of the dual port RAM with different ports

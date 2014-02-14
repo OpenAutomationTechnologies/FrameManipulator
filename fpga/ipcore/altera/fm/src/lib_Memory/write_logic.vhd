@@ -46,8 +46,12 @@ use ieee.numeric_std.all;
 
 --! Use work library
 library work;
---! use global library
-use work.global.all;
+
+--! Common library
+library libcommon;
+--! Use common library global package
+use libcommon.global.all;
+
 
 
 --! This is the entity of a write logic for memories

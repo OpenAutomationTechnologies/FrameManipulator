@@ -150,6 +150,7 @@ set_location_assignment PIN_N3 -to LED[2]
 set_location_assignment PIN_N2 -to LED[1]
 set_location_assignment PIN_N1 -to LED[0]
 
+set_global_assignment -name QIP_FILE ../../../../ipcore/altera/components/libcommon.qip
 set_global_assignment -name SDC_FILE PLK_RMII_base.sdc
 set_global_assignment -name VHDL_FILE toplevel.vhd
 set_global_assignment -name QIP_FILE cn_fm/synthesis/cn_fm.qip
