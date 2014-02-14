@@ -14,6 +14,32 @@ echo
 #store current path
 export ORIGIN_DIR=.
 
+LIBST_LIST="\
+common/lib/sh/libcommon.settings \
+"
+
+RET=1
+for LIBSET in $LIBST_LIST
+do
+    echo "###############################################################################"
+    echo "# Compile library $LIBSET"
+
+    chmod +x ./${DIR_TOOLS}/msim-vcomLib.sh
+    ./${DIR_TOOLS}/msim-vcomLib.sh ${LIBSET}
+    RET=$?
+
+    #check return
+    if [ $RET -ne 0 ]; then
+        echo "-> ERROR!"
+        break
+    else
+        echo "-> SUCCESSFUL!"
+    fi
+
+    echo "###############################################################################"
+    echo
+done
+
 #find all *.settings
 TBSET_LIST=`find $ORIGIN_DIR -name "tb*.settings"`
 
