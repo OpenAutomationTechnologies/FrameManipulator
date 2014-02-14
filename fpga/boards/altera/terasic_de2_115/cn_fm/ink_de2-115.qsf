@@ -286,9 +286,6 @@ set_location_assignment PIN_AE25 -to BENCHMARK[7]
 
 # other assignments
 
-set_global_assignment -name VHDL_FILE "../../../../../stacks/openPOWERLINK/hardware/ipcore/common/openmac/src/openmacPkg-p.vhd"
-set_global_assignment -name VHDL_FILE ../../../../../stacks/openPOWERLINK/hardware/ipcore/common/lib/src/global.vhd
-set_global_assignment -name QIP_FILE ../../../../ipcore/altera/components/convRmiiToMii.qip
 set_global_assignment -name SDC_FILE PLK_MII_base.sdc
 set_global_assignment -name VHDL_FILE toplevel.vhd
 set_global_assignment -name VHDL_FILE ../../../../ipcore/common/lib/src/bcd2ledRtl.vhd

@@ -44,11 +44,12 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library work;
---! use global library
-use work.global.all;
---! use openmac package
-use work.openmacPkg.all;
+--! Include the Qsys source files
+library cn_fm;
+--! Use global library
+use cn_fm.global.all;
+--! Use openmac package
+use cn_fm.openmacPkg.all;
 
 entity toplevel is
     port (
