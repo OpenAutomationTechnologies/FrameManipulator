@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
---! @file tbFmIpCore.vhd
+--! @file tbFramemanipulator.vhd
 --! @brief Testbench for Framemanipulator IP-core
 -------------------------------------------------------------------------------
 --
@@ -61,23 +61,23 @@ use libcommon.global.all;
 
 
 --! This is the testbench of Framemanipulator IP-core
-entity tbFmIpCore is
+entity tbFramemanipulator is
     generic(gStimIn             : string := "stimEthPacket.txt";    --! Stimulation file in
             gFileFrameOutStim   : string := "outStim.txt";          --! Output of stimulation file
             gFileFrameOutFm     : string := "outFm.txt";            --! Output of stimulation file
             gFileFrameOutTiming : string := "outTiming.txt";        --! Output of frame delay
             gTestSetting        : string := "passTest"              --! Task configuration
             );
-end tbFmIpCore;
+end tbFramemanipulator;
 
---! @brief tbFmIpCore architecture
+--! @brief tbFramemanipulator architecture
 --! @details Testbench for Framemanipulator IP-core
 --! - Testbench creates Ethernet stream from stimulation file
 --! - Stimulated data stream, output stream and frame delay will be stored in
 --!   separate files. The data is allocated to bash-variables
 --! - Testbench won't stop in case of an error
 --! - The module check will be processed in the shell post script afterwards
-architecture bhv of tbFmIpCore is
+architecture bhv of tbFramemanipulator is
 
     constant cPeriode   : time := 20 ns;     -- used 50 MHz clock cycle FM/RMII-clock
 

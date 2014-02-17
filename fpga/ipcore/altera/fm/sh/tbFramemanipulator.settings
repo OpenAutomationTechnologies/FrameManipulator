@@ -1,0 +1,98 @@
+#!/bin/bash
+# Settings file for running simulation.
+STIM_FILE="altera/fm/tb/tbFramemanipulator_stim.txt"
+
+#generated files + Number + $GEN_FILE_END
+GEN_FILE_STIM="altera/fm/tb/tbFramemanipulatorStim"
+GEN_FILE_FM="altera/fm/tb/tbFramemanipulatorFm"
+GEN_FILE_TIME="altera/fm/tb/tbFramemanipulatorTime"
+GEN_FILE_END="_out.txt"
+
+POST_SCRIPT="altera/fm/sh/tbFramemanipulator.sh"
+
+SRC_LIST="\
+altera/fm/src/framemanipulatorPkg.vhd \
+altera/fm/src/lib_Basics/adder_2121.vhd \
+altera/fm/src/lib_Basics/Basic_Cnter.vhd \
+altera/fm/src/lib_Basics/Basic_DownCnter.vhd \
+altera/fm/src/lib_Basics/From_To_Cnt_Filter.vhd \
+altera/fm/src/lib_Basics/FixCnter.vhd \
+altera/fm/src/lib_Basics/Mux1D.vhd \
+altera/fm/src/lib_Basics/Mux2D.vhd \
+altera/fm/src/lib_Basics/shift_right_register.vhd \
+altera/fm/src/lib_Ethernet/CRC_calculator.vhd \
+altera/fm/src/lib_Ethernet/end_of_frame_detection.vhd \
+altera/fm/src/lib_Ethernet/Preamble_check.vhd \
+altera/fm/src/lib_Ethernet/Preamble_Generator.vhd \
+altera/fm/src/lib_Ethernet/sync_newData.vhd \
+altera/fm/src/lib_Ethernet/sync_RxFrame.vhd \
+altera/fm/src/lib_Memory/DpramAdjustable.vhd \
+altera/fm/src/lib_Memory/DpramFix.vhd \
+altera/fm/src/lib_Memory/FiFo_File.vhd \
+altera/fm/src/lib_Memory/FiFo_Sync_Ctrl.vhd \
+altera/fm/src/lib_Memory/FiFo_top.vhd \
+altera/fm/src/lib_Memory/read_logic.vhd \
+altera/fm/src/lib_Memory/write_logic.vhd \
+altera/fm/src/src_components/Byte_to_TXData.vhd \
+altera/fm/src/src_components/Control_Register.vhd \
+altera/fm/src/src_components/Delay_FSM.vhd \
+altera/fm/src/src_components/StoreAddress_FSM.vhd \
+altera/fm/src/src_components/ReadAddress_FSM.vhd \
+altera/fm/src/src_components/Delay_Handler.vhd \
+altera/fm/src/src_components/Address_Manager.vhd \
+altera/fm/src/src_components/Frame_collector.vhd \
+altera/fm/src/src_components/Frame_Create_FSM.vhd \
+altera/fm/src/src_components/SoC_Cnter.vhd \
+altera/fm/src/src_components/SafetyTaskSelection.vhd \
+altera/fm/src/src_components/Manipulation_Manager.vhd \
+altera/fm/src/src_components/Packet_MemCnter.vhd \
+altera/fm/src/src_components/Packet_StartAddrMem.vhd \
+altera/fm/src/src_components/Packet_Memory.vhd \
+altera/fm/src/src_components/PacketControl_FSM.vhd \
+altera/fm/src/src_components/RXData_to_Byte.vhd \
+altera/fm/src/src_components/Task_Mem_Reset.vhd \
+altera/fm/src/src_components/Task_Memory.vhd \
+altera/fm/src/src_Manipulator_top_level/Data_Buffer.vhd \
+altera/fm/src/src_Manipulator_top_level/Frame_Creator.vhd \
+altera/fm/src/src_Manipulator_top_level/Frame_Receiver.vhd \
+altera/fm/src/src_Manipulator_top_level/Memory_Interface.vhd \
+altera/fm/src/src_Manipulator_top_level/Packet_Buffer.vhd \
+altera/fm/src/src_Manipulator_top_level/Process_Unit.vhd \
+altera/fm/src/FrameManipulator.vhd \
+altera/fm/tb/configurateFmBhv.vhd \
+altera/fm/tb/ethPktGenBhv.vhd \
+altera/fm/tb/ethPktStorage.vhd \
+altera/fm/tb/tbFramemanipulator.vhd \
+"
+
+TEST1=passFrame
+TEST2=dropSocCycle2
+TEST3=delay25UsPResCycle1Type1
+TEST4=maniMtype9PResCycle2
+TEST5=crcPResCycle2
+TEST6=cut50PResCycle2
+TEST7=safetyRep2Start41Size11PResCycle3
+TEST8=safetyLoss2Start41Size11PResCycle3
+TEST9=safetyInsertion2Start41Size11StartSn52PResCycle3
+TEST10=safetyIncSeq2Start41Size11PResCycle4
+TEST11=safetyIncData2Start41Size11PResCycle3
+TEST12=safetyDelay2Start41Size11PResCycle3
+TEST13=safetyMasq2Start41Size11PResCycle3
+
+GEN_LIST=( \
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}1${GEN_FILE_END}  gFileFrameOutFm=${GEN_FILE_FM}1${GEN_FILE_END}  gFileFrameOutTiming=${GEN_FILE_TIME}1${GEN_FILE_END}  gTestSetting=${TEST1}" \
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}2${GEN_FILE_END}  gFileFrameOutFm=${GEN_FILE_FM}2${GEN_FILE_END}  gFileFrameOutTiming=${GEN_FILE_TIME}2${GEN_FILE_END}  gTestSetting=${TEST2}" \
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}3${GEN_FILE_END}  gFileFrameOutFm=${GEN_FILE_FM}3${GEN_FILE_END}  gFileFrameOutTiming=${GEN_FILE_TIME}3${GEN_FILE_END}  gTestSetting=${TEST3}" \
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}4${GEN_FILE_END}  gFileFrameOutFm=${GEN_FILE_FM}4${GEN_FILE_END}  gFileFrameOutTiming=${GEN_FILE_TIME}4${GEN_FILE_END}  gTestSetting=${TEST4}" \
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}5${GEN_FILE_END}  gFileFrameOutFm=${GEN_FILE_FM}5${GEN_FILE_END}  gFileFrameOutTiming=${GEN_FILE_TIME}5${GEN_FILE_END}  gTestSetting=${TEST5}" \
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}6${GEN_FILE_END}  gFileFrameOutFm=${GEN_FILE_FM}6${GEN_FILE_END}  gFileFrameOutTiming=${GEN_FILE_TIME}6${GEN_FILE_END}  gTestSetting=${TEST6}" \
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}7${GEN_FILE_END}  gFileFrameOutFm=${GEN_FILE_FM}7${GEN_FILE_END}  gFileFrameOutTiming=${GEN_FILE_TIME}7${GEN_FILE_END}  gTestSetting=${TEST7}" \
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}8${GEN_FILE_END}  gFileFrameOutFm=${GEN_FILE_FM}8${GEN_FILE_END}  gFileFrameOutTiming=${GEN_FILE_TIME}8${GEN_FILE_END}  gTestSetting=${TEST8}" \
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}9${GEN_FILE_END}  gFileFrameOutFm=${GEN_FILE_FM}9${GEN_FILE_END}  gFileFrameOutTiming=${GEN_FILE_TIME}9${GEN_FILE_END}  gTestSetting=${TEST9}" \
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}10${GEN_FILE_END}  gFileFrameOutFm=${GEN_FILE_FM}10${GEN_FILE_END}  gFileFrameOutTiming=${GEN_FILE_TIME}10${GEN_FILE_END}  gTestSetting=${TEST10}" \
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}11${GEN_FILE_END}  gFileFrameOutFm=${GEN_FILE_FM}11${GEN_FILE_END}  gFileFrameOutTiming=${GEN_FILE_TIME}11${GEN_FILE_END}  gTestSetting=${TEST11}" \
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}12${GEN_FILE_END}  gFileFrameOutFm=${GEN_FILE_FM}12${GEN_FILE_END}  gFileFrameOutTiming=${GEN_FILE_TIME}12${GEN_FILE_END}  gTestSetting=${TEST12}" \
+"gStimIn=${STIM_FILE} gFileFrameOutStim=${GEN_FILE_STIM}13${GEN_FILE_END}  gFileFrameOutFm=${GEN_FILE_FM}13${GEN_FILE_END}  gFileFrameOutTiming=${GEN_FILE_TIME}13${GEN_FILE_END}  gTestSetting=${TEST13}" \
+)
+
+TOP_LEVEL=tbFramemanipulator
