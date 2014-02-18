@@ -76,10 +76,10 @@ architecture two_seg_arch of ReadAddress_FSM is
     type tMcState is
         (
         sIdle,                  --! Wait for ready-signal from the Frame-Creator
-        sWait_new_frame_data,   --! Wait for new frame data/start address
-        sStart_frame,           --! Stores start address
-        sWait_end_addr,         --! Wait for valid end position
-        sRd_end_addr            --! Stores end address
+        sWaitNewFrameData,   --! Wait for new frame data/start address
+        sStartFrame,           --! Stores start address
+        sWaitEndAddr,         --! Wait for valid end position
+        sRdEndAddr            --! Stores end address
         );
 
     signal state_reg    : tMcState; --! Current state
@@ -123,35 +123,35 @@ begin
 
             when sIdle=>
                 if iNextFrame='1' then                  --if Frame-Creator is ready
-                    state_next  <= sWait_new_frame_data;    --check of new frame data
+                    state_next  <= sWaitNewFrameData;    --check of new frame data
 
                 else
                     state_next  <= sIdle;
 
                 end if;
 
-            when sWait_new_frame_data=>
+            when sWaitNewFrameData=>
                 if iDataReady='1' then          --if new data is ready
-                    state_next  <= sStart_frame;    --start a new frame
+                    state_next  <= sStartFrame;    --start a new frame
 
                 else
-                    state_next  <= sWait_new_frame_data;
+                    state_next  <= sWaitNewFrameData;
 
                 end if;
 
-            when sStart_frame=>
-                state_next  <= sWait_end_addr;  --goto: wait for end address
+            when sStartFrame=>
+                state_next  <= sWaitEndAddr;  --goto: wait for end address
 
-            when sWait_end_addr=>
+            when sWaitEndAddr=>
                 if iDataReady='1' then          --if data is ready
-                    state_next  <= sRd_end_addr;    --read end address
+                    state_next  <= sRdEndAddr;    --read end address
 
                 else
-                    state_next  <= sWait_end_addr;
+                    state_next  <= sWaitEndAddr;
 
                 end if;
 
-            when sRd_end_addr=>
+            when sRdEndAddr=>
                 state_next  <= sIdle;               --goto: idle
 
         end case;
@@ -174,19 +174,19 @@ begin
             when sIdle=>
                 null;
 
-            when sWait_new_frame_data=>
+            when sWaitNewFrameData=>
                 null;
 
-            when sStart_frame=>                     --start new frame
+            when sStartFrame=>                     --start new frame
                 oRd                 <= '1';         --read fifo
                 oStart              <= '1';         --set start signal
                 oDataOutStart       <= iFifoData;   --store start address
                 next_dataOutStart   <= iFifoData;
 
-            when sWait_end_addr=>
+            when sWaitEndAddr=>
                 null;
 
-            when sRd_end_addr=>                 --read end address
+            when sRdEndAddr=>                 --read end address
                 oRd             <= '1';         --read fifo
                 oDataOutEnd     <= iFifoData;   --store end address
                 next_dataOutEnd <= iFifoData;
