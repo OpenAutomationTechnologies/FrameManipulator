@@ -1,0 +1,42 @@
+digraph finite_state_machine {
+    rankdir=TB;
+    size="14!,10"; resolution=100;
+
+    node [colorscheme = pastel19];
+    node [style=dashed,fillcolor=6, shape = doublecircle]; sIdle;
+
+    node [style=filled, fillcolor=1, shape = ellipse, label="sPaDelay"] sPaDelay;
+    node [style=filled, fillcolor=2, shape = ellipse, label="sPaDelayMani\n oPacketExchangeEn <= 1\noStore <= iExchangeData\noRead <= iExchangeData"] sPaDelayMani;
+    node [style=filled, fillcolor=3, shape = ellipse, label="sPaDelayKill\n oZeroPacketEx <= 1"] sPaDelayKill;
+    node [style=filled, fillcolor=4, shape = ellipse, label="sPaDelayKillMani\n oPacketExchangeEn <= 1\n oZeroPacketEx <= 1\noStore <= iExchangeData\noRead <= iExchangeData"] sPaDelayKillMani;
+
+
+
+    sIdle -> sPaDelay    [ style="dashed" ];
+
+
+    sPaDelay -> sPaDelayKill        [label = "active & 'safetyFrame_posEdge"];
+    sPaDelay -> sPaDelayKillMani    [label = "active & safetyFrame_posEdge"];
+    sPaDelay -> sPaDelayMani        [label = "'active & safetyFrame_posEdge"];
+    sPaDelay -> sPaDelay            [label = "'active & 'safetyFrame_posEdge" tailport=nw, headport=w];
+
+
+    sPaDelayMani -> sPaDelayKillMani    [label = "active"];
+    sPaDelayMani -> sPaDelay            [label = "'active & exchangeData_negEdge"];
+    sPaDelayMani -> sPaDelayMani        [label = "'active & 'exchangeData_negEdge" tailport=sw, headport=w];
+
+
+    sPaDelayKill -> sPaDelay            [label = "'active"];
+    sPaDelayKill -> sPaDelayKillMani    [label = "active & safetyFrame_posEdge"];
+    sPaDelayKill -> sPaDelayKill        [label = "active & 'safetyFrame_posEdge"];
+
+
+    sPaDelayKillMani -> sPaDelayMani        [label = "'active"];
+    sPaDelayKillMani -> sPaDelayKill        [label = "active & exchangeData_negEdge\n oCntEn <= 1"];
+    sPaDelayKillMani -> sPaDelayKillMani    [label = "active & 'exchangeData_negEdge"];
+
+
+    { rank=same; sPaDelay sPaDelayKill}
+    { rank=same; sPaDelayMani sPaDelayKillMani}
+
+}

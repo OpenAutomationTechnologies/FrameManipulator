@@ -1,0 +1,28 @@
+digraph finite_state_machine {
+    rankdir=TB;
+    size="10!,10"; resolution=90;
+
+    node [colorscheme = pastel19];
+    node [style=dashed,fillcolor=6, shape = doublecircle]; sIdle;
+
+    node [style=filled, fillcolor=1, shape = ellipse, label="sMasquerade"] sMasquerade;
+    node [style=filled, fillcolor=2, shape = ellipse, label="sMasqueradeMani\n oPacketExchangeEn <= 1\noRead <= iExchangeData"] sMasqueradeMani;
+    node [style=filled, fillcolor=3, shape = ellipse, label="sStoreSoC\n oPacketExchangeEn <= 1\noPacketStartSoc <= 1\noStore <= iExchangeData"] sStoreSoC;
+
+
+    sIdle -> sMasquerade    [ style="dashed" ];
+
+
+    sMasquerade -> sStoreSoC        [label = "iFrameIsSoc"];
+    sMasquerade -> sMasqueradeMani  [label = "'iFrameIsSoc & active & safetyFrame_posEdge"];
+    sMasquerade -> sMasquerade      [label = "'iFrameIsSoc & '(active & safetyFrame_posEdge)" ];
+
+
+    sMasqueradeMani -> sMasquerade      [label = "exchangeData_negEdge\noCntEn <= 1"];
+    sMasqueradeMani -> sMasqueradeMani  [label = "'exchangeData_negEdge" ];
+
+    sStoreSoC -> sMasquerade    [label = "'iFrameIsSoc"];
+    sStoreSoC -> sStoreSoC      [label = "iFrameIsSoc" ];
+
+
+}

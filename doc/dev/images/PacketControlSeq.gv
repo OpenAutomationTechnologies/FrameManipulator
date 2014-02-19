@@ -1,0 +1,50 @@
+digraph finite_state_machine {
+    rankdir=TB;
+    size="15!,10"; resolution=100;
+
+    node [colorscheme = pastel19];
+    node [style=dashed,fillcolor=6, shape = doublecircle]; sIdle;
+
+    node [style=filled, fillcolor=1, shape = ellipse, label="sIncSeq\n oZeroPacketEx <= not iLagReached"] sIncSeq;
+    node [style=filled, fillcolor=2, shape = ellipse, label="sIncSeqEx\n oPacketExchangeEn <= 1\noStore <= iExchangeData\noRead <= iExchangeData"] sIncSeqEx;
+    node [style=filled, fillcolor=3, shape = ellipse, label="sIncSeqAct\n oTwistPacketEx <= 1"] sIncSeqAct;
+    node [style=filled, fillcolor=4, shape = ellipse, label="sIncTwistPack\n oPacketExchangeEn <= 1\n oTwistPacketEx <= 1\noStore <= iExchangeData\noRead <= iExchangeData"] sIncTwistPack;
+    node [style=filled, fillcolor=5, shape = ellipse, label="sIncSeqDelay\n oPacketExchangeEn <= 1\noZeroPacketEx <= 1\noStore <= iExchangeData\noRead <= iExchangeData"] sIncSeqDelay;
+
+
+
+    sIdle -> sIncSeq    [ style="dashed" ];
+
+
+    sIncSeq -> sIncSeqAct       [label = "active & 'safetyFrame_posEdge"];
+    sIncSeq -> sIncTwistPack    [label = "active & safetyFrame_posEdge"];
+    sIncSeq -> sIncSeqEx        [label = "'active & safetyFrame_posEdge & iLagReached"];
+    sIncSeq -> sIncSeqDelay     [label = "'active & safetyFrame_posEdge & 'iLagReached"];
+    sIncSeq -> sIncSeq          [label = "'active & 'safetyFrame_posEdge" tailport=nw, headport=w];
+
+
+    sIncSeqDelay -> sIncTwistPack  [label = "active"];
+    sIncSeqDelay -> sIncSeq        [label = "'active & exchangeData_negEdge"];
+    sIncSeqDelay -> sIncSeqDelay      [label = "'active & 'exchangeData_negEdge" tailport=sw, headport=w];
+
+
+    sIncSeqEx -> sIncTwistPack  [label = "active"];
+    sIncSeqEx -> sIncSeq        [label = "'active & exchangeData_negEdge"];
+    sIncSeqEx -> sIncSeqEx      [label = "'active & 'exchangeData_negEdge" tailport=sw, headport=w];
+
+
+    sIncSeqAct -> sIncSeq       [label = "'active"];
+    sIncSeqAct -> sIncTwistPack [label = "active & safetyFrame_posEdge"];
+    sIncSeqAct -> sIncSeqAct    [label = "active & 'safetyFrame_posEdge"];
+
+
+    sIncTwistPack -> sIncSeqEx      [label = "'active & iLagReached"];
+    sIncTwistPack -> sIncSeqDelay   [label = "'active & 'iLagReached"];
+    sIncTwistPack -> sIncSeqAct     [label = "active & exchangeData_negEdge\n oCntEn <= 1"];
+    sIncTwistPack -> sIncTwistPack  [label = "active & 'exchangeData_negEdge"];
+
+
+    { rank=same; sIncSeq sIncSeqAct}
+
+
+}

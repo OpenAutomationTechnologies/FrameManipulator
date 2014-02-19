@@ -1,0 +1,27 @@
+digraph finite_state_machine {
+    rankdir=TB;
+    size="10!,10"; resolution=100;
+
+    node [colorscheme = pastel19];
+    node [style=dashed,fillcolor=6, shape = doublecircle]; sIdle;
+
+    node [style=filled, fillcolor=1, shape = ellipse, label="sInsertion"] sInsertion;
+    node [style=filled, fillcolor=2, shape = ellipse, label="sInsertionMani\n oPacketExchangeEn <= 1\noRead <= iExchangeData"] sInsertionMani;
+    node [style=filled, fillcolor=3, shape = ellipse, label="sStoreSN2\n oPacketExchangeEn <= 1\noPacketStartSN2 <= 1\noStore <= iExchangeData"] sStoreSN2;
+
+    sIdle -> sInsertion    [ style="dashed" ];
+
+
+    sInsertion -> sStoreSN2         [label = "('active or iSn2Pre) & safetyFrame_posEdge"];
+    sInsertion -> sInsertionMani    [label = "active & 'iSn2Pre & safetyFrame_posEdge"];
+    sInsertion -> sInsertion        [label = "'safetyFrame_posEdge" ];
+
+
+    sInsertionMani -> sStoreSN2         [label = "exchangeData_negEdge & 'iSn2Pre\noPacketExtension <= iSnNoPaGap\noStore <= iSnNoPaGap"];
+    sInsertionMani -> sInsertion        [label = "exchangeData_negEdge & iSn2Pre\noCntEn <= 1"];
+    sInsertionMani -> sInsertionMani    [label = "'exchangeData_negEdge" ];
+
+    sStoreSN2 -> sInsertionMani [label = "exchangeData_negEdge & iSn2Pre\noPacketExtension <= iDutNoPaGap\noRead <= iDutNoPaGap"];
+    sStoreSN2 -> sInsertion     [label = "exchangeData_negEdge & 'iSn2Pre\noCntEn <= 1"];
+    sStoreSN2 -> sStoreSN2      [label = "'exchangeData_negEdge" ];
+}

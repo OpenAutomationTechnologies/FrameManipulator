@@ -1,0 +1,30 @@
+digraph finite_state_machine {
+    rankdir=TB;
+    size="20"
+
+    node [shape = point] reset n1 n2 n3 n4 n5 n6 n7;
+
+    node [colorscheme = pastel19];
+    node [style=filled,fillcolor=6, shape = doublecircle]; sIdle;
+
+    node [style=filled, fillcolor=1, shape = ellipse] sRepetition sPaLoss sInsertion sIncSeq sIncData sPaDelay sMasquerade;
+
+    reset -> sIdle [ label = "iReset or iStopTest or iNewTask" ];
+
+    sIdle -> sRepetition    [ label = "iSafetyTask=repetition" ];
+    sIdle -> sPaLoss        [ label = "iSafetyTask=paLoss" ];
+    sIdle -> sInsertion     [ label = "iSafetyTask=insertion" ];
+    sIdle -> sIncSeq        [ label = "iSafetyTask=incSeq" ];
+    sIdle -> sIncData       [ label = "iSafetyTask=incData" ];
+    sIdle -> sPaDelay       [ label = "iSafetyTask=paDelay" ];
+    sIdle -> sMasquerade    [ label = "iSafetyTask=masquerade" ];
+
+    sRepetition -> n1 [style="dashed" arrowhead="none"];
+    sPaLoss     -> n2 [style="dashed" arrowhead="none"];
+    sInsertion  -> n3 [style="dashed" arrowhead="none"];
+    sIncData    -> n4 [style="dashed" arrowhead="none"];
+    sIncSeq     -> n5 [style="dashed" arrowhead="none"];
+    sPaDelay    -> n6 [style="dashed" arrowhead="none"];
+    sMasquerade -> n7 [style="dashed" arrowhead="none"];
+
+}

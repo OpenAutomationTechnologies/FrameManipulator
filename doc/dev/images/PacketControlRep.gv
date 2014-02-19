@@ -1,0 +1,42 @@
+digraph finite_state_machine {
+    rankdir=TB;
+    size="14!,10"; resolution=100;
+
+    node [colorscheme = pastel19];
+    node [style=dashed,fillcolor=6, shape = doublecircle]; sIdle;
+
+    node [style=filled, fillcolor=1, shape = ellipse, label="sRepetition"] sRepetition;
+    node [style=filled, fillcolor=2, shape = ellipse, label="sRepetitionExchange\n oPacketExchangeEn <= 1\noStore <= iExchangeData\noRead <= iExchangeData"] sRepetitionExchange;
+    node [style=filled, fillcolor=3, shape = ellipse, label="sRepetitionCloneOutput\n oClonePacketEx <= 1"] sRepetitionCloneOutput;
+    node [style=filled, fillcolor=4, shape = ellipse, label="sRepetitionCloneExchange\n oPacketExchangeEn <= 1\n oClonePacketEx <= 1\noStore <= iExchangeData\noRead <= iExchangeData"] sRepetitionCloneExchange;
+
+
+
+    sIdle -> sRepetition    [ style="dashed" ];
+
+
+    sRepetition -> sRepetitionCloneOutput   [label = "active & 'safetyFrame_posEdge"];
+    sRepetition -> sRepetitionCloneExchange [label = "active & safetyFrame_posEdge"];
+    sRepetition -> sRepetitionExchange      [label = "'active & safetyFrame_posEdge"];
+    sRepetition -> sRepetition              [label = "'active & 'safetyFrame_posEdge" tailport=nw, headport=w];
+
+
+    sRepetitionExchange -> sRepetitionCloneExchange [label = "active"];
+    sRepetitionExchange -> sRepetition              [label = "'active & exchangeData_negEdge"];
+    sRepetitionExchange -> sRepetitionExchange      [label = "'active & 'exchangeData_negEdge" tailport=sw, headport=w];
+
+
+    sRepetitionCloneOutput -> sRepetition               [label = "'active"];
+    sRepetitionCloneOutput -> sRepetitionCloneExchange  [label = "active & safetyFrame_posEdge"];
+    sRepetitionCloneOutput -> sRepetitionCloneOutput    [label = "active & 'safetyFrame_posEdge"];
+
+
+    sRepetitionCloneExchange -> sRepetitionExchange         [label = "'active"];
+    sRepetitionCloneExchange -> sRepetitionCloneOutput      [label = "active & exchangeData_negEdge\n oCntEn <= 1"];
+    sRepetitionCloneExchange -> sRepetitionCloneExchange    [label = "active & 'exchangeData_negEdge"];
+
+
+    { rank=same; sRepetition sRepetitionCloneOutput}
+    { rank=same; sRepetitionExchange sRepetitionCloneExchange}
+
+}

@@ -1,0 +1,23 @@
+digraph finite_state_machine {
+    rankdir=TB;
+    size="10!,10"; resolution=50;
+
+    node [colorscheme = pastel19];
+    node [style=dashed,fillcolor=6, shape = doublecircle]; sIdle;
+
+    node [style=filled, fillcolor=1, shape = ellipse, label="sIncData\n oPacketStartPayload <= 1"] sIncData;
+    node [style=filled, fillcolor=2, shape = ellipse, label="sIncDataMani\n oPacketExchangeEn <= 1\n oPacketStartPayload <= 1"] sIncDataMani;
+
+
+    sIdle -> sIncData    [ style="dashed" ];
+
+
+    sIncData -> sIncDataMani  [label = "active & safetyFrame_posEdge"];
+    sIncData -> sIncData      [label = "'(active & safetyFrame_posEdge)" ];
+
+
+    sIncDataMani -> sIncData      [label = "exchangeData_negEdge\noCntEn <= 1"];
+    sIncDataMani -> sIncDataMani  [label = "'exchangeData_negEdge" ];
+
+
+}

@@ -1,0 +1,42 @@
+digraph toplevel {
+    rankdir=TB;
+    size="20!,20"; resolution=25;
+
+    node [shape = box,colorscheme = pastel19];
+
+    subgraph cluster1 {
+
+        node [style=filled,fillcolor=1] Frame_Receiver;
+        node [style=filled,fillcolor=2] Data_Buffer;
+        node [style=filled,fillcolor=3] Frame_Creator;
+        node [style=filled,fillcolor=4] Memory_Interface;
+        node [style=filled,fillcolor=5] Process_Unit;
+        node [style=filled,fillcolor=6] Packet_Buffer;
+
+        Frame_Receiver      -> {Data_Buffer Process_Unit};
+        Data_Buffer         -> {Process_Unit Frame_Creator};
+        Frame_Creator       -> {Packet_Buffer Process_Unit Data_Buffer};
+
+        Memory_Interface    -> Process_Unit;
+        Process_Unit        -> {Memory_Interface Frame_Receiver Data_Buffer Frame_Creator Packet_Buffer};
+        Packet_Buffer       -> {Process_Unit Frame_Creator}
+
+        { rank=same; Frame_Receiver Data_Buffer Frame_Creator}
+        { rank=same; Memory_Interface Process_Unit Packet_Buffer}
+
+        label = "IP-Core";
+        color=blue
+    }
+
+    node [style=filled,fillcolor=7] openHUB;
+    node [style=filled,fillcolor=8] Processor;
+    node [style=filled,fillcolor=9] PHY1;
+
+    Frame_Creator       -> PHY1;
+    openHUB             -> Frame_Receiver;
+    Processor           -> Memory_Interface;
+    Memory_Interface    -> Processor;
+
+
+
+}

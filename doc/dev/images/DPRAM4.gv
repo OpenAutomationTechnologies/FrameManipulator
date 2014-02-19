@@ -1,0 +1,32 @@
+digraph finite_state_machine {
+    rankdir=LR;
+    size="20!,20"; resolution=25;
+
+    node [shape = point] start end1 end2 end3 end4;
+
+    node [shape = box, colorscheme = pastel19];
+
+    node [style=filled,fillcolor=1 label="Memory1"] D1;
+    node [style=filled,fillcolor=3 label="Memory2"] D2;
+    node [style=filled,fillcolor=4 label="Memory3"] D3;
+    node [style=filled,fillcolor=5 label="Memory4"] D4;
+
+    struct1 [style=filled,fillcolor=2,shape=record label="<f0> 0x3001 |<f1> 0x3002|<f2> 0x3003|<f3> 0x3004"];
+
+
+    start -> struct1 [label="Data [31..0]"];
+
+
+    edge [tailport=e, headport=w];
+
+    struct1:f0 -> D1;
+    struct1:f1 -> D2;
+    struct1:f2 -> D3;
+    struct1:f3 -> D4;
+
+    D1    -> end1 [label="TaskSetting[127..64]"];
+    D2    -> end2 [label="TaskSetting[64..0]"];
+    D3    -> end3 [label="FrameData[63..0]"];
+    D4    -> end4 [label="FrameMask[63..0]"];
+
+}

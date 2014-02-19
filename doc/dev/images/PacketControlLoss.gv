@@ -1,0 +1,23 @@
+digraph finite_state_machine {
+    rankdir=TB;
+    size="10!,10"; resolution=40;
+
+    node [colorscheme = pastel19];
+    node [style=dashed,fillcolor=6, shape = doublecircle]; sIdle;
+
+    node [style=filled, fillcolor=1, shape = ellipse, label="sPaLoss"] sPaLoss;
+    node [style=filled, fillcolor=2, shape = ellipse, label="sPaLossMani\n oPacketExchangeEn <= 1"] sPaLossMani;
+
+
+    sIdle -> sPaLoss    [ style="dashed" ];
+
+
+    sPaLoss -> sPaLossMani  [label = "active & safetyFrame_posEdge"];
+    sPaLoss -> sPaLoss      [label = "'(active & safetyFrame_posEdge)" ];
+
+
+    sPaLossMani -> sPaLoss      [label = "exchangeData_negEdge\noCntEn <= 1"];
+    sPaLossMani -> sPaLossMani  [label = "'exchangeData_negEdge" ];
+
+
+}

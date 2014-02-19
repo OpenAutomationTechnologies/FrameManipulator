@@ -1,0 +1,47 @@
+digraph finite_state_machine {
+    rankdir=TB;
+    size="12,12!"; resolution=100;
+
+    node [style=filled colorscheme = pastel19];
+
+
+    node [shape = doublecircle fillcolor=6 label="sIdle\n clearCnt <= 1 \n clearPCnt <= 1 \n oNextFrame <= 1"]; sIdle;
+
+
+    node [shape = ellipse fillcolor=2 label="sPreamble\n clearPCnt <= 1\n oPreambleActive <= 1\n oSelectTX <= 01\n oTXDV <= 1"]; sPreamble;
+    node [shape = ellipse fillcolor=3 label="sPre_read\n clearPCnt <= 1\n oPreambleActive <= 1\n oPreReadBuff <= 1\n oSelectTX <= 01\n oTXDV <= 1"]; sPre_read;
+    node [shape = ellipse fillcolor=4 label="sRead\n clearCnt <= 1\n oReadBuffActive <= 1\n oSelectTX <= 11\n oTXDV <= 1"]; sRead;
+    node [shape = ellipse fillcolor=5 label="sSafetyRead\n clearCnt <= 1\n oReadBuffActive <= 1\n oSelectTX <= 11\n oTXDV <= 1\n oExchangeData <= 1"]; sSafetyRead;
+    node [shape = ellipse fillcolor=1 label="sCrc\n clearPCnt <= 1\n oCrcActive <= 1\n oSelectTX <= 10\n oTXDV <= 1"]; sCrc;
+    node [shape = ellipse fillcolor=7 label="sWait_IPG\n clearPCnt <= 1"]; sWait_IPG;
+
+
+
+    node [shape = point fixedsize=shape]; reset
+    reset -> sIdle;
+
+    sIdle  -> sIdle     [ label = "'iFrameStart" ];
+    sIdle  -> sPreamble [ label = "iFrameStart" ];
+
+    sPreamble   -> sPreamble  [ label = "cnt /= preamble-preReadTime" ];
+    sPreamble   -> sPre_read  [ label = "cnt = preamble-preReadTime" ];
+
+    sPre_read  -> sCrc      [ label = "iReadBuffDone" ];
+    sPre_read  -> sRead     [ label = "'iReadBuffDone & cnt = preamble" ];
+    sPre_read  -> sPre_read [ label = "'(iReadBuffDone & cnt = preamble)" ];
+
+    sRead  -> sCrc          [ label = "iReadBuffDone" ];
+    sRead  -> sSafetyRead   [ label = "'iReadBuffDone & iPacketExchangeEn & pCnt = iPacketStart" ];
+    sRead  -> sRead         [ label = "'(iReadBuffDone & iPacketExchangeEn & pCnt = iPacketStart)" ];
+
+    sSafetyRead  -> sRead       [ label = "pCnt = iPacketStart+iPacketSize" ];
+    sSafetyRead  -> sSafetyRead [ label = "pCnt /= iPacketStart+iPacketSize" ];
+
+    sCrc  -> sWait_IPG      [ label = "cnt = crcTime" ];
+    sCrc  -> sCrc           [ label = "cnt /= crcTime" ];
+
+    sWait_IPG  -> sIdle     [ label = "cnt = crcTime+ipgTime" ];
+    sWait_IPG  -> sWait_IPG [ label = "cnt /= crcTime+ipgTime" ];
+
+
+}
