@@ -241,7 +241,7 @@ package framemanipulatorPkg is
                                 preamble    => 31,  --! 8Byte => 8Byte*8Bit/2Width => 32
                                 preReadTime => 5,   --! Forerun of the reading logic of 5 cycles
                                 crcTime     => 15,  --! 4Byte => 4Byte*8Bit/2Width => 16
-                                ipgTime     => 43   --! Whole delay of 960ns => here 880ns + process time
+                                ipgTime     => 44   --! Whole delay of 960ns => here 880ns + process time
                                 );
 
 end framemanipulatorPkg;

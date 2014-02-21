@@ -251,7 +251,7 @@ begin
                 end if;
 
             when sWait_IPG =>
-                if cnt>std_logic_vector(to_unsigned(cCreateTime.crcTime+cCreateTime.ipgTime,cnt'length)) and iFrameStart='0' then
+                if cnt=std_logic_vector(to_unsigned(cCreateTime.crcTime+cCreateTime.ipgTime,cnt'length)) then
                     state_next  <= sIdle;   --goto idle after waiting for the IPG
 
                 else
