@@ -296,8 +296,8 @@ begin
         if safetyTask /= reg.safetyTask then    -- if safety task is different one than the one stored
             oError_taskConf    <= '1';         --error
 
-            if  (safetyTask     /= (cByteLength-1 downto 0=>'0') or
-                reg.safetyTask  /= (cByteLength-1 downto 0=>'0'))  then    --exept one of them is zero
+            if  (safetyTask     = (cByteLength-1 downto 0=>'0') or
+                reg.safetyTask  = (cByteLength-1 downto 0=>'0'))  then    --exept one of them is zero
 
                 oError_taskConf    <= '0';
 
