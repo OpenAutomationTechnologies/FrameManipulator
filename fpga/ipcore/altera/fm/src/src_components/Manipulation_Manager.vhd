@@ -212,12 +212,6 @@ begin
 
         reg_next.startTest  <= iStartTest;
 
-        --start of a test
-        if testSync='1' then
-            reg_next.testActive <= '1';
-
-        end if;
-
 
         --end of cycle counter
         if currentCycle=(gCycleCntWidth-1 downto 0 => '1')  then
@@ -232,6 +226,11 @@ begin
 
         end if;
 
+        --start of a test
+        if testSync='1' then
+            reg_next.testActive <= '1';
+
+        end if;
 
         --test is stoped by an operation
         if iStopTest='1'  then
