@@ -288,9 +288,12 @@ begin
     --! - Error, when packets at Insertion task are overlapping
     --! - Error, when new safety task should start, but current one is still active
     comb_errortask:
-    process(safetyTask, reg, iCycleNr, iCycleMem, iSafetyActive)
+    process(safetyTask, reg, iCycleNr, iCycleMem, iSafetyActive, iTestActive)
     begin
         oError_taskConf    <= '0';
+
+        --only test, when confiugration is done
+        if iTestActive = '1' or iSafetyActive = '1' then
 
         --error when different safety tasks are used
         if safetyTask /= reg.safetyTask then    -- if safety task is different one than the one stored
@@ -373,6 +376,8 @@ begin
                     end if;
                 end if;
             end if;
+        end if;
+
         end if;
 
     end process;
