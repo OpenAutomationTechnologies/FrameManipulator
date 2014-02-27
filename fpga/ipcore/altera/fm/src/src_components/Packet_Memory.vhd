@@ -121,6 +121,7 @@ architecture two_seg_arch of Packet_Memory is
     signal dataMemory       : std_logic_vector(cByteLength-1 downto 0);         --! Data from Memory
     signal wrStartAddr      : std_logic_vector(gPacketAddrWidth-1 downto 0);    --! Start address of next stored packet
     signal rdStartAddr      : std_logic_vector(gPacketAddrWidth-1 downto 0);    --! Start address of next read packet
+    signal rdMemStartAddr   : std_logic_vector(gPacketAddrWidth-1 downto 0);    --! Start address of next read packet from Fifo
     signal wrAddr           : std_logic_vector(gPacketAddrWidth-1 downto 0);    --! Write address
     signal rdAddr           : std_logic_vector(gPacketAddrWidth-1 downto 0);    --! Read address
 
@@ -249,7 +250,7 @@ begin
     --! - Disable reading of new packet at Repetition and Packet-Delay task
     combAddr :
     process(iClonePacketEx, iZeroPacketEx, reg, wrEn_negEdge, safetyFrame_posEdge,
-            wrAddr, iTaskSafety)
+            wrAddr, iTaskSafety, rdMemStartAddr, wrStartAddr)
     begin
 
         wrStartAddr     <= (others => '0');
@@ -287,6 +288,12 @@ begin
 
             end if;
 
+            rdStartAddr <= rdMemStartAddr;
+
+        else
+            --use same address during other manipulations
+            rdStartAddr <= wrStartAddr;
+
         end if;
 
     end process;
@@ -312,7 +319,7 @@ begin
             iWrAddrEn       => wrAddrEn,
             iRdAddrEn       => rdAddrEn,
             iAddrData       => wrAddr,
-            oAddrData       => rdStartAddr
+            oAddrData       => rdMemStartAddr
             );
 
 
