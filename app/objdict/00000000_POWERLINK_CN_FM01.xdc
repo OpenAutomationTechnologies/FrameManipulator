@@ -11,7 +11,7 @@
 
   Project:      openPOWERLINK
 
-  Description:  Device Description for a CiA DS401 POWERLINK CN
+  Description:  Device Description for a POWERLINK Framemanipulator
 
   License:
 
@@ -89,7 +89,7 @@
         <productName>POWERLINK_Framemanipulator</productName>
         <version versionType="HW">1.00</version>
         <version versionType="SW">1.00</version>
-        <version versionType="FW">EPL V2 V1.7 r1</version>
+        <version versionType="FW">EPL V2 V1.7 r2</version>
       </DeviceIdentity>
       <DeviceFunction>
         <capabilities>
@@ -226,7 +226,7 @@
           <Object index="1000" name="NMT_DeviceType_U32" objectType="7" dataType="0007" accessType="const" PDOmapping="no" defaultValue="0x000F0191"/>
           <Object index="1001" name="ERR_ErrorRegister_U8" objectType="7" dataType="0005" accessType="ro" PDOmapping="optional" defaultValue="0"/>
           <Object index="1006" name="NMT_CycleLen_U32" objectType="7" dataType="0007" accessType="rw" PDOmapping="no" defaultValue="1000"/>
-          <Object index="1008" name="NMT_ManufactDevName_VS" objectType="7" dataType="0009" accessType="const" PDOmapping="no" defaultValue="POWERLINK CN DEMO"/>
+          <Object index="1008" name="NMT_ManufactDevName_VS" objectType="7" dataType="0009" accessType="const" PDOmapping="no" defaultValue="POWERLINK_Framemanipulator"/>
           <Object index="1009" name="NMT_ManufactHwVers_VS" objectType="7" dataType="0009" accessType="const" PDOmapping="no" defaultValue="1.00"/>
           <Object index="100A" name="NMT_ManufactSwVers_VS" objectType="7" dataType="0009" accessType="const" PDOmapping="no" defaultValue="EPL V2 V1.7 r2"/>
           <Object index="1018" name="NMT_IdentityObject_REC" objectType="9">
@@ -253,7 +253,7 @@
             <SubObject subIndex="08" name="InterfaceAdminState_U8" objectType="7" dataType="0005" accessType="rw" PDOmapping="no" lowLimit="0" highLimit="1" defaultValue="1"/>
             <SubObject subIndex="09" name="Valid_BOOL" objectType="7" dataType="0001" accessType="rw" PDOmapping="no" defaultValue="true"/>
           </Object>
-          <Object index="1050" name="NMT_RelativeLatencyDiff_AU32" objectType="8" dataType="0007">
+          <Object index="1050" name="NMT_RelativeLatencyDiff_AU32" objectType="8">
             <SubObject subIndex="00" name="NumberOfEntries" objectType="7" dataType="0005" accessType="ro" PDOmapping="no" defaultValue="254"/>
             <SubObject subIndex="01" name="RelativeLatencyDiff" objectType="7" dataType="0007" accessType="ro" PDOmapping="no" defaultValue="0"/>
             <SubObject subIndex="02" name="RelativeLatencyDiff" objectType="7" dataType="0007" accessType="ro" PDOmapping="no" defaultValue="0"/>
