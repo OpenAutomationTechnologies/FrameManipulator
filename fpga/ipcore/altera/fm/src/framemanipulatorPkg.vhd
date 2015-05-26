@@ -200,7 +200,7 @@ package framemanipulatorPkg is
     ---------------------------------------------------------------------------
     --! Definition of POWERLINK Ethernet parameters
     type tEth is record
-        filterEtherType     : std_logic_vector(6*cByteLength-1 downto 0);   --! Frame Ethertypes which are allowed to pass the FM
+        filterEtherType     : std_logic_vector(8*cByteLength-1 downto 0);   --! Frame Ethertypes which are allowed to pass the FM
         startFrameFilter    : natural;                                      --! First Byte of the frame to identify it via object 0x3003
         endFrameFilter      : natural;                                      --! Last Byte of the frame to identify it via object 0x3003
         sizeEtherType       : natural;                                      --! Size of EtherType
@@ -212,7 +212,7 @@ package framemanipulatorPkg is
 
     --! Set predefined value for setting size
     constant cEth   : tEth :=(
-                                filterEtherType     => X"88AB_0800_0806",   --! POWERLINK, IP and ARP frames are valid
+                                filterEtherType     => X"88AB_0800_0806_3E3F",   --! POWERLINK V2, IP, ARP and POWERLINK V1 frames are valid
                                 startFrameFilter    => 15,                  --! Filter starts with Messagetype
                                 endFrameFilter      => 22,                  --! StartFrameFilter+8Byte-1
                                 sizeEtherType       => 2*cByteLength,       --! 2 Bytes
