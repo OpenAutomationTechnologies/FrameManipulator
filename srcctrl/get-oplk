@@ -8,7 +8,7 @@ source $ROOT_DIR/project.config
 
 checkoutOplk () {
     mkdir $DIR_OPENPOWERLINK -p
-    git clone $REPO_PATH $DIR_OPENPOWERLINK -b $VERSION_OPENPOWERLINK
+    git clone $REPO_PATH $DIR_OPENPOWERLINK
 
     if [ $? -ne 0 ]; then
         exit 1
