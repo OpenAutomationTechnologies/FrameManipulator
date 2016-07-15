@@ -7,6 +7,71 @@ Frame Manipulator
 Revision History
 ==============================================================================
 
+2016-07-15  V0.2.1
+
+[FIX] Fix openPOWERLINK repository source control
+
+2015-05-26  V0.2.0
+
+[TASK] Add EPL V1 EtherType to frame manipulator
+[FIX] Specification errors in framemanipulator XDC
+[TASK] Add hardware setup instruction to documentation
+[TASK] Update user documentation
+[FIX] Fix safety packet organisation
+[TASK] Check task error, when configuration is done
+[FIX] Suppress config error only, task is not a safety one
+[FIX] FM test start won't be disabled every second time
+[TASK] Add IP-Core development-doc
+[TASK] Simplify state at Frame_Create_FSM
+[TASK] Rename states of ReadAddress_FSM
+[TASK] Transfer Frame_Create constants to package
+[TASK] Rewrite register section of Delay_Handler
+[TASK] Combine the two register-processes at Manipulation_Manager
+[TASK] Fix write_ and read_logic configured with prescaler 0
+[TASK] Rewrite From_To_Cnt_Filter
+[TASK] Rewrite end_of_frame_detection logic
+[TASK] Rewrite task-memory with for-generate
+[TASK] Rewrite RAM-selection in task memory
+[TASK] Rename source and output files
+[TASK] Add behaviour for Masquerade manipulation
+[TASK] Add behaviour for Packet-Delay manipulation
+[TASK] Add behaviour for Incorrect-Data manipulation
+[TASK] Add behaviour for Incorrect-Sequence manipulation
+[TASK] Add behaviour for insertion manipulation
+[TASK] Add behaviour for safety loss
+[FEATURE] Add behaviour for packet repetition
+[FEATURE] Add behaviour for frame truncation
+[FEATURE] Add behaviour test for CRC distortion
+[FEATURE] Add behaviour test for header manipulation
+[FEATURE] Add behaviour test for frame delay
+[TASK] Update time-measurement and frame-trigger function
+[FEATURE] Add behaviour test for frame drop
+[TASK] FM Behaviour tests via functions
+[FEATURE] Add testbench and post sript for basic test
+[TASK] Add libcommon to simulation shell
+[FEATURE] Output multiple frames with packet generator
+[TASK] Add packet generator
+[TASK] Add FixCnter
+[TASK] Use of global.vhd via common library
+[FIX] Remove unused BCD-to-LED decoder assignment
+[FEATURE] Add VHDL library
+[FIX] Fix RMII-to-MII usage in INK board design
+[TASK] Add missing entity to direct component instantiation
+[TASK] Add testbench for FromToCntFilter
+[TASK] Add parameter for post-simulation script
+[TASK] Revise Framemanipulator ipcore directory
+[TASK] Add simulaton shell and update .gitignore
+[TASK] Cleanup Framemanipulator ip-core
+[TASK] Export FM parameters to package
+[TASK] Rewrite register processes
+[TASK] Apply global package functions and constants
+[TASK] Cleanup FM hw.tcl
+[TASK] Add SW for safety tasks
+[FEATURE] Add safety packet manipulation
+[TASK] Remove unused clk in From_To_Cnt_Filter
+[TASK] Update .gitignore of Quartus project
+[FIX] Enable ARP-frames for safety manipulations
+
 2014-01-28  V0.1.1
 
 [TASK] Update user documentation
