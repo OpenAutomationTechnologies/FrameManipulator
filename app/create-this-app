@@ -166,7 +166,7 @@ fi
 
 NIOS2_APP_GEN_ARGS="${NIOS2_APP_GEN_ARGS} --set APP_CFLAGS_DEFINED_SYMBOLS -DALT_TCIMEM_SIZE=${TCIMEM_SIZE}"
 
-cmd="nios2-app-generate-makefile --bsp-dir $BSP_DIR --set QUARTUS_PROJECT_DIR=$SOPC_DIR $NIOS2_APP_GEN_ARGS"
+cmd="nios2-app-generate-makefile --bsp-dir $BSP_DIR --set QUARTUS_PROJECT_DIR=$SOPC_DIR --set FM_DIR=$FM_DIR $NIOS2_APP_GEN_ARGS"
 
 echo "create-this-app: Running \"$cmd\""
 $cmd || {
@@ -183,26 +183,33 @@ PROGRAM_EPCS_TARGET := $(addsuffix $(PROGRAM_EPCS_SUFFIX), $(FLASH_FILES))
 .PHONY : program-epcs
 program-epcs : $(PROGRAM_EPCS_TARGET)
 
-SOF_FILE := $(wildcard $(QUARTUS_PROJECT_DIR)/*.sof)
+SOF_DIR := $(realpath $(QUARTUS_PROJECT_DIR))
+SOF_FILE := $(wildcard $(SOF_DIR)/*.sof)
+TOOLS_DIR := $(realpath $(FM_DIR)/tools/altera-nios2)
+OVERRIDE_FILE := nios2-flash-override.txt
+
+.PHONY : copy-flashoverridefile
+copy-flashoverridefile :
+	cp $(TOOLS_DIR)/$(OVERRIDE_FILE) $(OVERRIDE_FILE)
 
 .PHONY : $(PROGRAM_EPCS_TARGET)
-$(PROGRAM_EPCS_TARGET) : $(ELF)
+$(PROGRAM_EPCS_TARGET) : $(ELF) copy-flashoverridefile
 	@$(ECHO) Info: Programming $(basename $@).flash
 	@if [ -n "$($(basename $@)_EPCS_FLAGS)" ]; \
 	then \
 		nios2-configure-sof $(DOWNLOAD_CABLE_FLAG) -C $(QUARTUS_PROJECT_DIR); \
 		sof2flash --epcs --input=$(SOF_FILE) --output=sof.flash; \
 		$(ELF2FLASH) --after=sof.flash --input=$(ELF) --outfile=$(basename $@)_after_sof.flash --sim_optimize=$(SIM_OPTIMIZE) $(elf2flash_extra_args); \
-		$(ECHO) $(FLASHPROG) $(SOPC_SYSID_FLAG) --epcs --base=$($(basename $@)_START) sof.flash $(basename $@)_after_sof.flash; \
-		$(FLASHPROG) -i 0 $(DOWNLOAD_CABLE_FLAG) $(SOPC_SYSID_FLAG) --epcs --base=$($(basename $@)_START) sof.flash $(basename $@)_after_sof.flash; \
+		$(ECHO) $(FLASHPROG) $(SOPC_SYSID_FLAG) --epcs --override=$(OVERRIDE_FILE) --base=$($(basename $@)_START) sof.flash $(basename $@)_after_sof.flash; \
+		$(FLASHPROG) -i 0 $(DOWNLOAD_CABLE_FLAG) $(SOPC_SYSID_FLAG) --epcs --override=$(OVERRIDE_FILE) --base=$($(basename $@)_START) sof.flash $(basename $@)_after_sof.flash; \
 	fi
 
 # Rule for erasing the EPCS memory content
 .PHONY : erase-epcs
-erase-epcs:
+erase-epcs: copy-flashoverridefile
 	@nios2-configure-sof $(DOWNLOAD_CABLE_FLAG) -C $(QUARTUS_PROJECT_DIR); \
-	$(ECHO) $(FLASHPROG) $(DOWNLOAD_CABLE_FLAG) $(SOPC_SYSID_FLAG) --epcs --base=$($(basename $(PROGRAM_EPCS_TARGET))_START) --accept-bad-sysid --erase-all; \
-	$(FLASHPROG) -i 0 $(DOWNLOAD_CABLE_FLAG) $(SOPC_SYSID_FLAG) --epcs --base=$($(basename $(PROGRAM_EPCS_TARGET))_START) --accept-bad-sysid --erase-all
+	$(ECHO) $(FLASHPROG) $(DOWNLOAD_CABLE_FLAG) $(SOPC_SYSID_FLAG) --epcs --override=$(OVERRIDE_FILE) --base=$($(basename $(PROGRAM_EPCS_TARGET))_START) --accept-bad-sysid --erase-all; \
+	$(FLASHPROG) -i 0 $(DOWNLOAD_CABLE_FLAG) $(SOPC_SYSID_FLAG) --epcs --override=$(OVERRIDE_FILE) --base=$($(basename $(PROGRAM_EPCS_TARGET))_START) --accept-bad-sysid --erase-all
 
 # Rule for downloading the FPGA bitstream to the target
 .PHONY : download-bits

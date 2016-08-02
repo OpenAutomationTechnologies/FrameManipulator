@@ -11,4 +11,5 @@ generated_app.sh
 flash_programmer.sh
 *.flash
 mem_init
+nios2-flash-override.txt
 

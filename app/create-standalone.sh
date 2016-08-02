@@ -26,11 +26,16 @@ do
           DOWNLOAD=1
           echo "INFO: Flash-download will be started at the end"
           ;;
+      --ink)
+          SOPC_DIR=$SOPC_DIR_INK
+          echo "INFO: Creating standalone files for the INK-Board"
+          ;;
       --help)
           echo "Usage: ${0} [OPTION]"
           echo
           echo "  --start-download      device will be flashed automatically"
           echo "  --standalonedir PATH  path to stand-alone folder"
+          echo "  --ink                 create files for the INK-Board"
           echo
           exit 1
           ;;
@@ -68,6 +73,13 @@ cp "$SOPC_ELF" "$STANDALONE_DIR/standalone.elf" || {
 echo "Copy download-script $TOOL_DIR/altera-nios2/flash-device.sh"
 cp "$TOOL_DIR/altera-nios2/flash-device.sh" "$STANDALONE_DIR/flash-device.sh" || {
     echo "Copy download-script failed"
+    exit 1
+}
+
+echo "Copy flash-override-file $STANDALONE_DIR/nios2-flash-override.txt"
+cp "$TOOL_DIR/altera-nios2/nios2-flash-override.txt" \
+   "$STANDALONE_DIR/nios2-flash-override.txt" || {
+    echo "Copy flash-override-file failed"
     exit 1
 }
 

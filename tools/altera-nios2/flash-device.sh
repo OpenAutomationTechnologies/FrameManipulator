@@ -134,7 +134,7 @@ fi
 
 #Download
 echo "Download flash"
-DOWNLOAD_PARAM="$SOURCE_SOF_FLASH $SOURCE_ELF_FLASH --base=$BASE --epcs"
+DOWNLOAD_PARAM="$SOURCE_SOF_FLASH $SOURCE_ELF_FLASH --base=$BASE --epcs --override=nios2-flash-override.txt"
 
 if [ -z "$IGNORE_SYS" ]; then
     DOWNLOAD_PARAM+=" $SYSID"
