@@ -233,7 +233,10 @@ begin
                 end if;
 
             when sSafetyRead =>
-                if unsigned(pCnt)=unsigned(iPacketStart)+unsigned(iPacketSize) then
+                if iReadBuffDone='1' then
+                    state_next  <= sCrc;    --start CRC after reaching the end
+
+                elsif unsigned(pCnt)=unsigned(iPacketStart)+unsigned(iPacketSize) then
                     state_next  <= sRead;
 
                 else
