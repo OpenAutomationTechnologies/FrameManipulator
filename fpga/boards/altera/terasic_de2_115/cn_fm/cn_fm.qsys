@@ -310,7 +310,7 @@
  <parameter name="projectName" value="ink_de2-115.qpf" />
  <parameter name="sopcBorderPoints" value="false" />
  <parameter name="systemHash" value="1" />
- <parameter name="timeStamp" value="1390991227262" />
+ <parameter name="timeStamp" value="1481876326339" />
  <parameter name="useTestBenchNamingPattern" value="false" />
  <instanceScript></instanceScript>
  <interface name="clk50" internal="clk50.clk_in" type="clock" dir="end" />
@@ -619,9 +619,11 @@
   <parameter name="gBytesOfTheFrameBuffer" value="1600" />
   <parameter name="gTaskBytesPerWord" value="4" />
   <parameter name="gTaskAddr" value="8" />
-  <parameter name="gTaskCount" value="30" />
+  <parameter name="gTaskCount" value="32" />
   <parameter name="gControlBytesPerWord" value="1" />
   <parameter name="gControlAddr" value="1" />
+  <parameter name="gBytesOfThePackBuffer" value="16000" />
+  <parameter name="gNumberOfPackets" value="1000" />
   <parameter name="AUTO_CLOCK_MEM_SLAVE_CLOCK_RATE" value="50000000" />
   <parameter name="AUTO_CLOCK_50_CLOCK_RATE" value="50000000" />
  </module>
